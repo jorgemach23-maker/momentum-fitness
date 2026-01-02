@@ -8,6 +8,7 @@ export default defineConfig([
   globalIgnores(['dist']),
   {
     files: ['**/*.{js,jsx}'],
+    ignores: ['functions/**'],
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
@@ -26,4 +27,13 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: ['functions/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+    }
+  }
 ])
