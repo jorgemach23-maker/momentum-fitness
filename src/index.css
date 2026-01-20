@@ -1,3 +1,86 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+  .minimal-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 #0f172a;
+  }
+  .minimal-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .minimal-scrollbar::-webkit-scrollbar-track {
+    background: #0f172a;
+    border-radius: 8px;
+  }
+  .minimal-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #334155;
+    border-radius: 8px;
+    border: 2px solid #0f172a;
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .gemini-loader-circle {
+    width: 28px;
+    height: 28px;
+    position: relative;
+    animation: spin-slow 2s linear infinite;
+  }
+  .gemini-loader-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #2dd4bf;
+  }
+  .gemini-loader-path {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    padding: 2px;
+    background: conic-gradient(from 0deg, #2dd4bf, #8b5cf6, #2dd4bf);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    animation: spin-slow 2s linear infinite;
+  }
+  .tooltip {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .has-tooltip:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
