@@ -7,20 +7,15 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Reglas para la colección de usuarios
-    match /users/{userId} {
-      // Permitir leer/escribir solo si eres el dueño
-      allow read, write: if isOwner(userId);
-      
-      // Subcolecciones de usuarios (historial, planes, etc.)
-      match /{document=**} {
-        allow read, write: if isOwner(userId);
-      }
-    }
-
-    // Mantenemos tu ruta original por compatibilidad, pero restringida
+    // Reglas para la colección artifacts (que es la que usa la app)
+    // El wildcard {appId} permite cualquier ID de aplicación (como 'momentum-fitness-ai')
     match /artifacts/{appId}/users/{userId}/{documents=**} {
        allow read, write: if isOwner(userId);
+    }
+    
+    // Reglas para la colección users (por si se migra en el futuro)
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId);
     }
   }
 }
