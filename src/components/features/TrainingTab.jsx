@@ -38,12 +38,14 @@ const TrainingTab = ({
     const currentPlanId = profile.currentPlanId;
     const todayIndex = (new Date().getDay() + 6) % 7; 
 
+    // Filter current week routines from history based on planId and status not archived
     const currentWeekRoutines = history
         .filter(r => r.planId === currentPlanId && r.status !== 'archived_history')
         .sort((a, b) => a.weekDay - b.weekDay);
 
     const completionLog = new Map();
     history.forEach(r => {
+        // Log completed routines for the progress bar, checking for valid completion day
         if (r.planId === currentPlanId && r.status === 'completed' && r.completedOnDay !== undefined) {
             completionLog.set(r.completedOnDay, r);
         }
@@ -51,7 +53,7 @@ const TrainingTab = ({
 
     const pendingRoutines = currentWeekRoutines.filter(r => r.status === 'pending');
     const recommendedRoutine = pendingRoutines[0];
-    const libraryRoutines = currentWeekRoutines.filter(r => r.id !== recommendedRoutine?.id);
+    const libraryRoutines = currentWeekRoutines.filter(r => r.id !== recommendedRoutine?.id && r.status === 'pending');
 
     useEffect(() => {
         if (generationProgress < 30) setProgressText(t.analyzing);
@@ -156,11 +158,6 @@ const TrainingTab = ({
                         <Icon name="sparkles" className="w-8 h-8 text-teal-500 mx-auto mb-3" />
                         <p className="text-slate-400 text-xs mb-4">{t.noPlan}</p>
                         <button onClick={() => onGeneratePlan(profile)} className="w-full py-3 rounded-lg bg-teal-600 text-white font-bold text-xs shadow-lg shadow-teal-900/20 hover:bg-teal-500">{t.startRoutine}</button>
-                    </div>
-                )}
-                 {pendingRoutines.length > 0 && (
-                    <div className="mt-4">
-                        <button onClick={() => onAdjustNextSession(pendingRoutines[0], profile, false)} className="w-full py-3 rounded-lg bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700">Ajustar Próxima Sesión</button>
                     </div>
                 )}
             </div>

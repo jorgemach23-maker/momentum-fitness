@@ -1,9 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Solo permite que un usuario acceda a sus propios datos
+    
+    // Función helper para verificar autenticación y propiedad
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Reglas para la colección de usuarios
+    match /users/{userId} {
+      // Permitir leer/escribir solo si eres el dueño
+      allow read, write: if isOwner(userId);
+      
+      // Subcolecciones de usuarios (historial, planes, etc.)
+      match /{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Mantenemos tu ruta original por compatibilidad, pero restringida
     match /artifacts/{appId}/users/{userId}/{documents=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+       allow read, write: if isOwner(userId);
     }
   }
 }
