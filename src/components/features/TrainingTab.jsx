@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ActiveSession from './training/ActiveSession';
 import { WeeklyProgressBar, HeroRoutineCard, RoutineLibraryList, AdjustSessionView } from './training/TrainingUI';
-import Icon from '../ui/Icon';
+import { Icon } from '../ui/Icon';
 import { GeminiLoader } from '../ui/GeminiLoader';
 
 const TrainingTab = ({ 
@@ -16,7 +16,7 @@ const TrainingTab = ({
     onViewRoutine, 
     generationProgress, 
     lang, 
-    t, // Added t prop
+    t, 
     onAnalyzeBioage, 
     bioageLoading,
     view, 
@@ -38,22 +38,66 @@ const TrainingTab = ({
     const currentPlanId = profile.currentPlanId;
     const todayIndex = (new Date().getDay() + 6) % 7; 
 
-    // Filter current week routines from history based on planId and status not archived
-    const currentWeekRoutines = history
-        .filter(r => r.planId === currentPlanId && r.status !== 'archived_history')
-        .sort((a, b) => a.weekDay - b.weekDay);
+    // Helper: Detectar grupos musculares predominantes
+    const getMuscleGroups = (title = "") => {
+        const t = title.toLowerCase();
+        const groups = new Set();
+        if (/pecho|chest|push|empuje|press|hombro|shoulder|tricep/i.test(t)) groups.add('push');
+        if (/espalda|back|pull|tracción|remo|bicep/i.test(t)) groups.add('pull');
+        if (/pierna|leg|cuad|femoral|gluteo|squat|inferior/i.test(t)) groups.add('legs');
+        if (/core|abs|abdomen|plank/i.test(t)) groups.add('core');
+        return groups;
+    };
 
-    const completionLog = new Map();
-    history.forEach(r => {
-        // Log completed routines for the progress bar, checking for valid completion day
-        if (r.planId === currentPlanId && r.status === 'completed' && r.completedOnDay !== undefined) {
-            completionLog.set(r.completedOnDay, r);
-        }
-    });
+    // 1. Obtener todas las rutinas de la semana actual
+    const currentWeekRoutines = useMemo(() => 
+        history
+            .filter(r => r.planId === currentPlanId && r.status !== 'archived_history')
+            .sort((a, b) => a.weekDay - b.weekDay)
+    , [history, currentPlanId]);
 
-    const pendingRoutines = currentWeekRoutines.filter(r => r.status === 'pending');
-    const recommendedRoutine = pendingRoutines[0];
-    const libraryRoutines = currentWeekRoutines.filter(r => r.id !== recommendedRoutine?.id && r.status === 'pending');
+    // 2. Identificar la última rutina completada globalmente para saber qué descansar
+    const lastCompleted = useMemo(() => 
+        history
+            .filter(r => r.status === 'completed')
+            .sort((a, b) => {
+                const timeA = a.completedAt?.seconds || a.createdAt?.seconds || 0;
+                const timeB = b.completedAt?.seconds || b.createdAt?.seconds || 0;
+                return timeB - timeA;
+            })[0]
+    , [history]);
+
+    // 3. Lógica de Recomendación Inteligente
+    const { recommendedRoutine, libraryRoutines, pendingRoutines } = useMemo(() => {
+        const pending = currentWeekRoutines.filter(r => r.status === 'pending');
+        if (pending.length === 0) return { recommendedRoutine: null, libraryRoutines: [], pendingRoutines: [] };
+
+        const lastMuscles = lastCompleted ? getMuscleGroups(lastCompleted.diaEnfoque) : new Set();
+        
+        // Intentar encontrar la primera rutina pendiente que NO trabaje los mismos músculos
+        let recommended = pending.find(r => {
+            const currentMuscles = getMuscleGroups(r.diaEnfoque);
+            // Si no hay solapamiento de grupos principales, es buena candidata
+            return ![...currentMuscles].some(m => lastMuscles.has(m));
+        });
+
+        // Fallback: Si todas solapan o no se detectan grupos, usar la siguiente por orden cronológico
+        if (!recommended) recommended = pending[0];
+
+        const library = pending.filter(r => r.id !== recommended.id);
+
+        return { recommendedRoutine: recommended, libraryRoutines: library, pendingRoutines: pending };
+    }, [currentWeekRoutines, lastCompleted]);
+
+    const completionLog = useMemo(() => {
+        const log = new Map();
+        history.forEach(r => {
+            if (r.planId === currentPlanId && r.status === 'completed' && r.completedOnDay !== undefined) {
+                log.set(r.completedOnDay, r);
+            }
+        });
+        return log;
+    }, [history, currentPlanId]);
 
     useEffect(() => {
         if (generationProgress < 30) setProgressText(t.analyzing);
@@ -113,9 +157,18 @@ const TrainingTab = ({
                                     <div className="animate-fadeIn">
                                         <HeroRoutineCard
                                             routine={recommendedRoutine}
-                                            onView={onViewRoutine} // Correctly passing onViewRoutine as onView
+                                            onView={onViewRoutine}
                                             onAdjust={() => handleOpenAdjustment(recommendedRoutine)}
                                         />
+                                        {/* Badge informativo de por qué se recomienda esta rutina */}
+                                        {lastCompleted && (
+                                            <div className="mt-2 px-3 py-2 bg-slate-800/30 rounded-lg border border-slate-700/50 flex items-center gap-2">
+                                                <Icon name="info" className="w-3.5 h-3.5 text-teal-500" />
+                                                <span className="text-[10px] text-slate-400 italic">
+                                                    Sugerencia optimizada basada en tu última sesión de {lastCompleted.diaEnfoque}.
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="text-center py-12 border border-dashed border-slate-700/50 rounded-2xl bg-slate-800/20"><div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-500/20"><Icon name="check" className="w-8 h-8 text-emerald-500" /></div><h3 className="text-lg font-bold text-white mb-1">¡Semana Completada!</h3><p className="text-slate-500 text-xs mb-5 max-w-[200px] mx-auto">No hay rutinas pendientes. ¡Gran trabajo!</p></div>

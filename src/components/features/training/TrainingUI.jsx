@@ -7,7 +7,7 @@ import { GeminiLoader } from '../../ui/GeminiLoader.jsx';
 import { 
   formatRoutineTitle, 
   cleanExerciseTitle 
-} from '../../../utils/helpers.js'; // Ajusta rutas si tus helpers están en otro lado
+} from '../../../utils/helpers.js'; 
 
 // --- 1. BARRA DE PROGRESO SEMANAL ---
 export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex }) => (
@@ -30,9 +30,8 @@ export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex 
   </div>
 );
 
-// --- 2. VISTA PREVIA DE EJERCICIOS (EL COMPONENTE QUE FALTABA) ---
+// --- 2. VISTA PREVIA DE EJERCICIOS ---
 export const ExerciseListPreview = ({ exercises, limit }) => {
-  // Validación de seguridad: Si no hay ejercicios, mostramos aviso sutil
   if (!exercises || !Array.isArray(exercises) || exercises.length === 0) {
       return <div className="py-2 text-xs text-slate-500 italic text-center">Detalles disponibles al iniciar.</div>;
   }
@@ -68,7 +67,6 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
              );
          } else {
              const rawName = cleanExerciseTitle(ex.ejercicio);
-             // Badge simple de equipo
              let equipBadge = "General";
              if(rawName.match(/barra/i)) equipBadge = "Barra";
              else if(rawName.match(/mancuerna/i)) equipBadge = "Mancuernas";
@@ -104,14 +102,11 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
 export const HeroRoutineCard = ({ routine, onView, onAdjust }) => {
   if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
   
-  // Normalización de datos (Firebase a veces anida 'routine' dentro de 'routine')
   const data = routine.routine || routine;
-  // Extraemos la lista asegurando que sea un array
   const exercisesList = Array.isArray(data.rutinaPrincipal) ? data.rutinaPrincipal : [];
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-xl p-5 mb-4 group">
-       {/* Decoración Fondo */}
        <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none group-hover:bg-teal-500/10 transition-colors duration-500"></div>
        
        <div className="relative z-10">
@@ -126,7 +121,6 @@ export const HeroRoutineCard = ({ routine, onView, onAdjust }) => {
               <button onClick={(e) => { e.stopPropagation(); onAdjust(); }} className="p-2.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all shadow-lg active:scale-95"><Icon name="settings" className="w-4 h-4" /></button>
            </div>
            
-           {/* AQUÍ SE LLAMA A LA VISTA PREVIA */}
            <ExerciseListPreview exercises={exercisesList} limit={3} />
            
            <button onClick={() => onView(routine)} className="w-full py-3.5 bg-teal-500 hover:bg-teal-400 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-900/20 active:scale-[0.98] group-hover:shadow-teal-500/20 mt-2">
@@ -141,7 +135,6 @@ export const HeroRoutineCard = ({ routine, onView, onAdjust }) => {
 // --- 4. LISTA DE BIBLIOTECA ---
 export const RoutineLibraryList = ({ routines, onView, onAdjust }) => {
   const [expandedId, setExpandedId] = useState(null);
-  // Filtramos la rutina principal para no duplicarla
   if (!routines || routines.length === 0) return <div className="text-center py-8 text-xs text-slate-500">No hay opciones extra.</div>;
   
   return (
@@ -149,7 +142,9 @@ export const RoutineLibraryList = ({ routines, onView, onAdjust }) => {
        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Otras Opciones</h3>
        {routines.map((r) => {
          const isExpanded = expandedId === r.id;
-         const data = r.routine || {};
+         const data = r.routine || r; // Normalización de datos corregida
+         const exercisesList = Array.isArray(data.rutinaPrincipal) ? data.rutinaPrincipal : [];
+
          return (
            <div key={r.id} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-slate-800 border-teal-500/30 ring-1 ring-teal-500/20' : 'bg-slate-800/40 border-slate-700/50'}`}>
               <div className="w-full flex items-center justify-between p-4 text-left cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : r.id)}>
@@ -157,7 +152,7 @@ export const RoutineLibraryList = ({ routines, onView, onAdjust }) => {
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-teal-500 text-slate-900 shadow-lg shadow-teal-500/20' : 'bg-slate-900 text-slate-500 border border-slate-700'}`}><Icon name="dumbbell" className="w-5 h-5" /></div>
                     <div>
                         <h4 className={`text-sm font-bold ${isExpanded ? 'text-white' : 'text-slate-300'}`}>{formatRoutineTitle(r.diaEnfoque)}</h4>
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">{data.duracionEstimada}</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">{data.duracionEstimada || "45 min"}</p>
                     </div>
                  </div>
                  <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180 text-teal-500' : 'text-slate-600'}`}>
@@ -167,10 +162,10 @@ export const RoutineLibraryList = ({ routines, onView, onAdjust }) => {
               
               {isExpanded && (
                   <div className="px-4 pb-4 animate-fadeIn">
-                      <div className="pt-2 border-t border-slate-700/50 mb-4">
-                          <ExerciseListPreview exercises={data.rutinaPrincipal || []} limit={99} />
+                      <div className="pt-2 border-t border-slate-700/50 mb-4 bg-slate-900/20 rounded-xl p-2">
+                          <ExerciseListPreview exercises={exercisesList} limit={99} />
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 px-1">
                           <button onClick={(e) => { e.stopPropagation(); onAdjust(r); }} className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-bold text-xs hover:bg-slate-700 transition-colors">AJUSTAR</button>
                           <button onClick={(e) => { e.stopPropagation(); onView(r); }} className="flex-[2] py-2.5 rounded-lg bg-teal-600 text-white font-bold text-xs hover:bg-teal-500 shadow-lg shadow-teal-900/20 transition-colors flex items-center justify-center gap-2"><Icon name="play" className="w-3 h-3 fill-current"/> INICIAR</button>
                       </div>
@@ -183,13 +178,9 @@ export const RoutineLibraryList = ({ routines, onView, onAdjust }) => {
   );
 };
 
-// --- 5. MODAL DE AJUSTE (Mantenemos la versión corregida SIN bucles) ---
+// --- 5. MODAL DE AJUSTE ---
 export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdjustNextSession, loading, progressText, lang }) => {
-    // Si no llega TRANSLATIONS, usamos fallback
     const t = { timeAvailable: "Tiempo", modality: "Modalidad", noEquipment: "Sin equipo", focusZone: "Zona", processing: "Procesando...", recalcParams: "Recalcular" }; 
-    // Intenta leer las traducciones reales si existen
-    // const t = TRANSLATIONS[lang || 'es']; 
-
     const [selectedMuscles, setSelectedMuscles] = useState([]);
     const [noEquipment, setNoEquipment] = useState(false); 
     const [isZoneOpen, setIsZoneOpen] = useState(false);

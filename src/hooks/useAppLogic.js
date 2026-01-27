@@ -5,6 +5,8 @@ import { auth, db } from '../services/firebase';
 import { buildHistoryContext, TRANSLATIONS, calculateSmartRest } from '../utils/helpers';
 import { fetchGeminiWeeklyPlan, fetchGeminiSessionAdjustment, fetchGeminiBioageAnalysis } from '../services/gemini';
 
+// --- Force Hot-Reload --- 
+
 const appId = (typeof __app_id !== 'undefined' ? __app_id : 'momentum-fitness-ai').replace(/[\/.]/g, '_');
 
 // --- INDIVIDUAL LOGIC HOOKS ---
@@ -556,7 +558,7 @@ export const useAppLogic = () => {
         onPasswordReset,
         handleViewRoutine, handleBackToMain, handleRoutineFeedback, handleExerciseComplete, setRestSeconds, setIsSessionActive,
         onProfileChange: handleProfileChange, onProfileSave, onAnalyzeBioage,
-        onGeneratePlan, onAdjustNextSession,
+        onGeneratePlan, onGeneratePlan, onAdjustNextSession,
         onGenerateBackup: handleGenerateBackup, onCloseBackupModal: handleCloseBackupModal, onCopyToClipboard: handleCopyToClipboard, setIsImportModalOpen,
         onImportFromText: handleImportFromText
     };

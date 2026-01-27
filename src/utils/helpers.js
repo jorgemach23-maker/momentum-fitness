@@ -1,377 +1,8 @@
-export const TRANSLATIONS = {
-  es: {
-    lang: 'es',
-    online: "Online",
-    guest: "Invitado", 
-    appTitle: "Momentum AI", 
-    routineInProgress: "Rutina en Curso", 
-    errorAuth: "Error de autenticación",
-    errorSave: "Error al guardar",
-    errorHistorySave: "Error al guardar el historial. La sesión no se ha registrado.",
-    errorInvalidCreds: "Credenciales inválidas.",
-    errorEmailInUse: "El email ya está en uso.",
+import es from '../../locales/es.json';
+import en from '../../locales/en.json';
 
-    // Tabs
-    tabTraining: "Entrenamiento", 
-    tabHistory: "Historial", 
-    tabProfile: "Perfil",
-    
-    // Auth
-    signIn: "Iniciar Sesión",
-    signUp: "Registrarse",
-    signOut: "Cerrar Sesión",
-    signInGuest: "Entrar como Invitado",
-    emailPlaceholder: "correo@ejemplo.com",
-    passwordPlaceholder: "Contraseña",
-    passRequirementLength: "Mínimo 6 caracteres",
-    passRequirementUpper: "Contiene una mayúscula",
-    passRequirementNumber: "Contiene un número",
-    forgotPassword: "¿Olvidaste tu contraseña?",
-    resetPassword: "Restablecer Contraseña",
-    resetPasswordPrompt: "Introduce tu email para recibir un enlace de recuperación.",
-    resetEmailSentTitle: "Correo Enviado",
-    resetEmailSentMessage: "Revisa tu bandeja de entrada para restablecer tu contraseña.",
-    backToLogin: "Volver a Iniciar Sesión",
-    saveAccountPrompt: "Guarda tu Progreso",
-    saveAccountMessage: "Crea una cuenta para guardar tus datos y acceder desde cualquier dispositivo.",
-    saveAccountButton: "Guardar Cuenta",
-    signOutGuestTitle: "¡Atención!",
-    signOutGuestMessage: "Estás usando una cuenta de invitado. Si cierras sesión, perderás todo tu progreso. ¿Deseas guardar tu cuenta antes de salir?",
-    signOutAndLoseData: "Salir y Perder Datos",
-    accountLinkedTitle: "¡Cuenta Guardada!",
-    accountLinkedMessage: "Tu progreso ha sido vinculado a tu correo. Ahora tu cuenta es permanente.",
-
-    // Profile Sections
-    bioageTitle: "Perfil Avanzado (Bioage)", 
-    bioageSubtitle: "Biometría Clínica & Estructural", 
-    bioageDesc: "Datos opcionales para aumentar precisión de generación de rutina.", 
-    structuralIntegrity: "Integridad Estructural", 
-    metabolicHealth: "Salud Metabólica", 
-    clinicalAnalysis: "Análisis Bioage", 
-    detectedRisks: "Reglas de Ajuste Activadas", 
-    healthyStatus: "Perfil equilibrado. Sin contraindicaciones estructurales detectadas.", 
-    calcBioAge: "Calcular Edad Biológica", 
-    bioAgeResult: "Edad Biológica Estimada", 
-    realAge: "Cronológica", 
-    bioAgeAnalysis: "Análisis de Longevidad",
-    cycleTitle: "Salud Femenina (CycleSync)", 
-    cycleSubtitle: "Adaptación al Ciclo Menstrual", 
-    lastPeriod: "Fecha Última Menstruación", 
-    cycleLength: "Duración Ciclo (días)", 
-    phase: "Fase Actual", 
-    menstrual: "Menstrual", 
-    follicular: "Folicular", 
-    ovulation: "Ovulación", 
-    luteal: "Lútea", 
-    phaseDesc: "Impacto en el Entrenamiento",
-    
-    // Tooltips
-    tt_sq1rm: "Máximo peso para 1 repetición en Sentadilla.", 
-    tt_bp1rm: "Máximo peso para 1 repetición en Banca.", 
-    tt_pullups: "Máximas repeticiones estrictas.", 
-    tt_pushups: "Máximas flexiones estrictas.", 
-    tt_plank: "Tiempo máximo manteniendo postura perfecta.", 
-    tt_waist: "Circunferencia a nivel del ombligo.", 
-    tt_vo2: "Volumen máximo de oxígeno.", 
-    tt_rhr: "Pulsaciones nada más despertar.", 
-    tt_hrr: "Pulsaciones que bajan 1 min después de esfuerzo máximo.",
-    
-    // Loading states
-    generating: "Generando...", 
-    analyzing: "Analizando Biometría...", 
-    designing: "Diseñando Terapia...", 
-    optimizing: "Optimizando Cargas...", 
-    finalizing: "Finalizando Plan...",
-    processing: "Procesando...",
-    
-    // Training Tab
-    weeklyProgress: "Progreso Semanal", 
-    generalView: "Vista General", 
-    weeklyPlan: "Plan Semanal", 
-    startRoutine: "COMENZAR", 
-    goalMet: "Objetivo Cumplido", 
-    progressReg: "Progreso registrado.",
-    activeRecovery: "Recuperación Activa", 
-    restVital: "El descanso es vital.", 
-    regenerateCycle: "Regenerar Ciclo", 
-    noPlan: "Sin plan semanal",
-    adjustSession: "Ajuste de Sesión", 
-    modify: "Modificar:", 
-    focusZone: "Zona de Enfoque", 
-    timeAvailable: "Tiempo Disponible (min)", 
-    modality: "Modalidad", 
-    noEquipment: "Entrenamiento sin equipo", 
-    recalcParams: "Recalcular Parámetros",
-    
-    // Active Session
-    activeSession: "Sesión Activa", 
-    recovery: "Recuperación", 
-    notes: "Notas", 
-    finishSession: "Finalizar Sesión", 
-    easy: "Fácil", 
-    good: "Adecuado", 
-    hard: "Difícil", 
-    hide: "OCULTAR", 
-    viewTech: "Ver Técnica", 
-    series: "Serie", 
-    reps: "Reps", 
-    load: "Carga", 
-    superset: "Superserie",
-    completed: "Completado", 
-    noRecords: "No hay registros previos.",
-    
-    // Profile Tab
-    biometrics: "Datos Básicos", 
-    gender: "Género", 
-    age: "Edad", 
-    height: "Altura (cm)", 
-    weight: "Peso (kg)", 
-    bodyFat: "% Grasa (Opcional)", 
-    muscleMass: "% Músculo (Opcional)", 
-    customFocus: "Enfoque personalizado", 
-    mainGoal: "Objetivo Principal", 
-    expLevel: "Nivel Experiencia", 
-    daysWeek: "Días/Semana", 
-    injuries: "Lesiones / Limitaciones", 
-    saveFile: "Guardar Expediente", 
-    dataManagement: "Gestión de Datos", 
-    export: "Exportar", 
-    pasteJson: "Pegar JSON", 
-    uploadFile: "Cargar Archivo",
-    phNotes: "Reporte de dolor, sensaciones o ajustes necesarios...", 
-    phInjuries: "Ej. Menisco rodilla derecha...", 
-    male: "Hombre", 
-    female: "Mujer",
-    goalFat: "Perder Grasa / Metabolismo", 
-    goalMuscle: "Hipertrofia / Fuerza", 
-    goalStrength: "Fuerza Máxima", 
-    goalCardio: "Resistencia Cardio",
-    expBeginner: "Principiante (0-6 meses)", 
-    expInter: "Intermedio (6m - 2y)", 
-    expAdvanced: "Avanzado (+2y)",
-    
-    // Messages
-    msgPlanGen: "¡Nuevo plan terapéutico generado!", 
-    msgSessionUpd: "Sesión clínica actualizada.", 
-    msgSessionReg: "Sesión completada y registrada.", 
-    msgBonusReg: "¡Entreno Bonus registrado!", 
-    msgProfileSaved: "Expediente guardado correctamente.", 
-    msgImported: "Datos importados.",
-    
-    // Data Management
-    importData: "Importar Datos", 
-    exportData: "Exportar Datos",
-    copyBackup: "Copia de Seguridad", 
-    copied: "Copiado", 
-    copyToClip: "Copiar al Portapapeles", 
-    importBtn: "Importar",
-    
-    // General UI
-    cancel: "Cancelar", 
-    smashSet: "TERMINAR SERIE", 
-    nextEx: "SIGUIENTE", 
-    prevEx: "ANTERIOR", 
-    finishWorkout: "TERMINAR", 
-    letsGo: "¡A DARLE!", 
-    restTimer: "DESCANSO",
-    rateEffort: "¿Cómo sentiste el esfuerzo?", 
-    rateA1: "Esfuerzo Ejercicio 1", 
-    rateA2: "Esfuerzo Ejercicio 2",
-    warmupTitle: "Calentamiento", 
-    warmupDesc: "Prepara tu cuerpo", 
-    startMain: "EMPEZAR RUTINA",
-    cooldownTitle: "Enfriamiento", 
-    cooldownDesc: "Vuelta a la calma", 
-    finishComplete: "FINALIZAR SESIÓN",
-    paused: "PAUSA"
-  },
-  en: {
-    lang: 'en',
-    online: "Online",
-    guest: "Guest",
-    appTitle: "Momentum AI",
-    routineInProgress: "Routine in Progress",
-    errorAuth: "Authentication error",
-    errorSave: "Error saving data",
-    errorHistorySave: "Error saving history. The session was not recorded.",
-    errorInvalidCreds: "Invalid credentials.",
-    errorEmailInUse: "Email is already in use.",
-
-    // Tabs
-    tabTraining: "Training",
-    tabHistory: "History",
-    tabProfile: "Profile",
-    
-    // Auth
-    signIn: "Sign In",
-    signUp: "Sign Up",
-    signOut: "Sign Out",
-    signInGuest: "Sign In as Guest",
-    emailPlaceholder: "email@example.com",
-    passwordPlaceholder: "Password",
-    passRequirementLength: "At least 6 characters",
-    passRequirementUpper: "Contains an uppercase letter",
-    passRequirementNumber: "Contains a number",
-    forgotPassword: "Forgot your password?",
-    resetPassword: "Reset Password",
-    resetPasswordPrompt: "Enter your email to receive a recovery link.",
-    resetEmailSentTitle: "Email Sent",
-    resetEmailSentMessage: "Check your inbox to reset your password.",
-    backToLogin: "Back to Sign In",
-    saveAccountPrompt: "Save Your Progress",
-    saveAccountMessage: "Create an account to save your data and access it from any device.",
-    saveAccountButton: "Save Account",
-    signOutGuestTitle: "Warning!",
-    signOutGuestMessage: "You are using a guest account. If you sign out, you will lose all your progress. Would you like to save your account before exiting?",
-    signOutAndLoseData: "Sign Out & Lose Data",
-    accountLinkedTitle: "Account Saved!",
-    accountLinkedMessage: "Your progress has been linked to your email. Your account is now permanent.",
-
-    // Profile Sections
-    bioageTitle: "Advanced Profile (Bioage)",
-    bioageSubtitle: "Clinical & Structural Biometrics",
-    bioageDesc: "Optional data to increase routine generation accuracy.",
-    structuralIntegrity: "Structural Integrity",
-    metabolicHealth: "Metabolic Health",
-    clinicalAnalysis: "Bioage Analysis",
-    detectedRisks: "Adjustment Rules Activated",
-    healthyStatus: "Balanced profile. No structural contraindications detected.",
-    calcBioAge: "Calculate Biological Age",
-    bioAgeResult: "Estimated Biological Age",
-    realAge: "Chronological",
-    bioAgeAnalysis: "Longevity Analysis",
-    cycleTitle: "Female Health (CycleSync)",
-    cycleSubtitle: "Adaptation to Menstrual Cycle",
-    lastPeriod: "Last Period Date",
-    cycleLength: "Cycle Length (days)",
-    phase: "Current Phase",
-    menstrual: "Menstrual",
-    follicular: "Follicular",
-    ovulation: "Ovulation",
-    luteal: "Luteal",
-    phaseDesc: "Impact on Training",
-    
-    // Tooltips
-    tt_sq1rm: "Maximum weight for 1 repetition in Squat.",
-    tt_bp1rm: "Maximum weight for 1 repetition in Bench Press.",
-    tt_pullups: "Maximum strict pull-ups.",
-    tt_pushups: "Maximum strict push-ups.",
-    tt_plank: "Maximum time holding a perfect plank.",
-    tt_waist: "Circumference at navel level.",
-    tt_vo2: "Maximum volume of oxygen.",
-    tt_rhr: "Heart rate upon waking.",
-    tt_hrr: "Heart rate drop 1 min after maximum effort.",
-    
-    // Loading states
-    generating: "Generating...",
-    analyzing: "Analyzing Biometrics...",
-    designing: "Designing Therapy...",
-    optimizing: "Optimizing Loads...",
-    finalizing: "Finalizing Plan...",
-    processing: "Processing...",
-
-    // Training Tab
-    weeklyProgress: "Weekly Progress",
-    generalView: "General View",
-    weeklyPlan: "Weekly Plan",
-    startRoutine: "START",
-    goalMet: "Goal Achieved",
-    progressReg: "Progress registered.",
-    activeRecovery: "Active Recovery",
-    restVital: "Rest is vital.",
-    regenerateCycle: "Regenerate Cycle",
-    noPlan: "No weekly plan",
-    adjustSession: "Session Adjustment",
-    modify: "Modify:",
-    focusZone: "Focus Zone",
-    timeAvailable: "Time Available (min)",
-    modality: "Modality",
-    noEquipment: "No-equipment training",
-    recalcParams: "Recalculate Parameters",
-
-    // Active Session
-    activeSession: "Active Session",
-    recovery: "Recovery",
-    notes: "Notes",
-    finishSession: "Finish Session",
-    easy: "Easy",
-    good: "Good",
-    hard: "Hard",
-    hide: "HIDE",
-    viewTech: "View Technique",
-    series: "Set",
-    reps: "Reps",
-    load: "Load",
-    superset: "Superset",
-    completed: "Completed",
-    noRecords: "No previous records.",
-
-    // Profile Tab
-    biometrics: "Basic Data",
-    gender: "Gender",
-    age: "Age",
-    height: "Height (cm)",
-    weight: "Weight (kg)",
-    bodyFat: "% Fat (Optional)",
-    muscleMass: "% Muscle (Optional)",
-    customFocus: "Custom Focus",
-    mainGoal: "Main Goal",
-    expLevel: "Experience Level",
-    daysWeek: "Days/Week",
-    injuries: "Injuries / Limitations",
-    saveFile: "Save File",
-    dataManagement: "Data Management",
-    export: "Export",
-    pasteJson: "Paste JSON",
-    uploadFile: "Upload File",
-    phNotes: "Report pain, sensations, or necessary adjustments...",
-    phInjuries: "e.g., Right knee meniscus...",
-    male: "Male",
-    female: "Female",
-    goalFat: "Fat Loss / Metabolism",
-    goalMuscle: "Hypertrophy / Strength",
-    goalStrength: "Max Strength",
-    goalCardio: "Cardio Endurance",
-    expBeginner: "Beginner (0-6 months)",
-    expInter: "Intermediate (6m - 2y)",
-    expAdvanced: "Advanced (+2y)",
-
-    // Messages
-    msgPlanGen: "New therapeutic plan generated!",
-    msgSessionUpd: "Clinical session updated.",
-    msgSessionReg: "Session completed and registered.",
-    msgBonusReg: "Bonus workout registered!",
-    msgProfileSaved: "File saved successfully.",
-    msgImported: "Data imported.",
-
-    // Data Management
-    importData: "Import Data",
-    exportData: "Export Data",
-    copyBackup: "Backup Copy",
-    copied: "Copied",
-    copyToClip: "Copy to Clipboard",
-    importBtn: "Import",
-
-    // General UI
-    cancel: "Cancelar",
-    smashSet: "FINISH SET",
-    nextEx: "NEXT",
-    prevEx: "PREVIOUS",
-    finishWorkout: "FINISH",
-    letsGo: "LET'S GO!",
-    restTimer: "REST",
-    rateEffort: "How did you feel the effort?",
-    rateA1: "Effort Exercise 1",
-    rateA2: "Effort Exercise 2",
-    warmupTitle: "Warm-up",
-    warmupDesc: "Prepare your body",
-    startMain: "START ROUTINE",
-    cooldownTitle: "Cool-down",
-    cooldownDesc: "Return to calm",
-    finishComplete: "FINISH SESSION",
-    paused: "PAUSED"
-  }
-};
+// Patched to load translations from JSON files, ensuring updates are reflected.
+export const TRANSLATIONS = { es, en };
 
 export const calculateSmartRest = (profile, exercise) => {
     let restTime = 60; 
@@ -473,14 +104,17 @@ export const formatRoutineTitle = (title) => {
 
 export const formatRepsDisplay = (str) => { 
     if (!str) return "--"; 
-    let val = str.replace(/segundos?|segun\w*/gi, 'seg').replace(/minutos?|mins?/gi, 'min');
+    let val = String(str).replace(/segundos?|segun\w*/gi, 'seg').replace(/minutos?|mins?/gi, 'min');
     if (/min|seg|sec|m\b|s\b/i.test(val)) return val.substring(0, 8); 
     const nums = val.match(/\d+/); 
     return nums ? nums[0] : "--"; 
 };
 
-export const formatLoadDisplay = (str) => { 
-    if (!str || /PC|Bodyweight/i.test(str)) return "BW"; 
+export const formatLoadDisplay = (val) => { 
+    if (val === undefined || val === null) return "--";
+    if (typeof val === 'number') return `${val} kg`;
+    const str = String(val);
+    if (/BW|PC|Bodyweight/i.test(str)) return "BW"; 
     if (str.includes('%') || /Nvl/i.test(str)) return str.substring(0, 6); 
     const nums = str.match(/[\d.]+/); 
     return nums ? `${nums[0]} kg` : "BW"; 
@@ -509,22 +143,21 @@ export const EXERCISE_SCHEMA_V3 = {
 export const createSystemPrompt = (profile, clinicalAdjustments, contextType, historyContext, langInstruction, extraConstraints = "") => {
   const clinicalPrompt = clinicalAdjustments.length > 0 ? `\n[CLINICAL]:\n${clinicalAdjustments.map(r => `- ${r}`).join('\n')}` : "\n[Clinical]: Healthy.";
   const sq1rm = parseFloat(profile.bioage?.sq1rm) || 0;
+  const pushups = parseFloat(profile.bioage?.pushups) || 0;
+  const pullups = parseFloat(profile.bioage?.pullups) || 0;
   const isMale = profile.gender === 'Hombre';
   const weight = parseFloat(profile.weight) || 70;
   const squatEst = sq1rm > 0 ? sq1rm : Math.round(weight * (isMale ? 1.2 : 0.8));
 
-  return `Eres "FitCoach AI". ${langInstruction}
-  Atleta: ${profile.gender}, ${profile.age} años, ${weight}kg.
-  Lesiones: ${profile.injuries || 'Ninguna'}.
-  Fuerza Base (Est): Squat ${squatEst} kg.
-  Meta: ${profile.mainGoal}.
-  Tiempo Disponible: ${profile.timeAvailable} min.
-  ${clinicalPrompt}
-  Historial: ${historyContext}
-  ${extraConstraints}
-  INSTRUCCIÓN: La duración total debe ser cercana a ${profile.timeAvailable} minutos.
-  REGLAS: 
-  1. Nombres descriptivos y completos (ej: "Sentadilla (Goblet)" en vez de "Sentadilla").
-  2. SUPERSERIES: Campo "ejercicio" DEBE usar formato "A1: [Nombre] + A2: [Nombre]".
-  3. Carga en kg, Reps numéricas. JSON Estricto.`;
+  // Build a more detailed strength profile string
+  let strengthProfile = `Squat (1RM Est): ${squatEst} kg`;
+  if (pushups > 0) {
+    strengthProfile += `, Push-ups: ${pushups} reps`;
+  }
+  if (pullups > 0) {
+    strengthProfile += `, Pull-ups: ${pullups} reps`;
+  }
+
+
+  return `Eres "FitCoach AI". ${langInstruction}\n  Atleta: ${profile.gender}, ${profile.age} años, ${weight}kg.\n  Lesiones: ${profile.injuries || 'Ninguna'}.\n  Perfil de Fuerza: ${strengthProfile}.\n  Meta: ${profile.mainGoal}.\n  Tiempo Disponible: ${profile.timeAvailable} min.\n  ${clinicalPrompt}\n  Historial: ${historyContext}\n  ${extraConstraints}\n  INSTRUCCIÓN: La duración total debe ser cercana a ${profile.timeAvailable} minutos.\n  REGLAS: \n  1. Nombres descriptivos y completos (ej: "Sentadilla (Goblet)" en vez de "Sentadilla").\n  2. SUPERSERIES: Campo "ejercicio" DEBE usar formato "A1: [Nombre] + A2: [Nombre]".\n  3. Carga en kg, Reps numéricas. Para ejercicios sin peso, usar \"BW\" (Peso Corporal). JSON Estricto.\n  4. La carga ('carga_sugerida') DEBE ser desafiante y basarse en el Perfil de Fuerza. Evita pesos triviales (ej: 2kg) para atletas fuertes.`;
 };

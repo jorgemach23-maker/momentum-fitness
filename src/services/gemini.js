@@ -24,24 +24,34 @@ async function callGeminiAPI(payload) {
         const minPushups = profile.gender === 'Hombre' ? 15 : 10;
         if (bio.pushups > 0 && bio.pushups < minPushups) clinicalAdjustments.push("DÉFICIT RESISTENCIA EMPUJE: Priorizar volumen en empuje.");
         
-        const clinicalPrompt = clinicalAdjustments.length > 0 ? `\n[CLINICAL]:\n${clinicalAdjustments.map(r => `- ${r}`).join('\n')}` : "\n[Clinical]: Healthy.";
+        const clinicalPrompt = clinicalAdjustments.length > 0 ? `\n- Datos Clínicos Adicionales: \n${clinicalAdjustments.map(r => `  - ${r}`).join('\n')}` : "\n- Datos Clínicos Adicionales: Perfil saludable.";
 
-        const historyStr = Array.isArray(historyContext) ? historyContext.join('\n') : (historyContext || "No history.");
+        const historyStr = Array.isArray(historyContext) ? historyContext.join('\n') : (historyContext || "Sin historial.");
 
-        systemPrompt = `Eres "FitCoach AI". ${langInstruction}
-        Atleta: ${profile.gender}, ${profile.age} años, ${weight}kg.
-        Lesiones: ${profile.injuries || 'Ninguna'}.
-        Fuerza Base (Est): Squat ${squatEst} kg.
-        Meta: ${profile.mainGoal}.
-        Tiempo Disponible: ${profile.timeAvailable} min.
-        ${clinicalPrompt}
-        Historial: ${historyStr}
-        ${extraConstraints || ""}
-        INSTRUCCIÓN: La duración total debe ser cercana a ${profile.timeAvailable} minutos.
-        REGLAS: 
-        1. Nombres descriptivos y completos (ej: "Sentadilla (Goblet)" en vez de "Sentadilla").
-        2. SUPERSERIES: Campo "ejercicio" DEBE usar formato "A1: [Nombre] + A2: [Nombre]".
-        3. Carga en kg, Reps numéricas. JSON Estricto.`;
+        // New scientifically-grounded prompt
+        systemPrompt = `Eres "FitCoach AI", un experto en fitness y ciencias del deporte. ${langInstruction}
+Tu misión es crear rutinas de entrenamiento seguras, efectivas y basadas en evidencia científica.
+Debes basar tus recomendaciones en los principios de entrenamiento de fuerza y acondicionamiento de organizaciones reconocidas como la NSCA (National Strength and Conditioning Association) y el ACSM (American College of Sports Medicine).
+
+**Contexto del Atleta:**
+- Perfil: ${profile.gender}, ${profile.age} años, ${weight}kg.
+- Objetivo Principal: ${profile.mainGoal}.
+- Nivel de Experiencia (Estimado): Basado en el historial y fuerza base.
+- Lesiones a considerar: ${profile.injuries || 'Ninguna'}.
+- Tiempo por sesión: ${profile.timeAvailable} min.
+- Historial de Entrenamiento y Feedback: ${historyStr}
+- Restricciones Adicionales: ${extraConstraints || "Ninguna"}
+${clinicalPrompt}
+
+**INSTRUCCIONES CLAVE:**
+1.  **Metodología Científica:** La rutina debe seguir una progresión lógica. Prioriza ejercicios compuestos multiarticulares y compleméntalos con ejercicios de aislamiento según el objetivo. Incluye calentamiento, parte principal y enfriamiento.
+2.  **No Alucinar:** No inventes ejercicios. Usa nombres de ejercicios reales y reconocidos. Si un ejercicio tiene variantes, especifícala (ej: "Sentadilla Búlgara" en vez de solo "Sentadilla").
+3.  **Duración Precisa:** La duración total de la sesión debe ser lo más cercana posible a los ${profile.timeAvailable} minutos especificados.
+
+**REGLAS DE FORMATO DE SALIDA:**
+- La respuesta DEBE ser un objeto JSON estricto y válido.
+- Para superseries, el campo "ejercicio" DEBE usar el formato "A1: [Nombre Ejercicio 1] + A2: [Nombre Ejercicio 2]".
+- La carga debe estar en kg y las repeticiones deben ser numéricas.`;
     }
 
     // Extended Strategy: Prioritize the specific model known to work in the monolith

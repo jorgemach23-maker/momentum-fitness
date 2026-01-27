@@ -148,6 +148,7 @@ export default function App() {
                                 profile={profile}
                                 onProfileChange={onProfileChange}
                                 onGeneratePlan={onGeneratePlan}
+                                onAdjustNextSession={onAdjustNextSession}
                                 loading={loading}
                                 successMessage={successMessage}
                                 errorMessage={error}
@@ -166,11 +167,14 @@ export default function App() {
                                 restSeconds={restSeconds}
                                 setRestSeconds={setRestSeconds}
                                 sessionSeconds={sessionSeconds}
+                                routineId={currentRoutine?.id}
                             />}
                         {activeTab === 'history' && 
                              <HistoryTab 
-                                history={history.filter(r => r.status === 'completed')} 
+                                history={history} 
                                 t={t} 
+                                onViewRoutine={handleViewRoutine}
+                                setActiveTab={setActiveTab}
                             />}
                         {activeTab === 'profile' && 
                             <ProfileTab 
