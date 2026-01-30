@@ -7,6 +7,9 @@ import HistoryTab from './components/features/HistoryTab';
 import ProfileTab from './components/features/ProfileTab';
 import { Auth } from './components/features/Auth';
 
+// Sesión Activa (Cargada como vista de nivel superior)
+import ActiveSession from './components/features/training/ActiveSession';
+
 // Componentes de UI y Layout
 import { Icon } from './components/ui/Icon';
 import { MinimalScrollbarStyles } from './components/ui/GlobalStyles';
@@ -96,10 +99,28 @@ export default function App() {
         return <Auth onSignIn={onSignIn} onSignUp={onSignUp} onAnonymousSignIn={onAnonymousSignIn} onPasswordReset={onPasswordReset} error={authError} t={t} setAuthError={setAuthError} />
     }
 
+    // --- RENDERIZADO CONDICIONAL DE SESIÓN ACTIVA (PANTALLA COMPLETA) ---
+    if (view === 'routine') {
+        return (
+            <div className="h-screen bg-slate-900 text-slate-100 overflow-hidden">
+                <ActiveSession 
+                    routine={currentRoutine}
+                    onRoutineFeedback={handleRoutineFeedback}
+                    lang={t.lang}
+                    onExerciseComplete={handleExerciseComplete}
+                    restSeconds={restSeconds}
+                    setRestSeconds={setRestSeconds}
+                    setIsSessionActive={setIsSessionActive}
+                    isSessionActive={isSessionActive}
+                    sessionSeconds={sessionSeconds}
+                />
+            </div>
+        );
+    }
+
     const handleSaveAndSignOut = () => {
         setIsSignOutWarningVisible(false);
         setActiveTab('profile');
-        // No es necesario forzar el scroll, el usuario verá la sección de guardar cuenta.
     };
 
     return (
@@ -113,35 +134,27 @@ export default function App() {
                 <header ref={headerRef} className={`w-full z-40 fixed top-0 left-0 border-b transition-all duration-300 ${scrolled ? 'bg-slate-900/90 backdrop-blur-xl border-slate-700/50 py-2 shadow-md' : 'bg-transparent border-transparent py-3'}`}>
                     <div className="max-w-md mx-auto px-6 flex items-center justify-between">
                         <h1 className={`font-bold text-slate-100 flex items-center transition-all ${scrolled ? 'text-sm' : 'text-base'}`}>
-                            {view === 'routine' ? (
-                                <button onClick={handleBackToMain} className="mr-3 text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800">
-                                    <Icon name="arrowLeft" className="w-6 h-6" />
-                                </button>
-                            ) : (
-                                <div className="bg-teal-500/10 p-1.5 rounded-lg mr-2">
-                                    <Icon name="dumbbell" className="text-teal-400 w-4 h-4" />
-                                </div>
-                            )}
+                            <div className="bg-teal-500/10 p-1.5 rounded-lg mr-2">
+                                <Icon name="dumbbell" className="text-teal-400 w-4 h-4" />
+                            </div>
                             <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                                {view === 'routine' ? t.routineInProgress : t.appTitle}
+                                {t.appTitle}
                             </span>
                         </h1>
                         <div className="flex items-center gap-2 text-xs">
-                            {view !== 'routine' && (
-                                <div className="flex items-center gap-2 scale-90 origin-right">
-                                    <button onClick={toggleLanguage} className="flex items-center px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all font-bold font-mono tracking-tighter">
-                                        <span className={t.lang === 'es' ? 'text-teal-400' : ''}>ES</span>
-                                        <span className="mx-1 opacity-30">|</span>
-                                        <span className={t.lang === 'en' ? 'text-teal-400' : ''}>EN</span>
-                                    </button>
-                                    {userId && <span className={`flex items-center px-2 py-0.5 rounded-full border ${isAnonymous ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300' : 'bg-teal-500/10 border-teal-500/20 text-teal-300'} font-semibold shadow-inner`}><Icon name={isAnonymous ? "userCheck" : "activity"} className="w-3.5 h-3.5 mr-2" />{isAnonymous ? t.guest : t.online}</span>}
-                                </div>
-                            )}
+                            <div className="flex items-center gap-2 scale-90 origin-right">
+                                <button onClick={toggleLanguage} className="flex items-center px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all font-bold font-mono tracking-tighter">
+                                    <span className={t.lang === 'es' ? 'text-teal-400' : ''}>ES</span>
+                                    <span className="mx-1 opacity-30">|</span>
+                                    <span className={t.lang === 'en' ? 'text-teal-400' : ''}>EN</span>
+                                </button>
+                                {userId && <span className={`flex items-center px-2 py-0.5 rounded-full border ${isAnonymous ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300' : 'bg-teal-500/10 border-teal-500/20 text-teal-300'} font-semibold shadow-inner`}><Icon name={isAnonymous ? "userCheck" : "activity"} className="w-3.5 h-3.5 mr-2" />{isAnonymous ? t.guest : t.online}</span>}
+                            </div>
                         </div>
                     </div>
                 </header>
 
-                <main className={`flex-1 overflow-y-auto overflow-x-hidden minimal-scrollbar pt-16 ${view === 'routine' ? 'snap-y snap-proximity' : ''}`} onScroll={handleScroll}>
+                <main className="flex-1 overflow-y-auto overflow-x-hidden minimal-scrollbar pt-16" onScroll={handleScroll}>
                     <div className="max-w-md mx-auto px-4 md:px-0 pb-32">
                         {activeTab === 'training' && 
                             <TrainingTab 
@@ -159,22 +172,12 @@ export default function App() {
                                 onAnalyzeBioage={onAnalyzeBioage}
                                 bioageLoading={bioageLoading}
                                 view={view}
-                                currentRoutine={currentRoutine}
-                                onRoutineFeedback={handleRoutineFeedback}
-                                onExerciseComplete={handleExerciseComplete}
-                                isSessionActive={isSessionActive}
-                                setIsSessionActive={setIsSessionActive}
-                                restSeconds={restSeconds}
-                                setRestSeconds={setRestSeconds}
-                                sessionSeconds={sessionSeconds}
-                                routineId={currentRoutine?.id}
                             />}
                         {activeTab === 'history' && 
                              <HistoryTab 
                                 history={history} 
                                 t={t} 
                                 onViewRoutine={handleViewRoutine}
-                                setActiveTab={setActiveTab}
                             />}
                         {activeTab === 'profile' && 
                             <ProfileTab 
@@ -187,7 +190,7 @@ export default function App() {
                                 profileError={profileError}
                                 onGenerateBackup={onGenerateBackup}
                                 onShowImportModal={() => setIsImportModalOpen(true)} 
-                                onSignOut={onSignOutRequest} // <-- CAMBIO CLAVE AQUÍ
+                                onSignOut={onSignOutRequest} 
                                 isAnonymous={isAnonymous}
                                 onLinkAccount={onLinkAccount}
                                 linkAccountError={linkAccountError}
@@ -197,19 +200,17 @@ export default function App() {
                 </main>
 
                 <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center pointer-events-none">
-                    {view === 'main' && (
-                        <nav className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 shadow-2xl rounded-full px-6 py-3 flex gap-8 pointer-events-auto">
-                            {['training', 'history', 'profile'].map(tab => {
-                                const isActive = activeTab === tab;
-                                const icons = { training: 'target', history: 'list', profile: 'user' };
-                                return (
-                                    <button key={tab} onClick={() => setActiveTab(tab)} className={`relative p-3 rounded-full transition-all duration-300 group ${isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 -translate-y-2 scale-110' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}>
-                                        <Icon name={icons[tab]} className="w-6 h-6" />
-                                    </button>
-                                );
-                            })}
-                        </nav>
-                    )}
+                    <nav className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 shadow-2xl rounded-full px-6 py-3 flex gap-8 pointer-events-auto">
+                        {['training', 'history', 'profile'].map(tab => {
+                            const isActive = activeTab === tab;
+                            const icons = { training: 'target', history: 'list', profile: 'user' };
+                            return (
+                                <button key={tab} onClick={() => setActiveTab(tab)} className={`relative p-3 rounded-full transition-all duration-300 group ${isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 -translate-y-2 scale-110' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}>
+                                    <Icon name={icons[tab]} className="w-6 h-6" />
+                                </button>
+                            );
+                        })}
+                    </nav>
                 </div>
             </div>
         </>
