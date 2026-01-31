@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '../ui/Icon';
 import { Card, InputField, BioageInput } from '../ui/LayoutComponents';
 import { PasswordInput } from '../ui/PasswordInput';
@@ -71,7 +71,7 @@ const BioageProfileSection = ({ profile, onChange, onAnalyzeBioage, bioageLoadin
   return (
     <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-slate-900/80 to-slate-800/80 overflow-hidden shadow-lg transition-all duration-300">
        <button type="button" onClick={() => setIsOpen(!isOpen)} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
-          <div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-300 border border-violet-500/20"><Icon name="scanEye" className="w-5 h-5" /></div><div className="text-left"><h3 className="text-sm font-bold text-slate-100">{t.bioageTitle}</h3></div></div>
+          <div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-300 border border-violet-500/20"><Icon name="scanEye" className="w-5 h-5" /></div><div className="text-left"><h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">{t.bioageTitle}</h3></div></div>
           <Icon name={isOpen ? "chevronUp" : "chevronDown"} className={`w-5 h-5 text-slate-500 transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`} />
        </button>
        {isOpen && (
@@ -110,6 +110,32 @@ const BioageProfileSection = ({ profile, onChange, onAnalyzeBioage, bioageLoadin
   );
 };
 
+const AccordionSection = ({ icon, title, iconColor, children, defaultOpen = false, className = "" }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className={`rounded-2xl border border-white/5 bg-slate-900/40 overflow-hidden shadow-lg transition-all duration-300 ${className}`}>
+      <button type="button" onClick={() => setIsOpen(!isOpen)} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className={`p-2.5 rounded-xl bg-white/5 ${iconColor} border border-white/5`}>
+            <Icon name={icon} className="w-5 h-5" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">{title}</h3>
+          </div>
+        </div>
+        <Icon name={isOpen ? "chevronUp" : "chevronDown"} className={`w-5 h-5 text-slate-500 transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`} />
+      </button>
+      {isOpen && (
+        <div className="p-6 pt-0 animate-fadeIn border-t border-slate-800/50">
+          <div className="mt-4">
+            {children}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CycleSyncSection = ({ profile, onChange, t }) => {
     if (profile.gender !== 'Mujer') return null;
     const cycle = profile.menstrualCycle || { lastPeriod: '', cycleLength: 28 };
@@ -117,46 +143,60 @@ const CycleSyncSection = ({ profile, onChange, t }) => {
     const handleCycleChange = (e) => onChange({ target: { name: 'menstrualCycle', value: { ...cycle, [e.target.name]: e.target.value } } });
     
     return (
-        <Card className="p-6 border-pink-500/20 bg-gradient-to-br from-slate-900 to-pink-900/10">
-            <h3 className="text-sm font-bold text-pink-300 uppercase tracking-wider mb-2 flex items-center gap-2"><Icon name="flower" className="w-4 h-4 text-pink-400"/> {t.cycleTitle}</h3>
-            <div className="grid grid-cols-2 gap-4 mb-5">
-                <input type="date" name="lastPeriod" value={cycle.lastPeriod} onChange={handleCycleChange} className="w-full bg-slate-900/50 border border-slate-700 text-slate-100 rounded-lg py-3 px-3 text-xs outline-none" />
-                <input type="number" name="cycleLength" value={cycle.cycleLength} onChange={handleCycleChange} className="w-full bg-slate-900/50 border border-slate-700 text-slate-100 rounded-lg py-3 px-3 text-xs outline-none" />
+        <AccordionSection 
+            icon="flower" 
+            title={t.cycleTitle || "Salud Femenina"} 
+            iconColor="text-pink-400"
+            className="border-pink-500/10"
+        >
+            <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{t.lastPeriod || "Última fecha"}</label>
+                        <input type="date" name="lastPeriod" value={cycle.lastPeriod} onChange={handleCycleChange} className="w-full bg-slate-900/70 border border-slate-700 text-slate-100 rounded-lg py-2.5 px-3 text-sm outline-none focus:ring-1 focus:ring-pink-500/50" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{t.cycleLength || "Duración"}</label>
+                        <input type="number" name="cycleLength" value={cycle.cycleLength} onChange={handleCycleChange} className="w-full bg-slate-900/70 border border-slate-700 text-slate-100 rounded-lg py-2.5 px-3 text-sm outline-none focus:ring-1 focus:ring-pink-500/50" />
+                    </div>
+                </div>
+                {currentPhase && (
+                    <div className="bg-pink-500/5 border border-pink-500/20 rounded-xl p-4 shadow-inner">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                            <h4 className="text-sm font-black text-pink-200 uppercase tracking-tight">{currentPhase.label}</h4>
+                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed">{currentPhase.desc}</p>
+                    </div>
+                )}
             </div>
-            {currentPhase && <div className="bg-pink-500/10 border border-pink-500/30 rounded-xl p-4"><h4 className="text-lg font-bold text-pink-100">{currentPhase.label}</h4><p className="text-xs text-pink-200/80">{currentPhase.desc}</p></div>}
-        </Card>
+        </AccordionSection>
     );
 };
 
-const DataManagementSection = ({ onGenerateBackup, onShowImportModal, onSignOut, t }) => (
-    <Card className="p-6">
-        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2 pb-2 border-b border-slate-700/50">
-            <Icon name="database" className="w-4 h-4 text-slate-500"/> {t.dataManagement}
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-            <button onClick={onGenerateBackup} className="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
-                <Icon name="download" className="w-4 h-4" /> {t.exportData}
-            </button>
-            <button onClick={onShowImportModal} className="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
-                <Icon name="upload" className="w-4 h-4" /> {t.importData}
-            </button>
-        </div>
-        <div className="mt-4 pt-4 border-t border-slate-700/50">
-            <button onClick={onSignOut} className="w-full p-3 bg-red-900/50 hover:bg-red-800/70 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors text-red-400 hover:text-red-300">
-                <Icon name="logOut" className="w-4 h-4" /> {t.signOut}
-            </button>
-        </div>
-    </Card>
-);
+export default function ProfileTab({ profile, onProfileChange, onProfileSave, onSignOut, profileSuccess, profileError, onAnalyzeBioage, bioageLoading, t, isAnonymous, onLinkAccount, linkAccountError }) {
+  const saveTimeout = useRef(null);
 
-export default function ProfileTab({ profile, onProfileChange, onProfileSave, onGenerateBackup, onShowImportModal, onSignOut, profileSuccess, profileError, onAnalyzeBioage, bioageLoading, t, isAnonymous, onLinkAccount, linkAccountError }) {
+  // Auto-save logic: Guardar cuando el perfil cambia (con debounce)
+  useEffect(() => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    
+    saveTimeout.current = setTimeout(() => {
+      onProfileSave(profile);
+    }, 1500); // Guardar después de 1.5s de inactividad
+
+    return () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
+  }, [profile, onProfileSave]);
+
   return (
-    <div className="animate-fadeIn pb-20 space-y-6">
+    <div className="animate-fadeIn pb-20 space-y-4">
       {isAnonymous && <LinkAccountSection onLinkAccount={onLinkAccount} t={t} error={linkAccountError} />}
 
-      <form onSubmit={(e) => { e.preventDefault(); onProfileSave(profile); }} className="space-y-8">
-        <Card className="p-6">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2 pb-2 border-b border-slate-700/50"><Icon name="user" className="w-4 h-4 text-teal-400"/> {t.biometrics}</h3>
+      <div className="space-y-4">
+        {/* SECCIÓN DATOS BÁSICOS (ACORDEÓN) */}
+        <AccordionSection icon="user" title={t.biometrics || "Datos básicos"} iconColor="text-teal-400" defaultOpen={true}>
           <div className="grid grid-cols-2 gap-6">
             <InputField label={t.gender} icon="user" type="select" name="gender" value={profile.gender} onChange={onProfileChange} options={[{value:'Hombre',label:t.male},{value:'Mujer',label:t.female}]} />
             <InputField label={t.age} icon="calendar" type="number" name="age" value={profile.age} onChange={onProfileChange} />
@@ -167,39 +207,33 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
              <BioageInput name="bodyFat" value={profile.bodyFat} onChange={onProfileChange} unit="%" label={t.bodyFat} tooltip="Opcional: Grasa" isBio={false} />
              <BioageInput name="muscleMass" value={profile.muscleMass} onChange={onProfileChange} unit="%" label={t.muscleMass} tooltip="Opcional: Músculo" isBio={false} />
           </div>
-        </Card>
+        </AccordionSection>
         
         <CycleSyncSection profile={profile} onChange={onProfileChange} t={t} />
         
         <BioageProfileSection profile={profile} onChange={onProfileChange} onAnalyzeBioage={onAnalyzeBioage} bioageLoading={bioageLoading} t={t} />
 
-        <Card className="p-6">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2 pb-2 border-b border-slate-700/50"><Icon name="target" className="w-4 h-4 text-violet-400"/> {t.customFocus}</h3>
+        {/* SECCIÓN MI META (ACORDEÓN) */}
+        <AccordionSection icon="target" title={t.myGoal || "Mi meta"} iconColor="text-violet-400">
           <div className="space-y-6">
              <InputField label={t.mainGoal} icon="star" type="select" name="mainGoal" value={profile.mainGoal} onChange={onProfileChange} options={[{value: 'Perder grasa corporal', label: t.goalFat},{value: 'Crecimiento muscular (Hipertrofia)', label: t.goalMuscle || 'Crecimiento Muscular'},{value: 'Incremento de fuerza', label: t.goalStrength || 'Fuerza'},{value: 'Mejora de rendimiento cardiovascular', label: t.goalCardio || 'Cardio'}]} />
              <InputField label={t.expLevel} icon="activity" type="select" name="experienceLevel" value={profile.experienceLevel} onChange={onProfileChange} options={[{value: 'Principiante', label: t.beginner},{value: 'Intermedio', label: t.intermediate},{value: 'Avanzado', label: t.advanced}]} />
              <div className="grid grid-cols-2 gap-6"><InputField label={t.daysWeek} icon="calendar" type="number" name="daysPerWeek" value={profile.daysPerWeek} onChange={onProfileChange} /><InputField label={t.timeAvailable} icon="clock" type="number" name="timeAvailable" value={profile.timeAvailable} onChange={onProfileChange} /></div>
-             <InputField label={t.injuries} icon="alert" type="text" name="injuries" value={profile.injuries} onChange={onProfileChange} placeholder={t.phInjuries} isTextArea={true} />
+             <InputField label={t.considerations || "Deseos / Consideraciones"} icon="alert" type="text" name="injuries" value={profile.injuries} onChange={onProfileChange} placeholder={t.phInjuries} isTextArea={true} />
           </div>
-        </Card>
+        </AccordionSection>
 
-        <div className="flex items-center gap-4 sticky bottom-24">
-            <button type="submit" className="flex-1 py-4 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl shadow-lg shadow-teal-900/20 transition-all duration-300 hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-2">
-                <Icon name="save" className="w-5 h-5" /> {t.saveFile}
-            </button>
+        {/* FEEDBACK DE GUARDADO AUTOMÁTICO */}
+        <div className="flex flex-col gap-2 pt-2">
+            {profileSuccess && <div className="p-3 rounded-xl bg-teal-500/5 border border-teal-500/20 text-teal-400/80 text-[10px] font-bold uppercase tracking-widest text-center animate-pulse flex items-center justify-center gap-2"><Icon name="cloudUpload" className="w-3 h-3"/> {t.profileAutoSaved || 'Expediente actualizado'}</div>}
+            {profileError && <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium text-center shadow-sm">{profileError}</div>}
         </div>
-
-        {profileSuccess && <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm font-medium text-center shadow-sm">{profileSuccess}</div>}
-        {profileError && <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium text-center shadow-sm">{profileError}</div>}
-      </form>
+      </div>
 
       <div className="pt-8">
-          <DataManagementSection 
-              onGenerateBackup={onGenerateBackup}
-              onShowImportModal={onShowImportModal}
-              onSignOut={onSignOut}
-              t={t}
-          />
+        <button onClick={onSignOut} className="w-full p-4 bg-slate-900/40 hover:bg-red-900/20 border border-white/5 rounded-2xl text-xs font-bold flex items-center justify-center gap-3 transition-all text-slate-500 hover:text-red-400 active:scale-95 shadow-lg group">
+            <Icon name="logOut" className="w-4 h-4 group-hover:rotate-12 transition-transform" /> {t.signOut}
+        </button>
       </div>
 
     </div>

@@ -101,25 +101,40 @@ const TrainingTab = ({
 
             <WeeklyProgressBar weekDistribution={currentWeekRoutines} completionLog={completionLog} todayIndex={todayIndex} t={t} />
 
-            {/* CONTENEDOR DE PESTAÑAS */}
-            <div className="mb-4">
-                <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-4">
-                    <div className="flex space-x-2 bg-slate-800/50 p-1 rounded-lg">
+            {/* CONTENEDOR DE PESTAÑAS - MEJORADO VISUALMENTE */}
+            <div className="mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4 mb-4">
+                    <div className="flex items-center bg-slate-900/80 backdrop-blur-xl p-1.5 rounded-xl border border-white/10 shadow-2xl">
                         <button 
                             onClick={() => setActiveTab('recommended')} 
-                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-300 ${activeTab === 'recommended' ? 'bg-teal-500 text-white shadow' : 'text-slate-400 hover:bg-slate-700/50'}`}
+                            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-lg transition-all duration-500 ease-out uppercase tracking-wider ${
+                                activeTab === 'recommended' 
+                                ? 'bg-teal-500 text-slate-950 shadow-[0_0_20px_rgba(20,184,166,0.4)] scale-[1.02]' 
+                                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                            }`}
                         >
-                            {t.recommended}
+                            <Icon name="sparkles" className={`w-3.5 h-3.5 ${activeTab === 'recommended' ? 'text-slate-900' : 'text-slate-600'}`} />
+                            {t.recommended || "Recomendado"}
                         </button>
                         <button 
                             onClick={() => setActiveTab('library')} 
-                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-300 ${activeTab === 'library' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:bg-slate-700/50'}`}
+                            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-lg transition-all duration-500 ease-out uppercase tracking-wider ${
+                                activeTab === 'library' 
+                                ? 'bg-slate-700 text-white shadow-lg scale-[1.02]' 
+                                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                            }`}
                         >
-                            {t.moreOptions}
+                            <Icon name="list" className={`w-3.5 h-3.5 ${activeTab === 'library' ? 'text-teal-400' : 'text-slate-600'}`} />
+                            {t.moreOptions || "Otras opciones"}
                         </button>
                     </div>
-                    <button onClick={() => onGeneratePlan(profile)} className="text-[10px] font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1.5 transition-colors">
-                        <Icon name="refresh" className="w-3 h-3" /> {t.regenerateCycle}
+                    
+                    <button 
+                        onClick={() => onGeneratePlan(profile)} 
+                        className="group flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-800/40 border border-white/5 text-[10px] font-black text-teal-400 hover:bg-teal-500/10 hover:border-teal-500/30 transition-all duration-300 uppercase tracking-widest shadow-xl"
+                    >
+                        <Icon name="refresh" className="w-3 h-3 group-hover:rotate-180 transition-transform duration-700" /> 
+                        {t.regenerateCycle}
                     </button>
                 </div>
             </div>
@@ -135,10 +150,12 @@ const TrainingTab = ({
                                     <div className="animate-fadeIn">
                                         <HeroRoutineCard routine={recommendedRoutine} onView={onViewRoutine} onAdjust={() => handleOpenAdjustment(recommendedRoutine)} t={t}/>
                                         {lastCompleted && (
-                                            <div className="mt-2 px-3 py-2 bg-slate-800/30 rounded-lg border border-slate-700/50 flex items-center gap-2">
-                                                <Icon name="info" className="w-3.5 h-3.5 text-teal-500" />
-                                                <span className="text-[10px] text-slate-400 italic">
-                                                    {t.suggestionBasedOn} {lastCompleted.diaEnfoque}.
+                                            <div className="mt-4 px-4 py-3 bg-slate-900/50 rounded-2xl border border-white/5 flex items-center gap-3 shadow-inner">
+                                                <div className="p-1.5 bg-teal-500/10 rounded-lg">
+                                                    <Icon name="info" className="w-4 h-4 text-teal-500" />
+                                                </div>
+                                                <span className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                                                    {t.suggestionBasedOn} <span className="text-teal-400 font-bold">{lastCompleted.diaEnfoque}</span>.
                                                 </span>
                                             </div>
                                         )}
