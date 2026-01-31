@@ -50,7 +50,7 @@
   "expLevel": "Experience Level", 
   "daysWeek": "Days/Week", 
   "timeAvailable": "Time Available (min)",
-  "injuries": "Injuries / Limitations", 
+  "injuries": "Deseos / Consideraciones", 
   "saveFile": "Save File", 
   "fitnessLevel": "Fitness Level",
   "beginner": "Beginner (0-6 months)", 
@@ -79,7 +79,7 @@
   "structuralIntegrity": "Structural Integrity", 
   "metabolicHealth": "Metabolic Health", 
   "clinicalAnalysis": "Bioage Analysis", 
-  "detectedRisks": "Adjustment Rules Activated", 
+  "detectedRisks": "Adjustment Risks Activated", 
   "healthyStatus": "Balanced profile. No structural contraindications detected.", 
   "calcBioAge": "Calculate Biological Age", 
   "bioAgeResult": "Estimated Biological Age", 
@@ -100,6 +100,8 @@
   "ovulation": "Ovulation", 
   "luteal": "Luteal", 
   "phaseDesc": "Impact on Training",
+  "lastPeriodLabel": "Last date",
+  "cycleLengthLabel": "Duration",
   
   "account": "Account",
   "backupData": "Data Backup",
@@ -149,5 +151,17 @@
   "error.auth.too-many-requests": "Too many failed attempts. Try again later.",
   "error.auth.network-request-failed": "Network error. Please check your internet connection.",
   "startMain": "START",
-  "finishComplete": "FINISH"
+  "finishComplete": "FINISH",
+  
+  "recommended": "Recommended",
+  "moreOptions": "Other Options",
+  "regenerateCycle": "Regenerate Cycle",
+  "suggestionBasedOn": "Suggestion based on",
+  "weekCompletedTitle": "Week Completed",
+  "weekCompletedMessage": "Great job! You have completed all routines for this week.",
+  "onlyRecommendedLeft": "Only the recommended routine is left.",
+  "myGoal": "My Goal",
+  "considerations": "Desires / Considerations",
+  "profileAutoSaved": "Profile automatically updated",
+  "suggestion": "SUGGESTION"
 }
