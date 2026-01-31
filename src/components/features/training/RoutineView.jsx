@@ -18,24 +18,49 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
     let supersetCounter = 0;
 
     const renderExercise = (exercise, index) => {
-        const isSuperset = exercise.tipo_bloque === 'superserie' || /\+|\s+y\s+|\/|A1.*A2/i.test(exercise.ejercicio);
+        // Normalización: Gemini usa 'bloque', pero el código a veces usa 'tipo_bloque'
+        const bloqueType = (exercise.bloque || exercise.tipo_bloque || "").toLowerCase();
+        
+        // Detección mejorada
+        const isSuperset = bloqueType.includes('superserie') || 
+                           /[\+\/]/.test(exercise.ejercicio) || 
+                           /[A-Z]2[:\s]/i.test(exercise.ejercicio) ||
+                           /\s+y\s+/i.test(exercise.ejercicio);
         
         if (isSuperset) {
             const letter = String.fromCharCode(65 + supersetCounter);
             supersetCounter++; 
 
-            // Split agnóstico: Dividir por '+' o '/' o patrón 'A1...A2'
-            // IMPORTANTE: Ya no dependemos de que A1 esté presente para hacer el split
-            let parts = exercise.ejercicio.split(/[\+\/]|A1[:\s]*|A2[:\s]*/i).filter(p => p && p.trim().length > 0);
-            
-            // Si el split falló pero sabemos que es superserie, intentamos regex más flexible
-            if (parts.length < 2) {
-                 const match = exercise.ejercicio.match(/(.*?)\s*(?:\+|y|\/)\s*(.*)/i);
-                 if (match) parts = [match[1], match[2]];
-            }
+            let partA, partB;
 
-            const partA = parts[0] ? cleanExerciseTitle(parts[0]) : "Ejercicio A";
-            const partB = parts[1] ? cleanExerciseTitle(parts[1]) : "Ejercicio B";
+            // 1. Prioridad ABSOLUTA a los campos explícitos si existen (Solución de raíz)
+            if (exercise.ejercicioA && exercise.ejercicioB) {
+                partA = exercise.ejercicioA;
+                partB = exercise.ejercicioB;
+            } else {
+                // 2. Fallback a la lógica de split robusta
+                let rawParts = [];
+                if (/[A-Z]2[:\s]/i.test(exercise.ejercicio)) {
+                     const match = exercise.ejercicio.match(/[\+\s]*([A-Z]2[:\s].*)/i);
+                     if (match) {
+                         const part2 = match[1];
+                         const part1 = exercise.ejercicio.replace(match[0], '').trim();
+                         rawParts = [part1, part2];
+                     }
+                }
+                if (rawParts.length < 2) rawParts = exercise.ejercicio.split(/[\+\/]/);
+                if (rawParts.length < 2) rawParts = exercise.ejercicio.split(/\s+y\s+/i);
+                if (rawParts.length === 0) rawParts = [exercise.ejercicio, ""];
+
+                const parts = rawParts.map(p => {
+                    if (!p) return "";
+                    let cleaned = p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^[\+\/]\s*/, '').trim();
+                    return cleanExerciseTitle(cleaned);
+                }).filter(p => p.length > 0);
+
+                partA = parts[0] || "Ejercicio A";
+                partB = parts[1] || "Ejercicio B";
+            }
 
             return (
                 <div key={index} className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">

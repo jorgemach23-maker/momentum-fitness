@@ -1,199 +1,252 @@
-import { EXERCISE_SCHEMA_V3 } from '../utils/helpers';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
-// API Key setup - using the provided key
-const API_KEY = "AIzaSyC168hQr_3MAlid9sSwOFAKxim0kCg4F5w";
+const MODEL_NAME = "models/gemini-2.5-flash-preview-09-2025";
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-// Core function to call Gemini API directly from the client
-async function callGeminiAPI(payload) {
-    const { userQuery, contextType, profile, historyContext, language, extraConstraints, schema, responseKey } = payload;
+const genAI = new GoogleGenerativeAI(API_KEY);
+const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    // Reconstruct System Prompt on Client Side
-    const langInstruction = (language === 'en') ? "RESPOND IN ENGLISH." : "RESPONDE EN ESPAÑOL.";
-    const bio = profile.bioage || {};
+const generationConfig = {
+    temperature: 0.7,
+    topK: 1,
+    topP: 1,
+    maxOutputTokens: 8192,
+    responseMimeType: "application/json",
+};
+
+const safetySettings = [
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+];
+
+// --- HELPERS ---
+
+const buildHistoryContext = (recentRoutines) => {
+  if (!recentRoutines || recentRoutines.length === 0) return "No hay historial de entrenamiento.";
+  const historySummary = recentRoutines.map(r => {
+    const feedback = r.feedback ? `Feedback: [Dificultad: ${r.feedback.difficulty}, Notas: ${r.feedback.notes || 'ninguna'}]` : 'Sin feedback.';
+    const exercises = r.routine?.rutinaPrincipal?.map(ex => `${ex.ejercicio} (${ex.series}x${ex.reps_logradas || ex.reps} @ ${ex.carga_lograda || ex.carga_sugerida})`).join('; ') || 'No hay datos de ejercicios.';
+    return ` - Sesión [${r.diaEnfoque}]: ${feedback} | Logros: ${exercises}`;
+  }).join("\n");
+  return `\n**Historial de Entrenamiento y Feedback:**\n${historySummary}`;
+};
+
+const getStrengthProfile = (profile) => {
+    const sq1rm = parseFloat(profile.bioage?.sq1rm) || 0;
+    const pushups = parseFloat(profile.bioage?.pushups) || 0;
+    const pullups = parseFloat(profile.bioage?.pullups) || 0;
+    const isMale = profile.gender === 'Hombre';
     const weight = parseFloat(profile.weight) || 70;
-    const sq1rm = parseFloat(bio.sq1rm) || 0;
-    const squatEst = sq1rm > 0 ? sq1rm : Math.round(weight * (profile.gender === 'Hombre' ? 1.2 : 0.8));
+    const squatEst = sq1rm > 0 ? sq1rm : Math.round(weight * (isMale ? 1.2 : 0.8));
+    return `Squat (1RM Est): ${squatEst} kg, Push-ups: ${pushups} reps, Pull-ups: ${pullups} reps`;
+};
 
-    let systemPrompt = "";
-
-    if (contextType === "BIOAGE_ANALYSIS") {
-        systemPrompt = `Eres Especialista Clínico. ${langInstruction}. Calcula edad biológica basada en ${profile.age} años, VO2Max ${bio.vo2max}, Fuerza ${bio.sq1rm}. Si faltan datos, estima con lo disponible.`;
-    } else {
-        const clinicalAdjustments = [];
-        if (sq1rm > (1.5 * weight) && bio.plank > 0 && bio.plank < 45) clinicalAdjustments.push("RIESGO LUMBAR (Fuerza > Estabilidad): Sustituir Sentadilla pesada por variantes unilaterales.");
-        const minPushups = profile.gender === 'Hombre' ? 15 : 10;
-        if (bio.pushups > 0 && bio.pushups < minPushups) clinicalAdjustments.push("DÉFICIT RESISTENCIA EMPUJE: Priorizar volumen en empuje.");
-        
-        const clinicalPrompt = clinicalAdjustments.length > 0 ? `\n- Datos Clínicos Adicionales: \n${clinicalAdjustments.map(r => `  - ${r}`).join('\n')}` : "\n- Datos Clínicos Adicionales: Perfil saludable.";
-
-        const historyStr = Array.isArray(historyContext) ? historyContext.join('\n') : (historyContext || "Sin historial.");
-
-        // New scientifically-grounded prompt
-        systemPrompt = `Eres "FitCoach AI", un experto en fitness y ciencias del deporte. ${langInstruction}
-Tu misión es crear rutinas de entrenamiento seguras, efectivas y basadas en evidencia científica.
-Debes basar tus recomendaciones en los principios de entrenamiento de fuerza y acondicionamiento de organizaciones reconocidas como la NSCA (National Strength and Conditioning Association) y el ACSM (American College of Sports Medicine).
-
-**Contexto del Atleta:**
-- Perfil: ${profile.gender}, ${profile.age} años, ${weight}kg.
-- Objetivo Principal: ${profile.mainGoal}.
-- Nivel de Experiencia (Estimado): Basado en el historial y fuerza base.
-- Lesiones a considerar: ${profile.injuries || 'Ninguna'}.
-- Tiempo por sesión: ${profile.timeAvailable} min.
-- Historial de Entrenamiento y Feedback: ${historyStr}
-- Restricciones Adicionales: ${extraConstraints || "Ninguna"}
-${clinicalPrompt}
-
-**INSTRUCCIONES CLAVE:**
-1.  **Metodología Científica:** La rutina debe seguir una progresión lógica. Prioriza ejercicios compuestos multiarticulares y compleméntalos con ejercicios de aislamiento según el objetivo. Incluye calentamiento, parte principal y enfriamiento.
-2.  **No Alucinar:** No inventes ejercicios. Usa nombres de ejercicios reales y reconocidos. Si un ejercicio tiene variantes, especifícala (ej: "Sentadilla Búlgara" en vez de solo "Sentadilla").
-3.  **Duración Precisa:** La duración total de la sesión debe ser lo más cercana posible a los ${profile.timeAvailable} minutos especificados.
-
-**REGLAS DE FORMATO DE SALIDA:**
-- La respuesta DEBE ser un objeto JSON estricto y válido.
-- Para superseries, el campo "ejercicio" DEBE usar el formato "A1: [Nombre Ejercicio 1] + A2: [Nombre Ejercicio 2]".
-- La carga debe estar en kg y las repeticiones deben ser numéricas.`;
+const getFemaleHealthContext = (profile) => {
+    if (profile.gender === 'Mujer' && profile.advancedProfile?.healthMetrics) {
+        const metrics = Object.entries(profile.advancedProfile.healthMetrics).map(([key, value]) => `- ${key}: ${value}`).join('\n');
+        return `\n**Métricas de Salud Femenina (a considerar):**\n${metrics}`;
     }
+    return '';
+};
 
-    // Extended Strategy: Prioritize the specific model known to work in the monolith
-    const attempts = [
-        // This specific model was used in ORIGINAL_MONOLITH.jsx and is likely the one whitelisted/available
-        { version: 'v1beta', model: 'gemini-2.5-flash-preview-09-2025' }, 
-        // Fallbacks
-        { version: 'v1beta', model: 'gemini-1.5-flash' },
-        { version: 'v1beta', model: 'gemini-1.5-flash-latest' },
-        { version: 'v1beta', model: 'gemini-1.5-pro' },
-        { version: 'v1', model: 'gemini-pro' }
-    ];
+// --- POST-PROCESSING ---
+
+const processSupersets = (plan) => {
+    if (!Array.isArray(plan)) return plan;
     
-    let lastError = null;
+    return plan.map(day => {
+        if (!day.rutinaPrincipal) return day;
+        
+        return {
+            ...day,
+            rutinaPrincipal: day.rutinaPrincipal.map(ex => {
+                // Normalizamos a tipo_bloque
+                let bloqueType = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
+                
+                // Detección robusta de superserie
+                let isSuperset = bloqueType.includes('superserie') || 
+                                 /A1.*A2/.test(ex.ejercicio) || 
+                                 /[A-Z]2[:\s]/.test(ex.ejercicio) ||
+                                 /\s+y\s+/i.test(ex.ejercicio);
 
-    for (const attempt of attempts) {
-        const { version, model } = attempt;
-        const apiUrl = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${API_KEY}`;
+                // Aseguramos que tipo_bloque sea consistente
+                if (isSuperset) {
+                    ex.tipo_bloque = 'superserie';
+                    
+                    // Si la IA no devolvió los campos separados, los generamos nosotros con la lógica de split robusta
+                    if (!ex.ejercicioA || !ex.ejercicioB) {
+                         let rawParts = [];
+                         
+                         // 1. Intentar dividir por marcadores explícitos "Letra2:" (A2:, B2:, etc)
+                         if (/[A-Z]2[:\s]/i.test(ex.ejercicio)) {
+                              const match = ex.ejercicio.match(/[\+\s]*([A-Z]2[:\s].*)/i);
+                              if (match) {
+                                  const part2 = match[1];
+                                  const part1 = ex.ejercicio.replace(match[0], '').trim();
+                                  rawParts = [part1, part2];
+                              }
+                         }
+                         
+                         // 2. Split clásico
+                         if (rawParts.length < 2) rawParts = ex.ejercicio.split(/[\+\/]/);
+                         
+                         // 3. Fallback "y"
+                         if (rawParts.length < 2) rawParts = ex.ejercicio.split(/\s+y\s+/i);
+                         
+                         // Limpieza
+                         const clean = (t) => t ? t.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^[\+\/]\s*/, '').trim() : "Ejercicio";
+                         
+                         ex.ejercicioA = clean(rawParts[0] || "Ejercicio A");
+                         ex.ejercicioB = clean(rawParts[1] || "Ejercicio B");
+                    }
+                }
 
-        let requestPayload = {
-            contents: [{ parts: [{ text: userQuery }] }],
-            generationConfig: {
-                temperature: 0.7
-            }
+                const seriesCount = parseInt(ex.series) || 1;
+                const componentes = [];
+
+                if (isSuperset) {
+                    // Parse reps and loads
+                    const parseVal = (str) => {
+                        if (!str) return { a: "?", b: "?" };
+                        const s = String(str);
+                        const matchA = s.match(/A1:?\s*([^,]+)/i);
+                        const matchB = s.match(/A2:?\s*([^,]+)/i);
+                        if (!matchA && !matchB) {
+                             const parts = s.split(/[,+]/);
+                             return { a: parts[0]?.trim() || s, b: parts[1]?.trim() || s };
+                        }
+                        return { a: matchA ? matchA[1].trim() : s, b: matchB ? matchB[1].trim() : s };
+                    };
+
+                    const repsObj = parseVal(ex.reps);
+                    const loadObj = parseVal(ex.carga_sugerida);
+
+                    for (let i = 1; i <= seriesCount; i++) {
+                        componentes.push({
+                            numero_serie: i,
+                            repeticiones_ejercicioA: repsObj.a,
+                            repeticiones_ejercicioB: repsObj.b,
+                            carga_sugeridaA: loadObj.a,
+                            carga_sugeridaB: loadObj.b
+                        });
+                    }
+                } else {
+                    for (let i = 1; i <= seriesCount; i++) {
+                        componentes.push({
+                            numero_serie: i,
+                            repeticiones_ejercicio: ex.reps,
+                            carga_sugerida: ex.carga_sugerida
+                        });
+                    }
+                }
+
+                return { ...ex, componentes };
+            })
         };
+    });
+};
 
-        // System instructions and JSON mode are v1beta features.
-        if (version === 'v1beta') {
-            requestPayload.systemInstruction = { parts: [{ text: systemPrompt }] };
-            requestPayload.generationConfig.responseMimeType = "application/json";
-            
-            // Only attach schema if the model supports it (generally 1.5+ and beta endpoints)
-            if (schema) {
-                requestPayload.generationConfig.responseSchema = schema;
-            }
-        } else {
-            // For v1 (legacy), append system prompt to user text and DO NOT use responseMimeType/responseSchema
-            requestPayload.contents[0].parts[0].text = `${systemPrompt}\n\nUser Request: ${userQuery}\n\nRESPOND STRICTLY IN JSON.`;
-        }
+// --- MAIN PLAN GENERATION FUNCTION ---
 
-        try {
-            console.log(`Attempting Client-Side AI call: ${version}/${model}`);
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestPayload)
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                const errorMessage = `Gemini API Error ${response.status} for ${version}/${model}: ${errorText}`;
-                console.warn(errorMessage);
-                lastError = new Error(errorMessage);
-                continue;
-            }
-
-            const result = await response.json();
-            const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            if (!rawText) {
-                throw new Error("AI returned empty response.");
-            }
-
-            let cleanedText = rawText;
-            if (cleanedText.includes("```json")) {
-                cleanedText = cleanedText.split("```json")[1].split("```")[0];
-            } else if (cleanedText.includes("```")) {
-                cleanedText = cleanedText.split("```")[1].split("```")[0];
-            }
-
-            const parsedData = JSON.parse(cleanedText);
-            return responseKey ? parsedData[responseKey] : parsedData;
-
-        } catch (error) {
-            console.error(`Error with ${version}/${model}:`, error);
-            lastError = error;
-        }
+export const fetchGeminiWeeklyPlan = async (profile, recentRoutines, lang) => {
+    if (!profile || !profile.mainGoal) {
+        return [{ error: "Perfil de usuario incompleto." }];
     }
 
-    throw lastError || new Error("All AI models failed. Please check API Key permissions.");
-}
+    const langInstruction = lang === 'en' ? "You MUST answer in English." : "DEBES responder en Español.";
+    const daysPerWeek = profile.daysPerWeek || 3;
+    
+    const strengthProfile = getStrengthProfile(profile);
+    const historyContext = buildHistoryContext(recentRoutines);
+    const femaleHealthContext = getFemaleHealthContext(profile);
 
-export async function fetchGeminiWeeklyPlan(profile, historyContext, language) {
-    const userQuery = `Genera un nuevo plan semanal de ${profile.daysPerWeek} días.`;
-    const routineSchema = {
-        type: "OBJECT",
-        properties: { "diaEnfoque": { type: "STRING" }, "descripcionBreve": { type: "STRING" }, "duracionEstimada": { type: "STRING" }, "calentamiento": { type: "STRING" }, "rutinaPrincipal": { type: "ARRAY", items: EXERCISE_SCHEMA_V3 }, "enfriamiento": { type: "STRING" }, "consejoPro": { type: "STRING" } },
-        required: ["diaEnfoque", "descripcionBreve", "rutinaPrincipal", "enfriamiento", "consejoPro", "duracionEstimada"]
-    };
-    const schema = { type: "OBJECT", properties: { "planSemanal": { type: "ARRAY", items: routineSchema } } };
+    const systemPrompt = `
+    Eres "FitCoach AI", un director de programación de fitness de élite. ${langInstruction}
+    Tu única tarea es devolver un objeto JSON que representa un plan de entrenamiento semanal.
 
-    return await callGeminiAPI({
-        userQuery,
-        contextType: "WEEKLY_PLAN",
-        profile,
-        historyContext,
-        language,
-        schema,
-        responseKey: "planSemanal"
-    });
-}
+    **Contexto del Atleta:**
+    - Perfil: ${profile.gender}, ${profile.age} años, ${profile.weight} kg, Nivel: ${profile.experienceLevel}.
+    - Objetivo Principal: ${profile.mainGoal}.
+    - Días/Semana: ${daysPerWeek}.
+    - Tiempo/Sesión: ${profile.timeAvailable} min.
+    - Lesiones: ${profile.injuries || 'Ninguna'}.
+    - Perfil de Fuerza (BioAge): ${strengthProfile}.${femaleHealthContext}${historyContext}
 
-export async function fetchGeminiSessionAdjustment(profile, routine, adjustments, language) {
-    const { newFocus, newTime, noEquipment } = adjustments;
-    const extraConstraints = `Nuevo Enfoque: ${newFocus}. TIEMPO: ${newTime} min. ${noEquipment ? "Sin Equipo" : "Con Equipo"}.`;
-    const tempProfile = { ...profile, timeAvailable: newTime };
-    const userQuery = `Ajusta esta rutina: ${JSON.stringify(routine)}.`;
-    const routineSchema = { type: "OBJECT", properties: { "diaEnfoque": { type: "STRING" }, "descripcionBreve": { type: "STRING" }, "duracionEstimada": { type: "STRING" }, "calentamiento": { type: "STRING" }, "rutinaPrincipal": { type: "ARRAY", items: EXERCISE_SCHEMA_V3 }, "enfriamiento": { type: "STRING" }, "consejoPro": { type: "STRING" } }, required: ["diaEnfoque", "rutinaPrincipal"] };
+    **INSTRUCCIONES DE DISEÑO:**
+    1.  **SOBRECARGA PROGRESIVA**: Usa el Historial para ajustar la dificultad. Si el feedback de un ejercicio fue 'Fácil', incrementa la 'carga_sugerida'. Si fue 'Difícil', considera reducirla o mantenerla.
+    2.  **CÁLCULO DE DESCANSO**: El 'descanso_segs' es CRÍTICO. Calcula el tiempo de descanso óptimo: más largo para ejercicios compuestos pesados (ej. 90-180s), más corto para aislamiento o superseries (ej. 45-75s).
+    3.  **DURACIÓN TOTAL**: La suma de todos los tiempos de ejercicio y descanso debe aproximarse a los ${profile.timeAvailable} minutos de la sesión.
 
-    return await callGeminiAPI({
-        userQuery,
-        contextType: "SESSION_ADJUSTMENT",
-        profile: tempProfile,
-        historyContext: [],
-        language,
-        extraConstraints,
-        schema: routineSchema
-    });
-}
+    **REGLAS DE ORO (FORMATO DE SALIDA JSON ESTRICTO):**
+    La respuesta DEBE ser un ÚNICO ARRAY JSON, \`[...rutinas]\`. NO incluyas texto, markdown o explicaciones fuera del JSON.
+    Cada objeto en el array representa un día de entrenamiento y DEBE seguir esta estructura exacta:
 
-export async function fetchGeminiBonusSession(profile, historyContext, language) {
-    const routineSchema = { type: "OBJECT", properties: { "diaEnfoque": { type: "STRING", "default": "Bonus: Cuerpo Completo" }, "descripcionBreve": { type: "STRING" }, "duracionEstimada": { type: "STRING" }, "calentamiento": { type: "STRING" }, "rutinaPrincipal": { type: "ARRAY", items: EXERCISE_SCHEMA_V3 }, "enfriamiento": { type: "STRING" }, "consejoPro": { type: "STRING" } }, required: ["diaEnfoque", "rutinaPrincipal"] };
+    {
+      "diaEnfoque": "<Descripción>",
+      "rutinaPrincipal": [
+        {
+          "tipo_bloque": "<Calentamiento|Principal|Superserie|Vuelta a la Calma>",
+          "ejercicio": "<Nombre COMPLETO del ejercicio>",
+          "ejercicioA": "<OPCIONAL: Nombre limpio Ejercicio 1 si es Superserie>",
+          "ejercicioB": "<OPCIONAL: Nombre limpio Ejercicio 2 si es Superserie>",
+          "series": <número entero>,
+          "reps": "<NÚMERO ENTERO o 'Al fallo'>",
+          "carga_sugerida": "<OBLIGATORIO: Número en kg o 'BW'>",
+          "descanso_segs": <NÚMERO ENTERO de segundos>
+        }
+      ]
+    }
 
-    return await callGeminiAPI({
-        userQuery: "Rutina bonus",
-        contextType: "BONUS_SESSION",
-        profile,
-        historyContext,
-        language,
-        extraConstraints: "Genera rutina Bonus Cuerpo Completo.",
-        schema: routineSchema
-    });
-}
+    **REGLAS ESPECÍFICAS:**
+    -   **SUPERSERIES**: \`tipo_bloque\` DEBE ser "Superserie". ADEMÁS de concatenar en \`ejercicio\` (formato "A1: X + A2: Y"), **DEBES INCLUIR** los campos \`ejercicioA\` y \`ejercicioB\` con los nombres limpios de los ejercicios individuales.
+    -   **CARGA**: Para superseries, \`carga_sugerida\` debe ser "A1: X, A2: Y".
 
-export async function fetchGeminiBioageAnalysis(profile, language) {
-    const schema = { type: "OBJECT", properties: { "edadBiologica": { type: "INTEGER" }, "diferencia": { type: "INTEGER" }, "evaluacion": { type: "STRING" } }, required: ["edadBiologica", "evaluacion"] };
+    **FIN DE INSTRUCCIONES.**
+    `;
 
-    return await callGeminiAPI({
-        userQuery: "Analiza mi edad biológica",
-        contextType: "BIOAGE_ANALYSIS",
-        profile,
-        language,
-        schema
-    });
-}
+    try {
+        const result = await model.generateContent([systemPrompt]);
+        const cleanedText = result.response.text().replace(/^```json\s*|```$/g, '');
+        const rawPlan = JSON.parse(cleanedText);
+        return processSupersets(rawPlan);
+    } catch (error) {
+        console.error("Error al generar/parsear plan semanal:", error);
+        try {
+            const jsonMatch = error.message.match(/(\[[\s\S]*\])/);
+            if (jsonMatch && jsonMatch[1]) return processSupersets(JSON.parse(jsonMatch[1]));
+        } catch (e) { console.error("Fallo definitivo al parsear JSON de la respuesta:", e); }
+        return [{ diaEnfoque: "Error de Generación", rutinaPrincipal: [{ tipo_bloque: "Principal", ejercicio: "No se pudo generar el plan. Intenta de nuevo.", series: 1, reps: "1", carga_sugerida: "0", descanso_segs: 0 }] }];
+    }
+};
+
+// --- OTHER FUNCTIONS (BioAge, etc.) ---
+
+export const fetchGeminiBioageAnalysis = async (profile, lang) => {
+    if (!profile) return null;
+    const langInstruction = lang === 'en' ? "You MUST answer in English." : "DEBES responder en Español.";
+    const strengthProfile = getStrengthProfile(profile);
+    const systemPrompt = `
+    Eres un experto en fitness. ${langInstruction} Calcula la "Bio-Edad" y da un análisis JSON.
+    - Datos: Edad: ${profile.age}, Género: ${profile.gender}, ${strengthProfile}.
+    - FORMATO JSON: { "bioage": <número>, "strengths": ["<Fortaleza>"], "weaknesses": ["<Debilidad>"], "recommendations": ["<Recomendación>"] }`;
+    try {
+        const result = await model.generateContent([systemPrompt]);
+        return JSON.parse(result.response.text().replace(/^```json\s*|```$/g, ''));
+    } catch (error) {
+        console.error("Error en fetchGeminiBioageAnalysis:", error);
+        return { error: "No se pudo generar el análisis de BioAge." };
+    }
+};
+
+export const fetchGeminiSessionAdjustment = async (routine, feedback, lang) => {
+    console.warn("fetchGeminiSessionAdjustment no está implementado.");
+    return routine;
+};
+
+export const generateRoutine = async (profile, recentRoutines, day, lang) => {
+    console.warn("Llamada a función obsoleta: generateRoutine.");
+    const weeklyPlan = await fetchGeminiWeeklyPlan(profile, recentRoutines, lang);
+    return weeklyPlan[0] || { error: "Fallo en el fallback de generateRoutine." };
+};

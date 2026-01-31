@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { WeeklyProgressBar, HeroRoutineCard, RoutineLibraryList, AdjustSessionView } from './training/TrainingUI';
 import { Icon } from '../ui/Icon';
 import { GeminiLoader } from '../ui/GeminiLoader';
@@ -14,18 +14,21 @@ const TrainingTab = ({
     history, 
     onViewRoutine, 
     generationProgress, 
-    t, 
-    onAnalyzeBioage, 
-    bioageLoading,
-    view
+    t
 }) => {
-    const [progressText, setProgressText] = useState(t.generating);
     const [activeTab, setActiveTab] = useState('recommended');
     const [showAdjustment, setShowAdjustment] = useState(false);
     const [adjustingRoutine, setAdjustingRoutine] = useState(null);
 
     const currentPlanId = profile.currentPlanId;
     const todayIndex = (new Date().getDay() + 6) % 7; 
+
+    const progressText = useMemo(() => {
+        if (generationProgress < 30) return t.analyzing;
+        if (generationProgress < 60) return t.designing;
+        if (generationProgress < 90) return t.optimizing;
+        return t.finalizing;
+    }, [generationProgress, t]);
 
     // Helper: Detectar grupos musculares predominantes
     const getMuscleGroups = (title = "") => {
@@ -84,13 +87,6 @@ const TrainingTab = ({
         return log;
     }, [history, currentPlanId]);
 
-    useEffect(() => {
-        if (generationProgress < 30) setProgressText(t.analyzing);
-        else if (generationProgress < 60) setProgressText(t.designing);
-        else if (generationProgress < 90) setProgressText(t.optimizing);
-        else setProgressText(t.finalizing);
-    }, [generationProgress, t]);
-
     const handleOpenAdjustment = (routine) => {
         setAdjustingRoutine(routine);
         setShowAdjustment(true);
@@ -105,12 +101,27 @@ const TrainingTab = ({
 
             <WeeklyProgressBar weekDistribution={currentWeekRoutines} completionLog={completionLog} todayIndex={todayIndex} t={t} />
 
-            <div className="flex items-center justify-between mb-4 border-b border-slate-700/50 pb-1 px-2">
-                <div className="flex gap-6">
-                    <button onClick={() => setActiveTab('recommended')} className={`pb-2 text-xs font-bold transition-all relative uppercase tracking-wider ${activeTab === 'recommended' ? 'text-teal-400' : 'text-slate-500 hover:text-slate-300'}`}>{t.recommended}{activeTab === 'recommended' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-teal-500 rounded-t-full"></div>}</button>
-                    <button onClick={() => setActiveTab('library')} className={`pb-2 text-xs font-bold transition-all relative uppercase tracking-wider ${activeTab === 'library' ? 'text-slate-200' : 'text-slate-500 hover:text-slate-300'}`}>{t.moreOptions}{activeTab === 'library' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-200 rounded-t-full"></div>}</button>
+            {/* CONTENEDOR DE PESTAÑAS */}
+            <div className="mb-4">
+                <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-4">
+                    <div className="flex space-x-2 bg-slate-800/50 p-1 rounded-lg">
+                        <button 
+                            onClick={() => setActiveTab('recommended')} 
+                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-300 ${activeTab === 'recommended' ? 'bg-teal-500 text-white shadow' : 'text-slate-400 hover:bg-slate-700/50'}`}
+                        >
+                            {t.recommended}
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('library')} 
+                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-300 ${activeTab === 'library' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:bg-slate-700/50'}`}
+                        >
+                            {t.moreOptions}
+                        </button>
+                    </div>
+                    <button onClick={() => onGeneratePlan(profile)} className="text-[10px] font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1.5 transition-colors">
+                        <Icon name="refresh" className="w-3 h-3" /> {t.regenerateCycle}
+                    </button>
                 </div>
-                <button onClick={() => onGeneratePlan(profile)} className="pb-2 text-[10px] font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1.5 transition-colors"><Icon name="refresh" className="w-3 h-3" /> {t.regenerateCycle}</button>
             </div>
 
             <div className="min-h-[250px]">

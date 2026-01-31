@@ -8,27 +8,19 @@ import {
     formatDuration
 } from '../../../utils/helpers.js';
 
-const BodyweightLoad = ({ isSuperset = false }) => {
-    const sizeClass = isSuperset ? "text-lg" : "text-2xl";
-    const paddingClass = isSuperset ? "h-12" : "h-14";
-    return (
-        <div className={`flex flex-col items-center justify-center ${paddingClass} bg-slate-800/30 rounded-xl border border-slate-700/30`}>
-            <span className={`${sizeClass} font-black text-slate-500`}>BW</span>
-        </div>
-    );
-};
-
+// Componente unificado para manejar la carga. Es "inteligente" gracias a la lógica de parseo y formato.
 const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
-    const numericInitial = typeof initialLoad === 'number' ? initialLoad : parseFloat(initialLoad) || 0;
-    const [load, setLoad] = useState(numericInitial);
+    // Si initialLoad es null (fallo de IA), lo tratamos como 0 para el estado interno,
+    // pero la visualización será "0 kg" gracias a formatLoadDisplay.
+    const [load, setLoad] = useState(initialLoad === null ? 0 : initialLoad);
     const [isInteracting, setIsInteracting] = useState(false);
-    const touchStartY = useRef(0);
     const lastUpdateY = useRef(0);
 
-    useEffect(() => { setLoad(numericInitial); }, [numericInitial]);
+    useEffect(() => {
+        setLoad(initialLoad === null ? 0 : initialLoad);
+    }, [initialLoad]);
 
     const handleTouchStart = (e) => {
-        touchStartY.current = e.touches[0].clientY;
         lastUpdateY.current = e.touches[0].clientY;
         setIsInteracting(true);
     };
@@ -38,22 +30,32 @@ const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
         const currentY = e.touches[0].clientY;
         const deltaY = lastUpdateY.current - currentY;
         const sensitivity = 25;
-        const increment = 1.25;
-
         if (Math.abs(deltaY) > sensitivity) {
-            let newLoad = deltaY > 0 ? Math.min(250, load + increment) : Math.max(0, load - increment);
+            let newLoad = deltaY > 0 ? Math.min(300, load + 1.25) : Math.max(0, load - 1.25);
             newLoad = Math.round(newLoad * 100) / 100;
             setLoad(newLoad);
             onUpdate(newLoad);
             lastUpdateY.current = currentY;
         }
     };
+    
+    // Usamos el initialLoad original para la visualización, así formatLoadDisplay puede diferenciar entre 0 y null.
+    const displayValue = formatLoadDisplay(initialLoad);
+    const isBw = initialLoad === 0;
+    const sizeClass = isSuperset ? "text-lg" : "text-2xl";
 
     return (
-        <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={() => setIsInteracting(false)} style={{ touchAction: 'none' }} className={`relative flex flex-col items-center justify-center ${isSuperset ? 'h-12' : 'h-14'} bg-slate-800/50 rounded-xl border border-slate-700/50 cursor-ns-resize transition-all duration-200 ${isInteracting ? 'bg-teal-900/50 border-teal-500/50 scale-105 shadow-lg z-10' : ''}`}>
-            {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 opacity-70 absolute top-1 animate-bounce" />}
-            <span className={`${isSuperset ? 'text-lg' : 'text-2xl'} font-black text-teal-400 leading-none`}>{formatLoadDisplay(load)}</span>
-            {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 opacity-70 absolute bottom-1 animate-bounce" />}
+        <div 
+            onTouchStart={handleTouchStart} 
+            onTouchMove={handleTouchMove} 
+            onTouchEnd={() => setIsInteracting(false)} 
+            style={{ touchAction: 'none' }} 
+            className={`relative flex flex-col items-center justify-center h-14 rounded-xl border transition-all duration-200 cursor-ns-resize ${isInteracting ? 'bg-teal-900/40 border-teal-500/50 scale-105 shadow-[0_0_20px_rgba(20,184,166,0.2)] z-10' : (isBw ? 'bg-slate-800/30 border-slate-700/30' : 'bg-slate-800/50 border-slate-700/50')}`}>
+            {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-1 animate-pulse" />}
+            <span className={`${sizeClass} font-black leading-none tabular-nums ${isBw ? 'text-slate-500 uppercase tracking-tighter' : 'text-teal-400'}`}>
+                {displayValue}
+            </span>
+            {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-1 animate-pulse" />}
         </div>
     );
 };
@@ -67,7 +69,9 @@ export const ActiveSession = ({
     setRestSeconds, 
     setIsSessionActive, 
     isSessionActive,
-    sessionSeconds 
+    sessionSeconds,
+    onBack,
+    title
 }) => {
     const routineId = routine.id;
     const t = TRANSLATIONS?.[lang || 'es'] || TRANSLATIONS?.['es'] || {};
@@ -75,53 +79,108 @@ export const ActiveSession = ({
     const [idx, setIdx] = useState(0);
     const [completedSets, setCompletedSets] = useState({});
     const [currentLoads, setCurrentLoads] = useState({});
-    const [showDesc, setShowDesc] = useState(false);
     
     const isResting = restSeconds > 0;
 
     const rawExercises = routine.rutinaPrincipal || [];
     const exercises = rawExercises.filter(e => !/calentamiento|warm.?up/i.test(e.ejercicio));
-    const rawActiveExercise = phase === 'workout' ? exercises[idx] : null;
+    const activeExercise = phase === 'workout' ? exercises[idx] : null;
 
     const detectSuperset = (ex) => {
         if (!ex) return false;
-        if (ex.tipo_bloque === 'superserie') return true;
-        return /\+|\s+y\s+|\/|A1.*A2/i.test(ex.ejercicio);
+        const bloqueType = (ex.bloque || ex.tipo_bloque || "").toLowerCase();
+        return bloqueType.includes('superserie') || 
+               /\+|\s+y\s+|\/|A1.*A2/i.test(ex.ejercicio) ||
+               /[A-Z]2[:\s]/i.test(ex.ejercicio);
     };
 
-    const isSuperset = detectSuperset(rawActiveExercise);
+    const isSuperset = detectSuperset(activeExercise);
+
+    const getSupersetLetter = (currentIndex) => {
+        let count = 0;
+        for (let i = 0; i < currentIndex; i++) {
+            if (detectSuperset(exercises[i])) count++;
+        }
+        return String.fromCharCode(65 + count);
+    };
+
+    const currentLetter = getSupersetLetter(idx);
 
     const getExerciseParts = (title) => {
         if (!title) return ["Ejercicio 1", "Ejercicio 2"];
-        const simpleSplit = title.split(/[\+\/]/);
-        if (simpleSplit.length > 1) {
-            return [cleanExerciseTitle(simpleSplit[0]), cleanExerciseTitle(simpleSplit[1])];
+        
+        let rawParts = title.split(/[\+\/]/);
+        
+        // Estrategia robusta idéntica a RoutineView para fallback
+        if (/[A-Z]2[:\s]/i.test(title)) {
+             const match = title.match(/[\+\s]*([A-Z]2[:\s].*)/i);
+             if (match) {
+                 const part2 = match[1];
+                 const part1 = title.replace(match[0], '').trim();
+                 rawParts = [part1, part2];
+             }
         }
-        const match = title.match(/A1[:\s]*(.+?)[\s\+]+A2[:\s]*(.+)/i);
-        if (match && match.length >= 3) {
-            return [cleanExerciseTitle(match[1]), cleanExerciseTitle(match[2])];
+        else if (rawParts.length < 2) {
+            const a1a2Match = title.match(/A1[:\s]*(.+?)\s*A2[:\s]*(.+)/i);
+            if (a1a2Match) rawParts = [a1a2Match[1], a1a2Match[2]];
         }
-        return [cleanExerciseTitle(title), ""];
+        else if (rawParts.length < 2) {
+            const yMatch = title.match(/(.*?)\s+\by\b\s+(.*)/i);
+            if (yMatch) rawParts = [yMatch[1], yMatch[2]];
+        }
+
+        const parts = rawParts.map(p => {
+             if (!p) return "";
+             return cleanExerciseTitle(p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^[\+\/]\s*/, '').trim());
+        }).filter(p => p.length > 0);
+        
+        return [
+            parts[0] || "Ejercicio A",
+            parts[1] || "Ejercicio B"
+        ];
     };
 
-    const [partA, partB] = isSuperset ? getExerciseParts(rawActiveExercise?.ejercicio) : [cleanExerciseTitle(rawActiveExercise?.ejercicio), null];
+    // Prioridad a campos explícitos si existen (Solución de Raíz)
+    const [partA, partB] = isSuperset 
+        ? (activeExercise.ejercicioA && activeExercise.ejercicioB 
+            ? [activeExercise.ejercicioA, activeExercise.ejercicioB]
+            : getExerciseParts(activeExercise?.ejercicio))
+        : [cleanExerciseTitle(activeExercise?.ejercicio), null];
 
     useEffect(() => {
-        if (!rawActiveExercise) return;
+        if (!activeExercise) return;
         const initialLoads = {};
-        const isBodyWeight = (name) => /burpee|salto|jump|plank|flexion|push.?up|dominada|pull.?up|crunch|abdominal|mountain|climber|silla|air/i.test(name || "");
-        (rawActiveExercise.componentes || []).forEach((set, setIdx) => {
-            const parseL = (val, name) => {
-                if (typeof val === 'string' && /BW|PC|Bodyweight/i.test(val)) return 'BW';
-                const n = parseFloat(val);
-                if ((isNaN(n) || n === 0) && isBodyWeight(name)) return 'BW';
-                return isNaN(n) ? 0 : n;
-            };
-            initialLoads[`${idx}-${setIdx}-A`] = parseL(set.carga_sugeridaA ?? set.carga_sugerida, partA);
-            if (isSuperset) { initialLoads[`${idx}-${setIdx}-B`] = parseL(set.carga_sugeridaB, partB); }
+        
+        const isBodyweightByName = (name) => 
+            /burpee|salto|jump|plank|flexion|push.?up|dominada|pull.?up|crunch|abdominal|mountain|climber|silla|air|calistenia|fondos/i.test(name || "");
+
+        // Lógica de parseo robusta para manejar los 3 casos.
+        const parseLoad = (val, exerciseName) => {
+            if (typeof val === 'string' && val.toUpperCase() === 'BW') {
+                return 0; // Caso 1: Peso corporal explícito.
+            }
+            const num = parseFloat(val);
+            if (!isNaN(num)) {
+                return num; // Caso 2: Carga numérica válida.
+            }
+            if (isBodyweightByName(exerciseName)) {
+                return 0; // Caso 3: Peso corporal implícito por nombre.
+            }
+            // Caso 4: Fallo de la IA (null, undefined, etc.). Se devuelve null
+            // para que formatLoadDisplay() lo muestre como "0 kg".
+            return null;
+        };
+
+        (activeExercise.componentes || []).forEach((set, setIdx) => {
+            initialLoads[`${idx}-${setIdx}-A`] = parseLoad(set.carga_sugeridaA ?? set.carga_sugerida, partA);
+            if (isSuperset) {
+                initialLoads[`${idx}-${setIdx}-B`] = parseLoad(set.carga_sugeridaB, partB);
+            }
         });
-        setCurrentLoads(prev => ({ ...prev, ...initialLoads }));
-    }, [rawActiveExercise, idx, isSuperset, partA, partB]);
+        
+        setCurrentLoads(initialLoads);
+
+    }, [activeExercise, idx, isSuperset, partA, partB]);
 
     const progressPercent = phase === 'warmup' ? 0 : phase === 'cooldown' ? 100 : ((idx + 1) / exercises.length) * 100;
 
@@ -134,12 +193,20 @@ export const ActiveSession = ({
         const key = `${idx}-${setIndex}`;
         const isNowDone = !completedSets[key]?.completed;
         if (isNowDone) {
-            const setInfo = rawActiveExercise.componentes[setIndex];
-            const setData = { completed: true, ejercicio: rawActiveExercise.ejercicio, load: currentLoads[`${idx}-${setIdx}-A`], reps: setInfo.repeticiones_ejercicioA ?? setInfo.repeticiones_ejercicio };
-            if (isSuperset) { setData.loadB = currentLoads[`${idx}-${setIdx}-B`]; setData.repsB = setInfo.repeticiones_ejercicioB; }
+            const setInfo = activeExercise.componentes[setIndex];
+            const loadA = currentLoads[`${idx}-${setIndex}-A`];
+            const finalLoadA = loadA === null ? 0 : loadA; // Guardamos 0 si fue un fallo de IA
+
+            const setData = { completed: true, ejercicio: activeExercise.ejercicio, load: finalLoadA, reps: setInfo.repeticiones_ejercicioA ?? setInfo.repeticiones_ejercicio };
+            if (isSuperset) { 
+                const loadB = currentLoads[`${idx}-${setIndex}-B`];
+                const finalLoadB = loadB === null ? 0 : loadB;
+                setData.loadB = finalLoadB; 
+                setData.repsB = setInfo.repeticiones_ejercicioB; 
+            }
             setCompletedSets(prev => ({ ...prev, [key]: setData }));
-            if (onExerciseComplete) onExerciseComplete(rawActiveExercise);
-            setRestSeconds(rawActiveExercise.descanso_entre_series || 60);
+            if (onExerciseComplete) onExerciseComplete(activeExercise);
+            setRestSeconds(activeExercise.descanso_entre_series || 60);
         } else {
             const { [key]: _, ...rest } = completedSets;
             setCompletedSets(rest);
@@ -149,14 +216,8 @@ export const ActiveSession = ({
     const handleNext = () => {
         if (phase === 'warmup') setPhase('workout');
         else if (phase === 'cooldown') onRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
-        else if (idx < exercises.length - 1) { setIdx(prev => prev + 1); setShowDesc(false); }
+        else if (idx < exercises.length - 1) { setIdx(prev => prev + 1); }
         else setPhase('cooldown');
-    };
-
-    const handlePrev = () => {
-        if (phase === 'cooldown') setPhase('workout');
-        else if (phase === 'workout' && idx > 0) setIdx(prev => prev - 1);
-        else setPhase('warmup');
     };
 
     const formatWarmup = (text) => {
@@ -170,60 +231,86 @@ export const ActiveSession = ({
     };
 
     return (
-        <div className="h-screen w-full bg-slate-900 flex flex-col overflow-hidden relative">
+        <div className="h-screen w-full bg-slate-900 flex flex-col overflow-hidden relative selection:bg-teal-500/30">
             {/* Header Fijo */}
-            <div className="shrink-0 p-4 pt-6 bg-slate-900/80 backdrop-blur-md z-30">
+            <header className="shrink-0 p-4 pt-6 bg-slate-900/80 backdrop-blur-md z-30 border-b border-white/5">
+                <div className="flex items-center justify-between mb-4">
+                    <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors active:scale-90">
+                        <Icon name="arrowLeft" className="w-6 h-6" />
+                    </button>
+                    <h1 className="text-xs font-black text-slate-100 uppercase tracking-[0.2em]">{title}</h1>
+                    <div className="w-10"></div>
+                </div>
                 <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 px-1">
                     <span>{phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : `Ejercicio ${idx + 1} de ${exercises.length}`}</span>
                     <span>{`${Math.round(progressPercent)}%`}</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-teal-500 transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+                    <div className="h-full bg-teal-500 transition-all duration-700 ease-out shadow-[0_0_10px_rgba(20,184,166,0.4)]" style={{ width: `${progressPercent}%` }}></div>
                 </div>
-            </div>
+            </header>
 
-            {/* Área de Contenido Scrollable */}
-            <div className="flex-1 overflow-y-auto px-4 pb-40 minimal-scrollbar animate-fadeIn">
-                {phase === 'workout' && rawActiveExercise ? (
-                    <div className="flex flex-col">
-                        <div className="mb-4">
+            {/* Área de Contenido */}
+            <div className="flex-1 overflow-y-auto px-4 pb-40 minimal-scrollbar animate-fadeIn pt-4">
+                {phase === 'workout' && activeExercise ? (
+                    <div className="flex flex-col space-y-4">
+                        <div className="relative">
                             {isSuperset ? (
-                                <div className="bg-slate-800/40 rounded-2xl border border-slate-700/50 p-3 space-y-3 shadow-lg">
-                                    <div className="flex justify-between items-center gap-2"><h3 className="text-sm font-black text-white truncate flex-1">{partA}</h3><button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+tecnica`, '_blank')} className="p-1.5 rounded-lg bg-slate-700 text-red-500"><Icon name="youtube" className="w-4 h-4" /></button></div>
-                                    <div className="flex items-center gap-2"><div className="h-px flex-1 bg-slate-700"></div><Icon name="link2" className="w-3 h-3 text-slate-500"/><div className="h-px flex-1 bg-slate-700"></div></div>
-                                    {partB && <div className="flex justify-between items-center gap-2"><h3 className="text-sm font-black text-white truncate flex-1">{partB}</h3><button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+tecnica`, '_blank')} className="p-1.5 rounded-lg bg-slate-700 text-red-500"><Icon name="youtube" className="w-4 h-4" /></button></div>}
+                                <div className="bg-slate-800/40 rounded-3xl border border-slate-700/50 p-4 space-y-4 shadow-xl">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[10px] font-black text-cyan-400 bg-cyan-900/20 px-2 py-0.5 rounded border border-cyan-500/20 mb-1 inline-block uppercase">{currentLetter}1</span>
+                                            <h3 className="text-xl font-black text-white leading-tight break-words">{partA}</h3>
+                                        </div>
+                                        <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+tecnica`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
+                                    </div>
+                                    <div className="flex items-center gap-2 px-2 opacity-30"><div className="h-px flex-1 bg-slate-600"></div><Icon name="link2" className="w-3 h-3 text-slate-500"/><div className="h-px flex-1 bg-slate-600"></div></div>
+                                    {partB && (
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-[10px] font-black text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded border border-blue-500/20 mb-1 inline-block uppercase">{currentLetter}2</span>
+                                                <h3 className="text-xl font-black text-white leading-tight break-words">{partB}</h3>
+                                            </div>
+                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+tecnica`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
-                                <div className="flex justify-between items-center pt-2">
-                                    <h2 className="text-2xl font-black text-white leading-tight truncate flex-1 pr-2">{partA}</h2>
-                                    <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+tecnica`, '_blank')} className="shrink-0 p-2.5 rounded-xl bg-slate-800 text-red-500 border border-slate-700 shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
+                                <div className="flex justify-between items-start pt-2 bg-slate-800/20 p-4 rounded-3xl border border-slate-700/30">
+                                    <h2 className="text-3xl font-black text-white leading-[1.1] break-words flex-1 pr-4">{partA}</h2>
+                                    <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+tecnica`, '_blank')} className="shrink-0 p-3 rounded-2xl bg-slate-800 text-red-500 border border-slate-700 shadow-xl active:scale-95 transition-all"><Icon name="youtube" className="w-6 h-6" /></button>
                                 </div>
                             )}
                         </div>
 
-                        <div className="flex flex-col bg-slate-900/50 border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl">
-                            <div className="grid grid-cols-[25px_1fr_1fr_1fr_1fr_45px] gap-1 bg-slate-800/80 p-2 text-[8px] font-bold uppercase text-center border-b border-slate-700 text-slate-500">
-                                {isSuperset ? (<><div>#</div><div className="text-cyan-400">Reps</div><div className="text-cyan-400">Kg</div><div className="text-blue-400">Reps</div><div className="text-blue-400">Kg</div><Icon name="check" className="mx-auto w-3 h-3"/></>) : (<><div>#</div><div className="col-span-2">Repeticiones</div><div className="col-span-2">Carga</div><Icon name="check" className="mx-auto w-4 h-4"/></>)}
+                        <div className="flex flex-col bg-slate-900/80 border border-slate-700/50 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                            <div className={`grid ${isSuperset ? 'grid-cols-[30px_1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[40px_1fr_1fr_60px]'} gap-2 bg-slate-800/80 p-3 text-[9px] font-black uppercase text-center border-b border-slate-700 text-slate-500 tracking-tighter`}>
+                                <span>#</span>
+                                {isSuperset ? (<><span className="text-cyan-400">Reps A</span><span className="text-cyan-400">Kg A</span><span className="text-blue-400">Reps B</span><span className="text-blue-400">Kg B</span></>) : (<><span className="col-span-1">Repeticiones</span><span className="col-span-1">Carga</span></>)}
+                                <Icon name="check" className="mx-auto w-4 h-4 opacity-30"/>
                             </div>
                             <div className="divide-y divide-slate-800/50">
-                                {(rawActiveExercise.componentes || []).map((set, setIdx) => {
+                                {(activeExercise.componentes || []).map((set, setIdx) => {
                                     const isDone = completedSets[`${idx}-${setIdx}`]?.completed;
                                     const valA = currentLoads[`${idx}-${setIdx}-A`];
                                     const valB = currentLoads[`${idx}-${setIdx}-B`];
                                     return (
-                                        <div key={setIdx} className={`grid ${isSuperset ? 'grid-cols-[25px_1fr_1fr_1fr_1fr_45px]' : 'grid-cols-[30px_1fr_1fr_50px]'} gap-1 items-center p-2 ${isDone ? 'bg-emerald-900/10' : ''}`}>
-                                            <div className="w-6 h-6 rounded-full border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-900 shrink-0">{set.numero_serie}</div>
+                                        <div key={setIdx} className={`grid ${isSuperset ? 'grid-cols-[30px_1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[40px_1fr_1fr_60px]'} gap-2 items-center p-3 transition-colors ${isDone ? 'bg-teal-500/10' : ''}`}>
+                                            <div className="text-xs font-black text-slate-600 tabular-nums">{set.numero_serie}</div>
                                             {isSuperset ? (
-                                                <><div className="h-12 flex items-center justify-center bg-cyan-900/10 rounded border border-cyan-900/20 text-sm font-black text-cyan-100">{formatRepsDisplay(set.repeticiones_ejercicioA)}</div>
-                                                {valA === 'BW' ? <BodyweightLoad isSuperset={true}/> : <AdjustableLoad initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} isSuperset={true} />}
-                                                <div className="h-12 flex items-center justify-center bg-blue-900/10 rounded border border-blue-900/20 text-sm font-black text-blue-100">{formatRepsDisplay(set.repeticiones_ejercicioB)}</div>
-                                                {valB === 'BW' ? <BodyweightLoad isSuperset={true}/> : <AdjustableLoad initialLoad={valB} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'B', nl)} isSuperset={true} />}
+                                                <>
+                                                    <div className="flex items-center justify-center h-14 bg-cyan-900/10 rounded-xl border border-cyan-900/20 text-xl font-black text-cyan-100 tabular-nums">{formatRepsDisplay(set.repeticiones_ejercicioA ?? set.repeticiones_ejercicio)}</div>
+                                                    <AdjustableLoad initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} isSuperset={true} />
+                                                    <div className="flex items-center justify-center h-14 bg-blue-900/10 rounded-xl border border-blue-900/20 text-xl font-black text-blue-100 tabular-nums">{formatRepsDisplay(set.repeticiones_ejercicioB)}</div>
+                                                    <AdjustableLoad initialLoad={valB} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'B', nl)} isSuperset={true} />
                                                 </>
                                             ) : (
-                                                <><div className="h-14 flex items-center justify-center bg-slate-800/50 rounded-xl border border-slate-700/50 text-2xl font-black text-white">{formatRepsDisplay(set.repeticiones_ejercicio)}</div>
-                                                {valA === 'BW' ? <BodyweightLoad /> : <AdjustableLoad initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />}</>
+                                                <>
+                                                    <div className="flex items-center justify-center h-14 bg-slate-800/50 rounded-xl border border-slate-700/50 text-2xl font-black text-white tabular-nums">{formatRepsDisplay(set.repeticiones_ejercicio)}</div>
+                                                    <AdjustableLoad initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
+                                                </>
                                             )}
-                                            <button onClick={() => toggleSetCompletion(setIdx)} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all border mx-auto ${isDone ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-800 border-slate-600 text-slate-600'}`}><Icon name="check" className="w-4 h-4" /></button>
+                                            <button onClick={() => toggleSetCompletion(setIdx)} className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all border shadow-lg ${isDone ? 'bg-teal-500 text-white border-teal-400 shadow-teal-500/20 scale-90' : 'bg-slate-800 border-slate-700 text-slate-600 active:bg-slate-700'}`}><Icon name="check" className="w-6 h-6" /></button>
                                         </div>
                                     );
                                 })}
@@ -232,43 +319,43 @@ export const ActiveSession = ({
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full text-center py-10">
-                        <div className={`w-24 h-24 rounded-full ${phase === 'warmup' ? 'bg-orange-500/10' : 'bg-blue-500/10'} flex items-center justify-center mb-6 animate-pulse`}><Icon name={phase === 'warmup' ? "flame" : "wind"} className={`w-12 h-12 ${phase === 'warmup' ? 'text-orange-500' : 'text-blue-400'}`}/></div>
-                        <h2 className="text-3xl font-black text-white mb-2">{phase === 'warmup' ? t.warmupTitle : t.cooldownTitle}</h2>
-                        <div className="bg-slate-800/30 rounded-3xl border border-slate-700/50 p-8 mb-10 w-full">
+                        <div className={`w-24 h-24 rounded-3xl ${phase === 'warmup' ? 'bg-orange-500/10 shadow-[0_0_40px_rgba(249,115,22,0.1)]' : 'bg-blue-500/10 shadow-[0_0_40px_rgba(59,130,246,0.1)]'} flex items-center justify-center mb-6 animate-pulse`}><Icon name={phase === 'warmup' ? "flame" : "wind"} className={`w-12 h-12 ${phase === 'warmup' ? 'text-orange-500' : 'text-blue-400'}`}/></div>
+                        <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{phase === 'warmup' ? t.warmupTitle : t.cooldownTitle}</h2>
+                        <div className="bg-slate-800/30 rounded-[2rem] border border-slate-700/50 p-8 mb-10 w-full backdrop-blur-sm">
                             <ul className="space-y-6 text-left">{formatWarmup(phase === 'warmup' ? (routine.calentamiento || t.warmupDesc) : (routine.enfriamiento || t.cooldownDesc))}</ul>
                         </div>
-                        <button onClick={handleNext} className={`w-full py-5 ${phase === 'warmup' ? 'bg-orange-500 shadow-orange-900/30' : 'bg-teal-500 shadow-teal-900/30'} text-white font-black rounded-2xl shadow-xl active:scale-95 transition-all text-sm tracking-widest`}>{phase === 'warmup' ? t.startMain : t.finishComplete}</button>
+                        <button onClick={handleNext} className={`w-full py-5 ${phase === 'warmup' ? 'bg-orange-500 shadow-orange-500/20' : 'bg-teal-500 shadow-teal-500/20'} text-white font-black rounded-3xl shadow-2xl active:scale-[0.98] transition-all text-sm tracking-[0.2em]`}>{phase === 'warmup' ? t.startMain : t.finishComplete}</button>
                     </div>
                 )}
             </div>
 
-            {/* Dock Flotante Verdaderamente Fijo */}
+            {/* Dock Flotante */}
             {!isResting && (
                 <div className="absolute bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-4">
-                    <div className="pointer-events-auto flex items-center bg-slate-900/90 backdrop-blur-xl border border-slate-700 shadow-2xl rounded-full p-2 gap-4">
-                        <div className="flex items-center gap-3 pl-2">
-                            <button onClick={handlePrev} className="p-3 text-slate-400 hover:text-white rounded-full transition-colors active:scale-90"><Icon name="arrowLeft" className="w-5 h-5"/></button>
-                            <button onClick={() => setIsSessionActive(!isSessionActive)} className={`p-4 rounded-full shadow-lg transition-all active:scale-95 ${!isSessionActive ? 'bg-amber-500 text-white shadow-amber-500/30' : 'bg-slate-700 text-slate-300'}`}><Icon name={!isSessionActive ? "play" : "pause"} className="w-6 h-6 fill-current"/></button>
-                            <button onClick={handleNext} className={`p-3 rounded-full transition-colors active:scale-90 ${phase === 'cooldown' ? 'text-teal-400' : 'text-slate-400 hover:text-white'}`}><Icon name={phase === 'cooldown' ? 'check' : 'arrowRight'} className="w-5 h-5"/></button>
+                    <div className="pointer-events-auto flex items-center bg-slate-900/50 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-full p-2.5 gap-4">
+                        <div className="flex items-center gap-2 pl-2">
+                            <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 hover:text-white rounded-full transition-colors active:scale-90"><Icon name="arrowLeft" className="w-5 h-5"/></button>
+                            <button onClick={() => setIsSessionActive(!isSessionActive)} className={`p-4 rounded-full shadow-2xl transition-all active:scale-90 ${!isSessionActive ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300'}`}><Icon name={!isSessionActive ? "play" : "pause"} className="w-6 h-6 fill-current"/></button>
+                            <button onClick={handleNext} className={`p-3 rounded-full transition-colors active:scale-90 ${phase === 'cooldown' ? 'text-teal-400' : 'text-slate-500 hover:text-white'}`}><Icon name={phase === 'cooldown' ? 'check' : 'arrowRight'} className="w-5 h-5"/></button>
                         </div>
-                        <div className="w-px h-8 bg-slate-700/50"></div>
-                        <div className="flex items-center gap-2 pr-4 pl-1 font-mono font-bold text-lg text-teal-400"><Icon name="timer" className="w-4 h-4 opacity-70" /><span className="tabular-nums">{formatDuration(sessionSeconds)}</span></div>
+                        <div className="w-px h-8 bg-white/10"></div>
+                        <div className="flex items-center gap-2 pr-5 pl-1 font-mono font-black text-xl text-teal-400 tracking-tighter tabular-nums"><Icon name="timer" className="w-4 h-4 opacity-50" /><span>{formatDuration(sessionSeconds)}</span></div>
                     </div>
                 </div>
             )}
 
-            {/* Pantalla de Descanso (Capa Superior) */}
+            {/* Pantalla de Descanso */}
             {isResting && (
-                <div className="absolute inset-0 z-[60] bg-slate-950/98 flex flex-col animate-fadeIn backdrop-blur-2xl p-6 text-center">
+                <div className="absolute inset-0 z-[60] bg-slate-950/98 flex flex-col animate-fadeIn backdrop-blur-3xl p-6 text-center">
                      <div className="flex-1 flex flex-col items-center justify-center">
-                         <div className="relative shrink-0 flex flex-col items-center mb-12">
-                            <div className="absolute -inset-4 bg-teal-500 blur-[80px] opacity-20 animate-pulse rounded-full"></div>
-                            <div className="text-[140px] font-black text-white tabular-nums leading-none tracking-tighter relative z-10 text-stroke">{String(restSeconds).padStart(2, '0')}</div>
-                            <h3 className="text-sm font-bold text-teal-400 uppercase tracking-[0.4em] animate-pulse mt-2">{t.restTimer || "DESCANSO"}</h3>
+                         <div className="relative shrink-0 flex flex-col items-center mb-16">
+                            <div className="absolute -inset-10 bg-teal-500 blur-[120px] opacity-20 animate-pulse rounded-full"></div>
+                            <div className="text-[160px] font-black text-white tabular-nums leading-none tracking-tighter relative z-10">{String(restSeconds).padStart(2, '0')}</div>
+                            <h3 className="text-sm font-black text-teal-400 uppercase tracking-[0.6em] animate-pulse mt-4">{t.restTimer || "DESCANSO"}</h3>
                          </div>
-                         <div className="w-full max-w-sm shrink-0">
-                             <button onClick={() => setRestSeconds(0)} className="w-full py-5 rounded-xl bg-teal-600 text-white font-black flex items-center justify-center gap-2 text-base shadow-lg shadow-teal-500/20 active:scale-95 transition-all"><Icon name="play" className="w-5 h-5 fill-current"/> {t.letsGo || "CONTINUAR"}</button>
-                             <button onClick={() => setRestSeconds(s => s + 30)} className="mt-4 w-full py-3 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 font-bold active:scale-95 transition-all text-sm">+30s</button>
+                         <div className="w-full max-w-sm shrink-0 space-y-4">
+                             <button onClick={() => setRestSeconds(0)} className="w-full py-6 rounded-2xl bg-teal-600 text-white font-black flex items-center justify-center gap-3 text-lg shadow-[0_20px_40px_rgba(20,184,166,0.2)] active:scale-95 transition-all uppercase tracking-widest"><Icon name="play" className="w-6 h-6 fill-current"/> {t.letsGo || "CONTINUAR"}</button>
+                             <button onClick={() => setRestSeconds(s => s + 30)} className="w-full py-4 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-300 font-black active:scale-95 transition-all text-sm tracking-widest">+30 SEGUNDOS</button>
                          </div>
                      </div>
                 </div>

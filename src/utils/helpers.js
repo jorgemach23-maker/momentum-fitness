@@ -111,7 +111,8 @@ export const formatRepsDisplay = (str) => {
 };
 
 export const formatLoadDisplay = (val) => { 
-    if (val === undefined || val === null) return "--";
+    if (val === undefined || val === null) return "0 kg";
+    if (val === 0) return "BW";
     if (typeof val === 'number') return `${val} kg`;
     const str = String(val);
     if (/BW|PC|Bodyweight/i.test(str)) return "BW"; 
@@ -149,15 +150,9 @@ export const createSystemPrompt = (profile, clinicalAdjustments, contextType, hi
   const weight = parseFloat(profile.weight) || 70;
   const squatEst = sq1rm > 0 ? sq1rm : Math.round(weight * (isMale ? 1.2 : 0.8));
 
-  // Build a more detailed strength profile string
   let strengthProfile = `Squat (1RM Est): ${squatEst} kg`;
-  if (pushups > 0) {
-    strengthProfile += `, Push-ups: ${pushups} reps`;
-  }
-  if (pullups > 0) {
-    strengthProfile += `, Pull-ups: ${pullups} reps`;
-  }
+  if (pushups > 0) { strengthProfile += `, Push-ups: ${pushups} reps`; }
+  if (pullups > 0) { strengthProfile += `, Pull-ups: ${pullups} reps`; }
 
-
-  return `Eres "FitCoach AI". ${langInstruction}\n  Atleta: ${profile.gender}, ${profile.age} años, ${weight}kg.\n  Lesiones: ${profile.injuries || 'Ninguna'}.\n  Perfil de Fuerza: ${strengthProfile}.\n  Meta: ${profile.mainGoal}.\n  Tiempo Disponible: ${profile.timeAvailable} min.\n  ${clinicalPrompt}\n  Historial: ${historyContext}\n  ${extraConstraints}\n  INSTRUCCIÓN: La duración total debe ser cercana a ${profile.timeAvailable} minutos.\n  REGLAS: \n  1. Nombres descriptivos y completos (ej: "Sentadilla (Goblet)" en vez de "Sentadilla").\n  2. SUPERSERIES: Campo "ejercicio" DEBE usar formato "A1: [Nombre] + A2: [Nombre]".\n  3. Carga en kg, Reps numéricas. Para ejercicios sin peso, usar \"BW\" (Peso Corporal). JSON Estricto.\n  4. La carga ('carga_sugerida') DEBE ser desafiante y basarse en el Perfil de Fuerza. Evita pesos triviales (ej: 2kg) para atletas fuertes.`;
+  return `Eres "FitCoach AI". ${langInstruction}\n  Atleta: ${profile.gender}, ${profile.age} años, ${weight}kg.\n  Lesiones: ${profile.injuries || 'Ninguna'}.\n  Perfil de Fuerza: ${strengthProfile}.\n  Meta: ${profile.mainGoal}.\n  Tiempo Disponible: ${profile.timeAvailable} min.\n  ${clinicalPrompt}\n  Historial: ${historyContext}\n  ${extraConstraints}\n  INSTRUCCIÓN: La duración total debe ser cercana a ${profile.timeAvailable} minutos.\n  REGLAS DE ORO: \n  1. Nombres descriptivos y completos (ej: "Sentadilla (Goblet)" en vez de "Sentadilla").\n  2. SUPERSERIES: Campo "ejercicio" DEBE usar formato "A1: [Nombre] + A2: [Nombre]".\n  3. CAMPO 'carga_sugerida': ESTE CAMPO ES OBLIGATORIO Y NO PUEDE SER NULO. Si un ejercicio no necesita peso externo (ej. flexiones, planchas), el valor DEBE ser el string "BW". Si necesita peso, DEBE ser un string que contenga ÚNICAMENTE el número de kg (ej: "45").\n  4. CÁLCULO DE CARGA: El valor numérico de 'carga_sugerida' DEBE ser un cálculo inteligente basado en el Perfil de Fuerza del atleta y su historial. Para atletas fuertes (ej: Squat 1RM > 1.5x peso corporal), las cargas deben ser desafiantes y acordes a su nivel (ej: >50kg en sentadilla), no valores genéricos. Si no hay historial para un ejercicio, estima un peso inicial conservador pero realista. NO uses rangos, solo un número.`;
 };

@@ -113,6 +113,8 @@ export default function App() {
                     setIsSessionActive={setIsSessionActive}
                     isSessionActive={isSessionActive}
                     sessionSeconds={sessionSeconds}
+                    onBack={handleBackToMain} // <-- PASAMOS LA FUNCIÓN PARA REGRESAR
+                    title={t.routineInProgress} // <-- PASAMOS EL TÍTULO TRADUCIDO
                 />
             </div>
         );
@@ -178,6 +180,7 @@ export default function App() {
                                 history={history} 
                                 t={t} 
                                 onViewRoutine={handleViewRoutine}
+                                setActiveTab={setActiveTab}
                             />}
                         {activeTab === 'profile' && 
                             <ProfileTab 
