@@ -83,14 +83,31 @@ export const ActiveSession = ({
     const isResting = restSeconds > 0;
 
     const rawExercises = routine.rutinaPrincipal || [];
-    const exercises = rawExercises.filter(e => !/calentamiento|warm.?up/i.test(e.ejercicio));
+
+    // Separación lógica de fases en el frontend
+    const isWarmup = (ex) => {
+        const b = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
+        return /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(b) || 
+               /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(ex.ejercicio);
+    };
+    
+    const isCooldown = (ex) => {
+        const b = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
+        return /enfriamiento|cool.?down|vuelta.*calma/i.test(b) || /enfriamiento|vuelta.*calma/i.test(ex.ejercicio);
+    };
+
+    const warmupEx = rawExercises.filter(isWarmup);
+    const cooldownEx = rawExercises.filter(isCooldown);
+    // La lista principal de ejercicios NO debe contener calentamiento ni enfriamiento
+    const exercises = rawExercises.filter(e => !isWarmup(e) && !isCooldown(e));
+
     const activeExercise = phase === 'workout' ? exercises[idx] : null;
 
     const detectSuperset = (ex) => {
         if (!ex) return false;
-        const bloqueType = (ex.bloque || ex.tipo_bloque || "").toLowerCase();
+        const bloqueType = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
         return bloqueType.includes('superserie') || 
-               /\+|\s+y\s+|\/|A1.*A2/i.test(ex.ejercicio) ||
+               /\+/.test(ex.ejercicio) || // Eliminamos / de aquí
                /[A-Z]2[:\s]/i.test(ex.ejercicio);
     };
 
@@ -109,9 +126,9 @@ export const ActiveSession = ({
     const getExerciseParts = (title) => {
         if (!title) return ["Ejercicio 1", "Ejercicio 2"];
         
-        let rawParts = title.split(/[\+\/]/);
+        let rawParts = title.split(/\s*\+\s*/); // Split solo por +
         
-        // Estrategia robusta idéntica a RoutineView para fallback
+        // Estrategia robusta para fallback
         if (/[A-Z]2[:\s]/i.test(title)) {
              const match = title.match(/[\+\s]*([A-Z]2[:\s].*)/i);
              if (match) {
@@ -131,7 +148,7 @@ export const ActiveSession = ({
 
         const parts = rawParts.map(p => {
              if (!p) return "";
-             return cleanExerciseTitle(p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^[\+\/]\s*/, '').trim());
+             return cleanExerciseTitle(p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^\+\s*/, '').trim());
         }).filter(p => p.length > 0);
         
         return [
@@ -142,7 +159,7 @@ export const ActiveSession = ({
 
     // Prioridad a campos explícitos si existen (Solución de Raíz)
     const [partA, partB] = isSuperset 
-        ? (activeExercise.ejercicioA && activeExercise.ejercicioB 
+        ? (activeExercise?.ejercicioA && activeExercise?.ejercicioB 
             ? [activeExercise.ejercicioA, activeExercise.ejercicioB]
             : getExerciseParts(activeExercise?.ejercicio))
         : [cleanExerciseTitle(activeExercise?.ejercicio), null];
@@ -226,6 +243,16 @@ export const ActiveSession = ({
             <li key={i} className="flex items-start gap-3 text-left">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
                 <span className="text-slate-300 text-sm leading-relaxed font-medium">{s.trim()}</span>
+            </li>
+        ));
+    };
+
+    const formatWarmupList = (list) => {
+        if (!list || list.length === 0) return null;
+        return list.map((ex, i) => (
+            <li key={i} className="flex items-start gap-3 text-left">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
+                <span className="text-slate-300 text-sm leading-relaxed font-medium">{ex.ejercicio}</span>
             </li>
         ));
     };
@@ -322,7 +349,12 @@ export const ActiveSession = ({
                         <div className={`w-24 h-24 rounded-3xl ${phase === 'warmup' ? 'bg-orange-500/10 shadow-[0_0_40px_rgba(249,115,22,0.1)]' : 'bg-blue-500/10 shadow-[0_0_40px_rgba(59,130,246,0.1)]'} flex items-center justify-center mb-6 animate-pulse`}><Icon name={phase === 'warmup' ? "flame" : "wind"} className={`w-12 h-12 ${phase === 'warmup' ? 'text-orange-500' : 'text-blue-400'}`}/></div>
                         <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{phase === 'warmup' ? t.warmupTitle : t.cooldownTitle}</h2>
                         <div className="bg-slate-800/30 rounded-[2rem] border border-slate-700/50 p-8 mb-10 w-full backdrop-blur-sm">
-                            <ul className="space-y-6 text-left">{formatWarmup(phase === 'warmup' ? (routine.calentamiento || t.warmupDesc) : (routine.enfriamiento || t.cooldownDesc))}</ul>
+                            <ul className="space-y-6 text-left">
+                                {formatWarmup(phase === 'warmup' ? routine.calentamiento : routine.enfriamiento) || 
+                                 formatWarmupList(phase === 'warmup' ? warmupEx : cooldownEx) ||
+                                 formatWarmup(phase === 'warmup' ? t.warmupDesc : t.cooldownDesc)
+                                }
+                            </ul>
                         </div>
                         <button onClick={handleNext} className={`w-full py-5 ${phase === 'warmup' ? 'bg-orange-500 shadow-orange-500/20' : 'bg-teal-500 shadow-teal-500/20'} text-white font-black rounded-3xl shadow-2xl active:scale-[0.98] transition-all text-sm tracking-[0.2em]`}>{phase === 'warmup' ? t.startMain : t.finishComplete}</button>
                     </div>

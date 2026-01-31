@@ -11,7 +11,15 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
 
     if (!routine || !routine.rutinaPrincipal) return null;
 
-    const mainExercises = routine.rutinaPrincipal.filter(e => e.ejercicio && !/calentamiento|enfriamiento|descanso/i.test(e.ejercicio));
+    const mainExercises = routine.rutinaPrincipal.filter(e => {
+        // Normalización para filtrar calentamiento/enfriamiento
+        const b = (e.tipo_bloque || e.bloque || "").toLowerCase();
+        // Filtro potenciado con palabras clave de movilidad, rotación, estiramiento, etc.
+        const isExcluded = /calentamiento|enfriamiento|warm.?up|cool.?down|descanso|vuelta.*calma|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(b) || 
+                           /calentamiento|enfriamiento|warm.?up|cool.?down|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(e.ejercicio);
+        return !isExcluded;
+    });
+
     const displayedExercises = isExpanded ? mainExercises : mainExercises.slice(0, 3);
     const hiddenCount = mainExercises.length - displayedExercises.length;
 
@@ -21,9 +29,9 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
         // Normalización: Gemini usa 'bloque', pero el código a veces usa 'tipo_bloque'
         const bloqueType = (exercise.bloque || exercise.tipo_bloque || "").toLowerCase();
         
-        // Detección mejorada
+        // Detección mejorada (Eliminamos / de la detección)
         const isSuperset = bloqueType.includes('superserie') || 
-                           /[\+\/]/.test(exercise.ejercicio) || 
+                           /\+/.test(exercise.ejercicio) || 
                            /[A-Z]2[:\s]/i.test(exercise.ejercicio) ||
                            /\s+y\s+/i.test(exercise.ejercicio);
         
@@ -38,7 +46,7 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
                 partA = exercise.ejercicioA;
                 partB = exercise.ejercicioB;
             } else {
-                // 2. Fallback a la lógica de split robusta
+                // 2. Fallback a la lógica de split robusta (Eliminamos / de aquí)
                 let rawParts = [];
                 if (/[A-Z]2[:\s]/i.test(exercise.ejercicio)) {
                      const match = exercise.ejercicio.match(/[\+\s]*([A-Z]2[:\s].*)/i);
@@ -48,13 +56,13 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
                          rawParts = [part1, part2];
                      }
                 }
-                if (rawParts.length < 2) rawParts = exercise.ejercicio.split(/[\+\/]/);
+                if (rawParts.length < 2) rawParts = exercise.ejercicio.split(/\s*\+\s*/);
                 if (rawParts.length < 2) rawParts = exercise.ejercicio.split(/\s+y\s+/i);
                 if (rawParts.length === 0) rawParts = [exercise.ejercicio, ""];
 
                 const parts = rawParts.map(p => {
                     if (!p) return "";
-                    let cleaned = p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^[\+\/]\s*/, '').trim();
+                    let cleaned = p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^\+\s*/, '').trim();
                     return cleanExerciseTitle(cleaned);
                 }).filter(p => p.length > 0);
 

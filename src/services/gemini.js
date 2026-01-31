@@ -65,7 +65,7 @@ const processSupersets = (plan) => {
                 // Normalizamos a tipo_bloque
                 let bloqueType = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
                 
-                // Detección robusta de superserie
+                // Detección robusta de superserie (Eliminamos / de la detección para evitar falsos positivos)
                 let isSuperset = bloqueType.includes('superserie') || 
                                  /A1.*A2/.test(ex.ejercicio) || 
                                  /[A-Z]2[:\s]/.test(ex.ejercicio) ||
@@ -75,11 +75,10 @@ const processSupersets = (plan) => {
                 if (isSuperset) {
                     ex.tipo_bloque = 'superserie';
                     
-                    // Si la IA no devolvió los campos separados, los generamos nosotros con la lógica de split robusta
+                    // Si la IA no devolvió los campos separados, los generamos nosotros
                     if (!ex.ejercicioA || !ex.ejercicioB) {
                          let rawParts = [];
                          
-                         // 1. Intentar dividir por marcadores explícitos "Letra2:" (A2:, B2:, etc)
                          if (/[A-Z]2[:\s]/i.test(ex.ejercicio)) {
                               const match = ex.ejercicio.match(/[\+\s]*([A-Z]2[:\s].*)/i);
                               if (match) {
@@ -89,14 +88,14 @@ const processSupersets = (plan) => {
                               }
                          }
                          
-                         // 2. Split clásico
-                         if (rawParts.length < 2) rawParts = ex.ejercicio.split(/[\+\/]/);
+                         // Split clásico por + (Eliminamos / de aquí)
+                         if (rawParts.length < 2) rawParts = ex.ejercicio.split(/\s*\+\s*/);
                          
-                         // 3. Fallback "y"
+                         // Fallback "y"
                          if (rawParts.length < 2) rawParts = ex.ejercicio.split(/\s+y\s+/i);
                          
                          // Limpieza
-                         const clean = (t) => t ? t.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^[\+\/]\s*/, '').trim() : "Ejercicio";
+                         const clean = (t) => t ? t.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^\+\s*/, '').trim() : "Ejercicio";
                          
                          ex.ejercicioA = clean(rawParts[0] || "Ejercicio A");
                          ex.ejercicioB = clean(rawParts[1] || "Ejercicio B");
@@ -184,24 +183,44 @@ export const fetchGeminiWeeklyPlan = async (profile, recentRoutines, lang) => {
     Cada objeto en el array representa un día de entrenamiento y DEBE seguir esta estructura exacta:
 
     {
-      "diaEnfoque": "<Descripción>",
+      "diaEnfoque": "<Descripción. EJ: 'Empuje (Pecho/Hombro/Tríceps)'>",
       "rutinaPrincipal": [
         {
-          "tipo_bloque": "<Calentamiento|Principal|Superserie|Vuelta a la Calma>",
-          "ejercicio": "<Nombre COMPLETO del ejercicio>",
-          "ejercicioA": "<OPCIONAL: Nombre limpio Ejercicio 1 si es Superserie>",
-          "ejercicioB": "<OPCIONAL: Nombre limpio Ejercicio 2 si es Superserie>",
-          "series": <número entero>,
-          "reps": "<NÚMERO ENTERO o 'Al fallo'>",
-          "carga_sugerida": "<OBLIGATORIO: Número en kg o 'BW'>",
-          "descanso_segs": <NÚMERO ENTERO de segundos>
+          "tipo_bloque": "Calentamiento",
+          "ejercicio": "<Nombre Ejercicio Calentamiento>",
+          "series": 1,
+          "reps": "15",
+          "carga_sugerida": "BW",
+          "descanso_segs": 0
+        },
+        {
+          "tipo_bloque": "Principal",
+          "ejercicio": "<Nombre Ejercicio Fuerza>",
+          "series": 3,
+          "reps": "10",
+          "carga_sugerida": "40",
+          "descanso_segs": 90
+        },
+        {
+          "tipo_bloque": "Enfriamiento",
+          "ejercicio": "<Nombre Ejercicio Estiramiento>",
+          "series": 1,
+          "reps": "1",
+          "carga_sugerida": "BW",
+          "descanso_segs": 0
         }
       ]
     }
 
-    **REGLAS ESPECÍFICAS:**
-    -   **SUPERSERIES**: \`tipo_bloque\` DEBE ser "Superserie". ADEMÁS de concatenar en \`ejercicio\` (formato "A1: X + A2: Y"), **DEBES INCLUIR** los campos \`ejercicioA\` y \`ejercicioB\` con los nombres limpios de los ejercicios individuales.
-    -   **CARGA**: Para superseries, \`carga_sugerida\` debe ser "A1: X, A2: Y".
+    **REGLAS ESPECÍFICAS DE VALIDACIÓN (CRÍTICO):**
+    1.  **ETIQUETADO DE BLOQUES:**
+        -   Los primeros ejercicios (preparación/movilidad) **DEBEN** tener \`"tipo_bloque": "Calentamiento"\`.
+        -   Los últimos ejercicios (vuelta a la calma/estiramiento) **DEBEN** tener \`"tipo_bloque": "Enfriamiento"\`.
+        -   El núcleo del entrenamiento es \`"Principal"\` o \`"Superserie"\`.
+        -   **PROHIBIDO** usar "General", "Movilidad" o "Activación" en \`tipo_bloque\`. Úsalos solo como parte del nombre del ejercicio.
+    2.  **SUPERSERIES:** \`tipo_bloque\` DEBE ser "Superserie". ADEMÁS de concatenar en \`ejercicio\` (formato "A1: X + A2: Y"), **DEBES INCLUIR** los campos \`ejercicioA\` y \`ejercicioB\` con los nombres limpios.
+    3.  **CARGA:** Para superseries, \`carga_sugerida\` debe ser "A1: X, A2: Y".
+    4.  **NUNCA** incluyas un campo de descripción o técnica.
 
     **FIN DE INSTRUCCIONES.**
     `;
