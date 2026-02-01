@@ -8,10 +8,7 @@ import {
     formatDuration
 } from '../../../utils/helpers.js';
 
-// Componente unificado para manejar la carga. Es "inteligente" gracias a la lógica de parseo y formato.
 const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
-    // Si initialLoad es null (fallo de IA), lo tratamos como 0 para el estado interno,
-    // pero la visualización será "0 kg" gracias a formatLoadDisplay.
     const [load, setLoad] = useState(initialLoad === null ? 0 : initialLoad);
     const [isInteracting, setIsInteracting] = useState(false);
     const lastUpdateY = useRef(0);
@@ -39,10 +36,9 @@ const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
         }
     };
     
-    // Usamos el initialLoad original para la visualización, así formatLoadDisplay puede diferenciar entre 0 y null.
     const displayValue = formatLoadDisplay(initialLoad);
     const isBw = initialLoad === 0;
-    const sizeClass = isSuperset ? "text-xl" : "text-3xl"; // AUMENTADO
+    const sizeClass = isSuperset ? "text-xl" : "text-3xl";
 
     return (
         <div 
@@ -84,7 +80,6 @@ export const ActiveSession = ({
 
     const rawExercises = currentRoutine.rutinaPrincipal || [];
 
-    // Separación lógica de fases en el frontend
     const isWarmup = (ex) => {
         const b = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
         return /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(b) || 
@@ -101,6 +96,22 @@ export const ActiveSession = ({
     const exercises = rawExercises.filter(e => !isWarmup(e) && !isCooldown(e));
 
     const activeExercise = phase === 'workout' ? exercises[idx] : null;
+    const nextExercise = phase === 'workout' && idx + 1 < exercises.length ? exercises[idx + 1] : null;
+
+    useEffect(() => {
+        if (isResting) {
+            const timer = setInterval(() => {
+                setRestSeconds(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [isResting, setRestSeconds]);
 
     const detectSuperset = (ex) => {
         if (!ex) return false;
@@ -151,6 +162,13 @@ export const ActiveSession = ({
             ? [activeExercise.ejercicioA, activeExercise.ejercicioB]
             : getExerciseParts(activeExercise?.ejercicio))
         : [cleanExerciseTitle(activeExercise?.ejercicio), null];
+        
+    const nextIsSuperset = detectSuperset(nextExercise);
+    const [nextPartA, nextPartB] = nextIsSuperset 
+        ? (nextExercise?.ejercicioA && nextExercise?.ejercicioB 
+            ? [nextExercise.ejercicioA, nextExercise.ejercicioB]
+            : getExerciseParts(nextExercise?.ejercicio))
+        : [cleanExerciseTitle(nextExercise?.ejercicio), null];
 
     useEffect(() => {
         if (!activeExercise) return;
@@ -195,7 +213,10 @@ export const ActiveSession = ({
             }
             setCompletedSets(prev => ({ ...prev, [key]: setData }));
             if (onExerciseComplete) onExerciseComplete(activeExercise);
-            setRestSeconds(activeExercise.descanso_entre_series || 60);
+            
+            const restTime = activeExercise.descanso_segs || activeExercise.descanso_entre_series || 60;
+            setRestSeconds(restTime);
+
         } else {
             const { [key]: _, ...rest } = completedSets;
             setCompletedSets(rest);
@@ -353,17 +374,32 @@ export const ActiveSession = ({
 
                 {isResting && (
                     <div className="absolute inset-0 z-[60] bg-slate-950/98 flex flex-col animate-fadeIn backdrop-blur-3xl p-6 text-center">
-                         <div className="flex-1 flex flex-col items-center justify-center">
-                             <div className="relative shrink-0 flex flex-col items-center mb-16">
+                        <div className="flex-1 flex flex-col items-center justify-center">
+                            <div className="relative shrink-0 flex flex-col items-center">
                                 <div className="absolute -inset-10 bg-teal-500 blur-[120px] opacity-20 animate-pulse rounded-full"></div>
                                 <div className="text-[160px] font-black text-white tabular-nums leading-none tracking-tighter relative z-10">{String(restSeconds).padStart(2, '0')}</div>
                                 <h3 className="text-sm font-black text-teal-400 uppercase tracking-[0.6em] animate-pulse mt-4">{t.restTimer || "DESCANSO"}</h3>
-                             </div>
-                             <div className="w-full max-w-sm shrink-0 space-y-4">
-                                 <button onClick={() => setRestSeconds(0)} className="w-full py-6 rounded-2xl bg-teal-600 text-white font-black flex items-center justify-center gap-3 text-lg shadow-[0_20px_40px_rgba(20,184,166,0.2)] active:scale-95 transition-all uppercase tracking-widest"><Icon name="play" className="w-6 h-6 fill-current"/> {t.letsGo || "CONTINUAR"}</button>
-                                 <button onClick={() => setRestSeconds(s => s + 30)} className="w-full py-4 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-300 font-black active:scale-95 transition-all text-sm tracking-widest">+30 SEGUNDOS</button>
-                             </div>
-                         </div>
+                            </div>
+                        </div>
+
+                        <div className="w-full max-w-sm shrink-0 pb-8">
+                            <div className="bg-black/20 rounded-2xl p-4 mb-6 text-left">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">{t.nextSession}</h4>
+                                {nextExercise ? (
+                                    <div className="text-lg font-bold text-white bg-slate-800/40 p-4 rounded-lg">
+                                        {nextIsSuperset ? `${nextPartA} + ${nextPartB}` : nextPartA}
+                                    </div>
+                                ) : (
+                                    <div className="text-lg font-bold text-white bg-slate-800/40 p-4 rounded-lg">
+                                        {t.cooldownTitle || 'Enfriamiento'}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-4">
+                                <button onClick={() => setRestSeconds(0)} className="w-full py-6 rounded-2xl bg-teal-600 text-white font-black flex items-center justify-center gap-3 text-lg shadow-[0_20px_40px_rgba(20,184,166,0.2)] active:scale-95 transition-all uppercase tracking-widest"><Icon name="play" className="w-6 h-6 fill-current"/> {t.letsGo || "CONTINUAR"}</button>
+                                <button onClick={() => setRestSeconds(s => s + 30)} className="w-full py-4 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-300 font-black active:scale-95 transition-all text-sm tracking-widest">+30 SEGUNDOS</button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
