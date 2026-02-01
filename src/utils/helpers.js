@@ -129,30 +129,3 @@ export const distributeWeek = (routinesList, totalDays) => {
   routinesList.forEach((routine, idx) => { if (idx < pattern.length) week[pattern[idx]] = routine; else { const emptyIdx = week.indexOf(null); if (emptyIdx !== -1) week[emptyIdx] = routine; } });
   return week;
 };
-
-export const EXERCISE_SCHEMA_V3 = {
-  type: "OBJECT",
-  properties: {
-    "tipo_bloque": { type: "STRING", enum: ["normal", "superserie"] },
-    "ejercicio": { type: "STRING" },
-    "tecnica_general": { type: "STRING" },
-    "componentes": { type: "ARRAY", items: { type: "OBJECT", properties: { "numero_serie": { type: "INTEGER" }, "repeticiones_ejercicio": { type: "STRING" }, "carga_sugerida": { type: "STRING" }, "repeticiones_ejercicioA": { type: "STRING" }, "carga_sugeridaA": { type: "STRING" }, "repeticiones_ejercicioB": { type: "STRING" }, "carga_sugeridaB": { type: "STRING" }, "completado": { type: "BOOLEAN", "default": false } }, required: ["numero_serie"] } }
-  },
-  required: ["tipo_bloque", "ejercicio", "componentes", "tecnica_general"]
-};
-
-export const createSystemPrompt = (profile, clinicalAdjustments, contextType, historyContext, langInstruction, extraConstraints = "") => {
-  const clinicalPrompt = clinicalAdjustments.length > 0 ? `\n[CLINICAL]:\n${clinicalAdjustments.map(r => `- ${r}`).join('\n')}` : "\n[Clinical]: Healthy.";
-  const sq1rm = parseFloat(profile.bioage?.sq1rm) || 0;
-  const pushups = parseFloat(profile.bioage?.pushups) || 0;
-  const pullups = parseFloat(profile.bioage?.pullups) || 0;
-  const isMale = profile.gender === 'Hombre';
-  const weight = parseFloat(profile.weight) || 70;
-  const squatEst = sq1rm > 0 ? sq1rm : Math.round(weight * (isMale ? 1.2 : 0.8));
-
-  let strengthProfile = `Squat (1RM Est): ${squatEst} kg`;
-  if (pushups > 0) { strengthProfile += `, Push-ups: ${pushups} reps`; }
-  if (pullups > 0) { strengthProfile += `, Pull-ups: ${pullups} reps`; }
-
-  return `Eres "FitCoach AI". ${langInstruction}\n  Atleta: ${profile.gender}, ${profile.age} años, ${weight}kg.\n  Lesiones: ${profile.injuries || 'Ninguna'}.\n  Perfil de Fuerza: ${strengthProfile}.\n  Meta: ${profile.mainGoal}.\n  Tiempo Disponible: ${profile.timeAvailable} min.\n  ${clinicalPrompt}\n  Historial: ${historyContext}\n  ${extraConstraints}\n  INSTRUCCIÓN: La duración total debe ser cercana a ${profile.timeAvailable} minutos.\n  REGLAS DE ORO: \n  1. Nombres descriptivos y completos (ej: "Sentadilla (Goblet)" en vez de "Sentadilla").\n  2. SUPERSERIES: Campo "ejercicio" DEBE usar formato "A1: [Nombre] + A2: [Nombre]".\n  3. CAMPO 'carga_sugerida': ESTE CAMPO ES OBLIGATORIO Y NO PUEDE SER NULO. Si un ejercicio no necesita peso externo (ej. flexiones, planchas), el valor DEBE ser el string "BW". Si necesita peso, DEBE ser un string que contenga ÚNICAMENTE el número de kg (ej: "45").\n  4. CÁLCULO DE CARGA: El valor numérico de 'carga_sugerida' DEBE ser un cálculo inteligente basado en el Perfil de Fuerza del atleta y su historial. Para atletas fuertes (ej: Squat 1RM > 1.5x peso corporal), las cargas deben ser desafiantes y acordes a su nivel (ej: >50kg en sentadilla), no valores genéricos. Si no hay historial para un ejercicio, estima un peso inicial conservador pero realista. NO uses rangos, solo un número.`;
-};

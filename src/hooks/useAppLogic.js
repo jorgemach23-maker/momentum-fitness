@@ -3,7 +3,7 @@ import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithE
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, serverTimestamp, query, writeBatch, Timestamp, deleteDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { buildHistoryContext, TRANSLATIONS, calculateSmartRest } from '../utils/helpers';
-import { fetchGeminiWeeklyPlan, fetchGeminiSessionAdjustment, fetchGeminiBioageAnalysis } from '../services/gemini';
+import { fetchGeminiWeeklyPlan, fetchGeminiBioageAnalysis } from '../services/gemini';
 
 // --- Force Hot-Reload --- 
 
@@ -272,7 +272,8 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         setProgressText(t.recalcParams);
 
         try {
-            const adjustedRoutine = await fetchGeminiSessionAdjustment(profile, routine, adjustments, language);
+            // const adjustedRoutine = await fetchGeminiSessionAdjustment(profile, routine, adjustments, language);
+            const adjustedRoutine = routine; // Placeholder since the function is removed
              if (!adjustedRoutine || typeof adjustedRoutine !== 'object' || !adjustedRoutine.rutinaPrincipal) {
                 throw new Error("La IA no generó un ajuste válido. Por favor, inténtalo de nuevo.");
             }

@@ -105,7 +105,7 @@ export const ActiveSession = ({
 
     const detectSuperset = (ex) => {
         if (!ex) return false;
-        const bloqueType = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
+        const bloqueType = (ex.bloque || ex.tipo_bloque || "").toLowerCase();
         return bloqueType.includes('superserie') || 
                /\+/.test(ex.ejercicio) || // Eliminamos / de aquí
                /[A-Z]2[:\s]/i.test(ex.ejercicio);
@@ -237,24 +237,31 @@ export const ActiveSession = ({
         else setPhase('cooldown');
     };
 
-    const formatWarmup = (text) => {
-        if (!text) return null;
-        return text.split(/[.\n-]/).filter(s => s.trim().length > 3).map((s, i) => (
-            <li key={i} className="flex items-start gap-3 text-left">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
-                <span className="text-slate-300 text-sm leading-relaxed font-medium">{s.trim()}</span>
-            </li>
-        ));
-    };
+    // Función polimórfica: Maneja tanto Strings (formato antiguo) como Arrays (formato nuevo)
+    const formatWarmup = (data) => {
+        if (!data) return null;
+        
+        // Caso 1: Array de objetos (Nuevo formato backend)
+        if (Array.isArray(data)) {
+             return data.map((ex, i) => (
+                <li key={i} className="flex items-start gap-3 text-left">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
+                    <span className="text-slate-300 text-sm leading-relaxed font-medium">{ex.ejercicio || ex}</span>
+                </li>
+            ));
+        }
 
-    const formatWarmupList = (list) => {
-        if (!list || list.length === 0) return null;
-        return list.map((ex, i) => (
-            <li key={i} className="flex items-start gap-3 text-left">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
-                <span className="text-slate-300 text-sm leading-relaxed font-medium">{ex.ejercicio}</span>
-            </li>
-        ));
+        // Caso 2: String (Formato antiguo o fallback)
+        if (typeof data === 'string') {
+             return data.split(/[.\n-]/).filter(s => s.trim().length > 3).map((s, i) => (
+                <li key={i} className="flex items-start gap-3 text-left">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
+                    <span className="text-slate-300 text-sm leading-relaxed font-medium">{s.trim()}</span>
+                </li>
+            ));
+        }
+
+        return null; 
     };
 
     return (
@@ -285,18 +292,18 @@ export const ActiveSession = ({
                             {isSuperset ? (
                                 <div className="bg-slate-800/40 rounded-3xl border border-slate-700/50 p-4 space-y-4 shadow-xl">
                                     <div className="flex justify-between items-start gap-4">
-                                        <div className="flex-1 min-w-0">
-                                            <span className="text-[10px] font-black text-cyan-400 bg-cyan-900/20 px-2 py-0.5 rounded border border-cyan-500/20 mb-1 inline-block uppercase">{currentLetter}1</span>
-                                            <h3 className="text-xl font-black text-white leading-tight break-words">{partA}</h3>
+                                        <div className="flex-1 min-w-0 flex items-center">
+                                            <span className="text-sm font-black text-cyan-400 bg-cyan-900/20 px-2.5 py-1 rounded-md border border-cyan-500/20 mr-3 uppercase">{currentLetter}1</span>
+                                            <h3 className="text-xl font-black text-white leading-tight break-words flex-1 text-center">{partA}</h3>
                                         </div>
                                         <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+tecnica`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
                                     </div>
                                     <div className="flex items-center gap-2 px-2 opacity-30"><div className="h-px flex-1 bg-slate-600"></div><Icon name="link2" className="w-3 h-3 text-slate-500"/><div className="h-px flex-1 bg-slate-600"></div></div>
                                     {partB && (
                                         <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <span className="text-[10px] font-black text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded border border-blue-500/20 mb-1 inline-block uppercase">{currentLetter}2</span>
-                                                <h3 className="text-xl font-black text-white leading-tight break-words">{partB}</h3>
+                                            <div className="flex-1 min-w-0 flex items-center">
+                                                <span className="text-sm font-black text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded-md border border-blue-500/20 mr-3 uppercase">{currentLetter}2</span>
+                                                <h3 className="text-xl font-black text-white leading-tight break-words flex-1 text-center">{partB}</h3>
                                             </div>
                                             <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+tecnica`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
                                         </div>
@@ -311,8 +318,7 @@ export const ActiveSession = ({
                         </div>
 
                         <div className="flex flex-col bg-slate-900/80 border border-slate-700/50 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                            <div className={`grid ${isSuperset ? 'grid-cols-[30px_1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[40px_1fr_1fr_60px]'} gap-2 bg-slate-800/80 p-3 text-[9px] font-black uppercase text-center border-b border-slate-700 text-slate-500 tracking-tighter`}>
-                                <span>#</span>
+                            <div className={`grid ${isSuperset ? 'grid-cols-[1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[1fr_1fr_60px]'} gap-2 bg-slate-800/80 p-3 text-[9px] font-black uppercase text-center border-b border-slate-700 text-slate-500 tracking-tighter`}>
                                 {isSuperset ? (<><span className="text-cyan-400">Reps A</span><span className="text-cyan-400">Kg A</span><span className="text-blue-400">Reps B</span><span className="text-blue-400">Kg B</span></>) : (<><span className="col-span-1">Repeticiones</span><span className="col-span-1">Carga</span></>)}
                                 <Icon name="check" className="mx-auto w-4 h-4 opacity-30"/>
                             </div>
@@ -322,8 +328,7 @@ export const ActiveSession = ({
                                     const valA = currentLoads[`${idx}-${setIdx}-A`];
                                     const valB = currentLoads[`${idx}-${setIdx}-B`];
                                     return (
-                                        <div key={setIdx} className={`grid ${isSuperset ? 'grid-cols-[30px_1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[40px_1fr_1fr_60px]'} gap-2 items-center p-3 transition-colors ${isDone ? 'bg-teal-500/10' : ''}`}>
-                                            <div className="text-xs font-black text-slate-600 tabular-nums">{set.numero_serie}</div>
+                                        <div key={setIdx} className={`grid ${isSuperset ? 'grid-cols-[1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[1fr_1fr_60px]'} gap-2 items-center p-3 transition-colors ${isDone ? 'bg-teal-500/10' : ''}`}>
                                             {isSuperset ? (
                                                 <>
                                                     <div className="flex items-center justify-center h-14 bg-cyan-900/10 rounded-xl border border-cyan-900/20 text-xl font-black text-cyan-100 tabular-nums">{formatRepsDisplay(set.repeticiones_ejercicioA ?? set.repeticiones_ejercicio)}</div>
@@ -350,8 +355,11 @@ export const ActiveSession = ({
                         <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{phase === 'warmup' ? t.warmupTitle : t.cooldownTitle}</h2>
                         <div className="bg-slate-800/30 rounded-[2rem] border border-slate-700/50 p-8 mb-10 w-full backdrop-blur-sm">
                             <ul className="space-y-6 text-left">
-                                {formatWarmup(phase === 'warmup' ? routine.calentamiento : routine.enfriamiento) || 
-                                 formatWarmupList(phase === 'warmup' ? warmupEx : cooldownEx) ||
+                                {formatWarmup(
+                                    phase === 'warmup' 
+                                    ? (routine.calentamiento || warmupEx) // Intenta propiedad directa o array filtrado
+                                    : (routine.enfriamiento || cooldownEx) // Intenta propiedad directa o array filtrado
+                                ) || 
                                  formatWarmup(phase === 'warmup' ? t.warmupDesc : t.cooldownDesc)
                                 }
                             </ul>

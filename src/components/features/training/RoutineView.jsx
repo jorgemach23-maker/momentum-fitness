@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Icon } from '../../ui/Icon';
+import { Icon } from '../ui/Icon';
 import { cleanExerciseTitle, formatRoutineTitle } from '../../../utils/helpers';
 
 const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
@@ -11,13 +11,10 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
 
     if (!routine || !routine.rutinaPrincipal) return null;
 
+    // FILTRO VISUAL: Mostrar solo los bloques de entrenamiento real
     const mainExercises = routine.rutinaPrincipal.filter(e => {
-        // Normalización para filtrar calentamiento/enfriamiento
-        const b = (e.tipo_bloque || e.bloque || "").toLowerCase();
-        // Filtro potenciado con palabras clave de movilidad, rotación, estiramiento, etc.
-        const isExcluded = /calentamiento|enfriamiento|warm.?up|cool.?down|descanso|vuelta.*calma|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(b) || 
-                           /calentamiento|enfriamiento|warm.?up|cool.?down|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(e.ejercicio);
-        return !isExcluded;
+        const bloqueType = (e.tipo_bloque || e.bloque || "").toLowerCase();
+        return bloqueType === 'principal' || bloqueType === 'superserie';
     });
 
     const displayedExercises = isExpanded ? mainExercises : mainExercises.slice(0, 3);
@@ -29,7 +26,7 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
         // Normalización: Gemini usa 'bloque', pero el código a veces usa 'tipo_bloque'
         const bloqueType = (exercise.bloque || exercise.tipo_bloque || "").toLowerCase();
         
-        // Detección mejorada (Eliminamos / de la detección)
+        // Detección mejorada
         const isSuperset = bloqueType.includes('superserie') || 
                            /\+/.test(exercise.ejercicio) || 
                            /[A-Z]2[:\s]/i.test(exercise.ejercicio) ||
@@ -46,7 +43,7 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
                 partA = exercise.ejercicioA;
                 partB = exercise.ejercicioB;
             } else {
-                // 2. Fallback a la lógica de split robusta (Eliminamos / de aquí)
+                // 2. Fallback a la lógica de split robusta
                 let rawParts = [];
                 if (/[A-Z]2[:\s]/i.test(exercise.ejercicio)) {
                      const match = exercise.ejercicio.match(/[\+\s]*([A-Z]2[:\s].*)/i);

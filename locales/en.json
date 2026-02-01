@@ -62,7 +62,6 @@
   "goalStrength": "Max Strength", 
   "goalCardio": "Cardio Endurance",
   "saveChanges": "Save Changes",
-  "changesSaved": "Profile saved!",
 
   "bioage": "Biological Age",
   "bioageTitle": "Advanced Profile (Bioage)", 
@@ -89,6 +88,9 @@
   "analyzing": "Analyzing...",
   "analysisComplete": "Analysis complete",
   "processing": "Processing...",
+  "strengthsLabel": "Strengths",
+  "weaknessesLabel": "Weaknesses",
+  "recommendationsLabel": "Recommendations",
 
   "cycleTitle": "Female Health (CycleSync)", 
   "cycleSubtitle": "Adaptation to Menstrual Cycle", 
@@ -151,7 +153,7 @@
   "error.auth.too-many-requests": "Too many failed attempts. Try again later.",
   "error.auth.network-request-failed": "Network error. Please check your internet connection.",
   "startMain": "START",
-  "finishComplete": "FINISH",
+  "finishComplete": "FINALIZAR",
   
   "recommended": "Recommended",
   "moreOptions": "Other Options",
