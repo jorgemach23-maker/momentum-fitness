@@ -371,7 +371,7 @@ export const ActiveSession = ({
 
             {/* Dock Flotante */}
             {!isResting && (
-                <div className="absolute bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-4">
+                <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-4">
                     <div className="pointer-events-auto flex items-center bg-slate-900/50 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-full p-2.5 gap-4">
                         <div className="flex items-center gap-2 pl-2">
                             <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 hover:text-white rounded-full transition-colors active:scale-90"><Icon name="arrowLeft" className="w-5 h-5"/></button>
