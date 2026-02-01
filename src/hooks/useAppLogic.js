@@ -6,8 +6,10 @@ import { buildHistoryContext, TRANSLATIONS, calculateSmartRest } from '../utils/
 import { fetchGeminiWeeklyPlan, fetchGeminiBioageAnalysis } from '../services/gemini';
 
 // --- Force Hot-Reload --- 
-
 const appId = (typeof __app_id !== 'undefined' ? __app_id : 'momentum-fitness-ai').replace(/[\/.]/g, '_');
+
+// --- Helper for deep object comparison ---
+const deepEqual = (obj1, obj2) => JSON.stringify(obj1) === JSON.stringify(obj2);
 
 // --- INDIVIDUAL LOGIC HOOKS ---
 
@@ -86,6 +88,7 @@ const useAuth = (t) => {
 const useProfile = (userId, isAuthReady, t) => {
     const defaultProfile = { gender: 'Hombre', age: 30, height: 175, weight: 75, bodyFat: 15, muscleMass: 40, daysPerWeek: 3, mainGoal: 'Perder grasa corporal', experienceLevel: 'Intermedio', injuries: '', muscleFocus: 'recomendado', timeAvailable: 45, currentPlanId: null, bioage: {}, bioageEstimation: null, menstrualCycle: { lastPeriod: '', cycleLength: 28 } };
     const [profile, setProfile] = useState(defaultProfile);
+    const [savedProfile, setSavedProfile] = useState(defaultProfile); // Guarda el estado del perfil en Firestore
     const [profileSuccess, setProfileSuccess] = useState(null);
     const [profileError, setProfileError] = useState(null);
     const [bioageLoading, setBioageLoading] = useState(false);
@@ -96,7 +99,7 @@ const useProfile = (userId, isAuthReady, t) => {
 
     useEffect(() => {
         if (!isAuthReady || !userId || !profileDocRef) {
-            return; // No hacer nada si no estamos listos
+            return;
         }
         let isMounted = true;
 
@@ -106,10 +109,13 @@ const useProfile = (userId, isAuthReady, t) => {
                 if (isMounted) {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        setProfile(prev => ({ ...defaultProfile, ...data, bioage: data.bioage || {}, bioageEstimation: data.bioageEstimation || null, menstrualCycle: data.menstrualCycle || { lastPeriod: '', cycleLength: 28 } }));
+                        const fullProfile = { ...defaultProfile, ...data, bioage: data.bioage || {}, bioageEstimation: data.bioageEstimation || null, menstrualCycle: data.menstrualCycle || { lastPeriod: '', cycleLength: 28 } };
+                        setProfile(fullProfile);
+                        setSavedProfile(fullProfile); // Inicializa el perfil guardado
                     } else {
                         await setDoc(profileDocRef, defaultProfile);
                         setProfile(defaultProfile);
+                        setSavedProfile(defaultProfile);
                     }
                 }
             } catch (e) {
@@ -138,17 +144,24 @@ const useProfile = (userId, isAuthReady, t) => {
     };
     
     const handleProfileSave = useCallback(async (updatedProfile) => {
-        if (!profileDocRef) return;
+        if (!profileDocRef || !updatedProfile) return;
+        
+        // Compara el perfil a guardar con el último perfil guardado
+        if (deepEqual(updatedProfile, savedProfile)) {
+            return; // No hay cambios, no se guarda
+        }
+
         setProfileError(null);
         setProfileSuccess(null);
         try {
             await setDoc(profileDocRef, updatedProfile, { merge: true });
+            setSavedProfile(updatedProfile); // Actualiza el perfil guardado
             setProfileSuccess(t.msgProfileSaved);
         } catch (e) {
             setProfileError(t.errorSave);
         }
         setTimeout(() => {setProfileSuccess(null); setProfileError(null)}, 3000);
-    }, [profileDocRef, t]);
+    }, [profileDocRef, t, savedProfile]);
 
     const handleAnalyzeBioage = useCallback(async (currentProfile, language) => {
         setBioageLoading(true);
@@ -156,21 +169,18 @@ const useProfile = (userId, isAuthReady, t) => {
         try {
             const result = await fetchGeminiBioageAnalysis(currentProfile, language);
             const updatedProfile = { ...currentProfile, bioageEstimation: result };
-            setProfile(updatedProfile);
-            if (profileDocRef) {
-                await setDoc(profileDocRef, { bioageEstimation: result }, { merge: true });
-            }
+            setProfile(updatedProfile); // Actualiza el estado local inmediatamente
+            // El guardado se gestionará al cambiar de pestaña
         } catch (err) {
             console.error(err);
             setProfileError("Error al calcular BioAge.");
         } finally {
             setBioageLoading(false);
         }
-    }, [profileDocRef]);
+    }, []);
     
     return { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef };
 };
-
 const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress) => {
     const [history, setHistory] = useState([]);
     
@@ -300,7 +310,7 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
 export const useAppLogic = () => {
     const [language, setLanguage] = useState('es');
     const t = useMemo(() => TRANSLATIONS[language] || TRANSLATIONS.es, [language]);
-    const [activeTab, setActiveTab] = useState('training');
+    const [activeTab, _setActiveTab] = useState('training');
     const [view, setView] = useState('main');
     const [currentRoutineId, setCurrentRoutineId] = useState(null);
     const [showSplash, setShowSplash] = useState(true);
@@ -309,7 +319,7 @@ export const useAppLogic = () => {
     const [successMessage, setSuccessMessage] = useState(null);
     const [showAdjustment, setShowAdjustment] = useState(false);
     const [isSignOutWarningVisible, setIsSignOutWarningVisible] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0); // Added generationProgress state
+    const [generationProgress, setGenerationProgress] = useState(0);
 
     const { userId, isAnonymous, isAuthReady, authError, setAuthError, handleSignIn, handleSignUp, handleAnonymousSignIn, handleSignOut, handleLinkAccount, handlePasswordReset } = useAuth(t);
     const { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef } = useProfile(userId, isAuthReady, t);
@@ -334,6 +344,15 @@ export const useAppLogic = () => {
     const currentRoutine = useMemo(() => history.find(r => r.id === currentRoutineId), [history, currentRoutineId]);
     const combinedError = useMemo(() => error || profileError, [error, profileError]);
 
+    const onProfileSave = useCallback(() => handleProfileSave(profile), [handleProfileSave, profile]);
+    
+    const setActiveTab = useCallback((tab) => {
+        if (activeTab === 'profile') {
+            onProfileSave();
+        }
+        _setActiveTab(tab);
+    }, [activeTab, onProfileSave]);
+
     useEffect(() => {
         if (isAuthReady) {
             const timer = setTimeout(() => setShowSplash(false), 1200);
@@ -347,7 +366,7 @@ export const useAppLogic = () => {
             setView('main');
             setCurrentRoutineId(null);
         }
-    }, [userId, isAuthReady]);
+    }, [userId, isAuthReady, setActiveTab]);
 
     const handleScroll = (e) => setScrolled(e.target.scrollTop > 20);
     const toggleLanguage = () => setLanguage(prev => prev === 'es' ? 'en' : 'es');
@@ -500,7 +519,6 @@ export const useAppLogic = () => {
         return () => clearInterval(restIntervalRef.current);
     }, [isResting, isSessionActive]);
 
-    const onProfileSave = useCallback(() => handleProfileSave(profile), [handleProfileSave, profile]);
     const onGeneratePlan = useCallback(() => handleGenerateWeeklyPlan(language), [handleGenerateWeeklyPlan, language]);
     const onAnalyzeBioage = useCallback(() => handleAnalyzeBioage(profile, language), [handleAnalyzeBioage, profile, language]);
     const onAdjustNextSession = useCallback((routine, adjustments) => handleAdjustNextSession(language, routine, adjustments), [handleAdjustNextSession, language]);
@@ -558,7 +576,7 @@ export const useAppLogic = () => {
         onPasswordReset,
         handleViewRoutine, handleBackToMain, handleRoutineFeedback, handleExerciseComplete, setRestSeconds, setIsSessionActive,
         onProfileChange: handleProfileChange, onProfileSave, onAnalyzeBioage,
-        onGeneratePlan, onGeneratePlan, onAdjustNextSession,
+        onGeneratePlan, onAdjustNextSession,
         onGenerateBackup: handleGenerateBackup, onCloseBackupModal: handleCloseBackupModal, onCopyToClipboard: handleCopyToClipboard, setIsImportModalOpen,
         onImportFromText: handleImportFromText
     };

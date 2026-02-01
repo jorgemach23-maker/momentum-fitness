@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '../ui/Icon';
 import { Card, InputField, BioageInput } from '../ui/LayoutComponents';
 import { PasswordInput } from '../ui/PasswordInput';
 import { calculateCyclePhase } from '../../utils/helpers';
 
 // Componente de Acordeón Reutilizable
-const AccordionSection = ({ title, icon, children, isOpen, onToggle, t }) => {
+const AccordionSection = ({ title, icon, children, isOpen, onToggle }) => {
     return (
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 overflow-hidden shadow-lg transition-all duration-300 mb-4">
             <button 
@@ -97,79 +97,32 @@ const LinkAccountSection = ({ onLinkAccount, t, error }) => {
     );
 };
 
-export default function ProfileTab({ profile, onProfileChange, onProfileSave, onSignOut, profileSuccess, profileError, onAnalyzeBioage, bioageLoading, t, isAnonymous, onLinkAccount, linkAccountError }) {
-    const [localProfile, setLocalProfile] = useState({ ...profile });
+export default function ProfileTab({ profile, onProfileChange, onSignOut, profileSuccess, profileError, onAnalyzeBioage, bioageLoading, t, isAnonymous, onLinkAccount, linkAccountError }) {
     const [openSections, setOpenSections] = useState({ basic: true, goals: false, cycle: false, bioage: false });
-    const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, saved
-    const saveTimeoutRef = useRef(null);
 
-    // Actualizar localProfile cuando cambia profile (pero evitar loop infinito si es por nuestro guardado)
-    // Solo si es significativamente diferente o es carga inicial
-    useEffect(() => {
-        // Simple check para no sobrescribir cambios locales pendientes
-        // En una app real usaríamos deep equal o timestamps
-        if (saveStatus === 'idle') {
-            setLocalProfile(prev => ({ ...prev, ...profile }));
-        }
-    }, [profile]);
-
-    // Efecto de autoguardado (Debounce)
-    useEffect(() => {
-        // No guardar en la carga inicial si no hubo cambios
-        if (saveStatus === 'idle') return;
-
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-        }
-
-        setSaveStatus('saving');
-
-        saveTimeoutRef.current = setTimeout(() => {
-            onProfileSave(localProfile);
-            // El estado 'saved' se seteará cuando profileSuccess cambie
-        }, 1500); // 1.5s delay
-
-        return () => clearTimeout(saveTimeoutRef.current);
-    }, [localProfile]);
-
-    // Feedback visual de guardado exitoso
-    useEffect(() => {
-        if (profileSuccess && saveStatus === 'saving') {
-            setSaveStatus('saved');
-            const timer = setTimeout(() => setSaveStatus('idle'), 2000);
-            return () => clearTimeout(timer);
-        }
-    }, [profileSuccess]);
+    // El estado local ahora se deriva directamente de las props
+    const localProfile = profile;
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         
-        // Marcar que hubo un cambio para activar el efecto de guardado
-        if (saveStatus === 'idle') setSaveStatus('saving'); 
-
-        let newProfile;
+        let processedValue;
         if (name === 'menstrualCycle') {
-            newProfile = { ...localProfile, menstrualCycle: { ...localProfile.menstrualCycle, ...value } };
-        } else if (name === 'bioage') {
-            newProfile = { ...localProfile, bioage: { ...localProfile.bioage, ...value } };
+            processedValue = { ...localProfile.menstrualCycle, ...value };
         } else {
-            newProfile = { ...localProfile, [name]: type === 'checkbox' ? checked : value };
+            processedValue = type === 'checkbox' ? checked : value;
         }
-        
-        setLocalProfile(newProfile);
-        
+
         if (onProfileChange) {
-            onProfileChange({ target: { name, value: type === 'checkbox' ? checked : value } });
+            onProfileChange({ target: { name, value: processedValue } });
         }
     };
 
     const handleBioChange = (e) => { 
-        if (saveStatus === 'idle') setSaveStatus('saving');
         const field = e.target.name.replace('bio_', ''); 
-        const newProfile = { ...localProfile, bioage: { ...localProfile.bioage, [field]: e.target.value } };
-        setLocalProfile(newProfile);
+        const newBioage = { ...localProfile.bioage, [field]: e.target.value };
         if (onProfileChange) {
-             handleChange({ target: { name: 'bioage', value: newProfile.bioage } });
+             onProfileChange({ target: { name: 'bioage', value: newBioage } });
         }
     };
 
@@ -197,7 +150,7 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
         if (recommendations && recommendations.length > 0) summary.push(`${t.recommendationsLabel || "Recomendaciones"}: ${recommendations.join(', ')}.`);
         return summary.join(' ');
     }, [localProfile.bioageEstimation, t]);
-
+    
     const bio = localProfile.bioage || {};
 
     return (
@@ -206,10 +159,9 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                 <div>
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         {t.profileTitle || "Tu Perfil"}
-                        {saveStatus === 'saving' && <span className="text-[10px] font-normal text-teal-400 animate-pulse bg-teal-900/30 px-2 py-0.5 rounded-full">{t.processing || "Guardando..."}</span>}
-                        {saveStatus === 'saved' && <span className="text-[10px] font-normal text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full">{t.saved || "¡Guardado!"}</span>}
+                        {profileSuccess && <span className="text-[10px] font-normal text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full animate-fadeIn">{profileSuccess}</span>}
                     </h2>
-                    <p className="text-xs text-slate-400 mt-1">{t.profileSub || "Mantén tus datos actualizados"}</p>
+                    <p className="text-xs text-slate-400 mt-1">{t.profileSub || "Tus cambios se guardarán al salir."}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={onSignOut} className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:bg-red-900/50 hover:text-red-300 hover:border-red-700 transition-colors" aria-label={t.signOut || "Cerrar sesión"}>
@@ -220,17 +172,14 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
 
             {isAnonymous && <LinkAccountSection onLinkAccount={onLinkAccount} t={t} error={linkAccountError} />}
 
-            {/* SECCIÓN 1: DATOS BÁSICOS */}
             <AccordionSection 
                 title={t.biometrics || "Datos Básicos"} 
                 icon="user" 
                 isOpen={openSections.basic} 
                 onToggle={() => toggleSection('basic')}
-                t={t}
             >
                 <div className="space-y-4">
                     <InputField name="name" value={localProfile.name || ''} onChange={handleChange} label={t.nameLabel || "Nombre"} />
-                    
                     <div className="grid grid-cols-2 gap-4">
                         <InputField name="age" type="number" value={localProfile.age || ''} onChange={handleChange} label={t.ageLabel || "Edad"} />
                         <div>
@@ -242,12 +191,10 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                             </select>
                         </div>
                     </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <InputField name="height" type="number" value={localProfile.height || ''} onChange={handleChange} label={t.heightLabel || "Altura (cm)"} />
                         <InputField name="weight" type="number" value={localProfile.weight || ''} onChange={handleChange} label={t.weightLabel || "Peso (kg)"} />
                     </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <InputField name="bodyFat" type="number" value={localProfile.bodyFat || ''} onChange={handleChange} label={t.bodyFatLabel || "% Grasa"} />
                         <InputField name="muscleMass" type="number" value={localProfile.muscleMass || ''} onChange={handleChange} label={t.muscleMassLabel || "% Músculo"} />
@@ -255,16 +202,13 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                 </div>
             </AccordionSection>
 
-            {/* SECCIÓN 2: MIS METAS Y PREFERENCIAS */}
             <AccordionSection 
                 title={t.myGoalTitle || "Mi Meta y Preferencias"} 
                 icon="target" 
                 isOpen={openSections.goals} 
                 onToggle={() => toggleSection('goals')}
-                t={t}
             >
                 <div className="space-y-4">
-                    {/* Objetivo Principal */}
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">{t.mainGoal || "Objetivo Principal"}</label>
                         <select name="goal" value={localProfile.goal || 'fat_loss'} onChange={handleChange} className="w-full bg-slate-900/70 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-slate-800/50 disabled:text-slate-500">
@@ -274,8 +218,6 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                             <option value="endurance">{t.goalCardio || "Resistencia"}</option>
                         </select>
                     </div>
-
-                    {/* Nivel de Experiencia */}
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">{t.fitnessLevel || "Nivel de Experiencia"}</label>
                         <select name="fitnessLevel" value={localProfile.fitnessLevel || 'beginner'} onChange={handleChange} className="w-full bg-slate-900/70 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-slate-800/50 disabled:text-slate-500">
@@ -284,8 +226,6 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                             <option value="advanced">{t.advanced || "Avanzado"}</option>
                         </select>
                     </div>
-
-                    {/* Días y Tiempo Disponible */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-slate-400 mb-1">{t.daysWeek || "Días/Semana"}</label>
@@ -303,8 +243,6 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                             label={t.timeAvailable || "Minutos/Sesión"} 
                         />
                     </div>
-
-                    {/* Consideraciones / Lesiones / Deseos */}
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">{t.injuries || "Deseos / Consideraciones"}</label>
                         <textarea 
@@ -319,14 +257,12 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                 </div>
             </AccordionSection>
 
-            {/* SECCIÓN 3: SALUD FEMENINA (Solo si es mujer) */}
             {localProfile.gender === 'female' && (
                 <AccordionSection 
                     title={t.cycleTitle || "Salud Femenina"} 
                     icon="heart" 
                     isOpen={openSections.cycle} 
                     onToggle={() => toggleSection('cycle')}
-                    t={t}
                 >
                     <div className="space-y-4">
                         <div className="flex justify-between items-center mb-4">
@@ -342,7 +278,6 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                                 className="toggle-checkbox" 
                             />
                         </div>
-
                         {localProfile.trackCycle && (
                             <div className="space-y-4 animate-fadeIn">
                                 <InputField name="menstrualCycle.lastPeriod" type="date" value={localProfile.menstrualCycle?.lastPeriod || ''} onChange={(e) => handleChange({ target: { name: 'menstrualCycle', value: { lastPeriod: e.target.value } } })} label={t.lastPeriodLabel || "Último Periodo"} />
@@ -360,13 +295,11 @@ export default function ProfileTab({ profile, onProfileChange, onProfileSave, on
                 </AccordionSection>
             )}
 
-            {/* SECCIÓN 4: BIOAGE (Perfil Avanzado) */}
             <AccordionSection 
                 title={t.bioageTitle || "Perfil Avanzado (Bioage)"} 
                 icon="scanEye" 
                 isOpen={openSections.bioage} 
                 onToggle={() => toggleSection('bioage')}
-                t={t}
             >
                 <div className="space-y-6">
                     <p className="text-xs text-slate-400 -mt-2 mb-2">{t.bioageDesc || "Datos clínicos para mayor precisión."}</p>
