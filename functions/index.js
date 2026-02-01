@@ -210,5 +210,78 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
 });
 
 exports.analyzeBioage = functions.https.onCall(async (data, context) => {
-    // ... (código existente)
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'La función debe ser llamada por un usuario autenticado.');
+    }
+    if (!geminiKey) {
+        console.error("Error: La API Key de Gemini no está configurada.");
+        throw new functions.https.HttpsError('internal', 'La configuración del servidor de IA está incompleta.');
+    }
+
+    const { profile, lang } = data;
+    if (!profile || !profile.bioage) {
+        throw new functions.https.HttpsError('invalid-argument', 'El perfil de usuario o los datos de Bioage están incompletos.');
+    }
+
+    const langInstruction = lang === 'en' ? "You MUST answer in English." : "DEBES responder en Español.";
+
+    const systemPrompt = `
+    Eres un fisiólogo del ejercicio y científico de datos. ${langInstruction}
+    Tu tarea es analizar los datos biométricos de un usuario para estimar su edad biológica ("BioAge") y proporcionar un breve análisis.
+
+    **Datos del Usuario:**
+    - Edad Cronológica: ${profile.age} años
+    - Género: ${profile.gender}
+    - Peso: ${profile.weight} kg
+    - Altura: ${profile.height} cm
+    - % Grasa Corporal: ${profile.bodyFat || 'No disponible'}
+    - % Masa Muscular: ${profile.muscleMass || 'No disponible'}
+    
+    **Métricas de Rendimiento (Bioage):**
+    - Squat 1RM: ${profile.bioage.sq1rm || 'No disponible'} kg
+    - Plank: ${profile.bioage.plank || 'No disponible'} segundos
+    - Dominadas (Pull-ups): ${profile.bioage.pullups || 'No disponible'} reps
+    - Flexiones (Push-ups): ${profile.bioage.pushups || 'No disponible'} reps
+    - Cintura: ${profile.bioage.waist || 'No disponible'} cm
+    - VO2 Max: ${profile.bioage.vo2max || 'No disponible'} ml/kg/min
+    - Frecuencia Cardíaca en Reposo (RHR): ${profile.bioage.rhr || 'No disponible'} bpm
+    - Recuperación de Frecuencia Cardíaca (HRR): ${profile.bioage.hrr || 'No disponible'} bpm (descenso en 1 min)
+
+    **INSTRUCCIONES:**
+    1.  **Estima la Edad Biológica (BioAge):** Basándote en una comparación holística de los datos proporcionados contra benchmarks de poblaciones saludables, estima la edad biológica del usuario. Sé realista. Un atleta de 30 años podría tener una BioAge de 25, no de 15.
+    2.  **Identifica Fortalezas y Debilidades:** Analiza las métricas para encontrar 1-2 fortalezas y 1-2 debilidades clave.
+    3.  **Da Recomendaciones:** Proporciona 1-2 recomendaciones accionables muy breves.
+
+    **FORMATO DE SALIDA (JSON ESTRICTO):**
+    La respuesta DEBE ser un ÚNICO objeto JSON. NO incluyas texto, markdown o explicaciones fuera del JSON. La estructura debe ser:
+
+    {
+      "bioage": <Número entero. EJ: 28>,
+      "strengths": ["<Breve descripción de una fortaleza>", "<Otra fortaleza>"],
+      "weaknesses": ["<Breve descripción de una debilidad>", "<Otra debilidad>"],
+      "recommendations": ["<Recomendación accionable muy corta>", "<Otra recomendación>"]
+    }
+
+    **FIN DE INSTRUCCIONES.**
+    `;
+
+    try {
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const result = await model.generateContent(systemPrompt);
+        const response = result.response;
+        
+        let text = response.text();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            text = text.replace(/^```json\s*|```$/g, '');
+        } else {
+            text = jsonMatch[0];
+        }
+        
+        return JSON.parse(text);
+
+    } catch (error) {
+        console.error("Error detallado al analizar BioAge con Gemini:", error);
+        throw new functions.https.HttpsError('internal', 'No se pudo analizar la edad biológica.');
+    }
 });
