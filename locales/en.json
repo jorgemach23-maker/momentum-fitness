@@ -3,7 +3,15 @@
   "lang": "en",
   "guest": "Guest",
   "online": "Online",
-  "weekdays": ["S", "M", "T", "W", "T", "F", "S"],
+  "weekdays": [
+    "S",
+    "M",
+  "T",
+    "W",
+    "T",
+    "F",
+    "S"
+  ],
   "tabTraining": "Training",
   "tabHistory": "History",
   "tabProfile": "Profile",
@@ -94,7 +102,6 @@
   "realAge": "Chronological",
   "bioAgeAnalysis": "Longevity Analysis",
   "analyzeBioage": "Analyze Bio Age",
-  "analyzing": "Analyzing...",
   "analysisComplete": "Analysis complete",
   "processing": "Processing...",
   "strengthsLabel": "Strengths",
@@ -167,7 +174,6 @@
   "error.auth.network-request-failed": "Network error. Please check your internet connection.",
   "startMain": "START",
   "finishComplete": "FINISH",
-  
   "recommended": "Recommended",
   "moreOptions": "Other options",
   "regenerateCycle": "Regenerate Cycle",
@@ -178,5 +184,15 @@
   "myGoal": "My Goal",
   "considerations": "Wishes / Considerations",
   "profileAutoSaved": "File automatically updated",
-  "suggestion": "SUGGESTION"
+  "suggestion": "SUGGESTION",
+  "warmupTitle": "Warm-up",
+  "warmupDesc": "Joint mobility and muscle activation exercises to prepare your body.",
+  "cooldownTitle": "Cool-down",
+  "cooldownDesc": "Gentle stretches to improve recovery and flexibility.",
+"restTimer": "REST",
+  "letsGo": "LET'S GO",
+  "analyzing": "Analyzing biomechanical profile...",
+  "designing": "Designing training cycle...",
+  "optimizing": "Optimizing for hormonal phase...",
+  "finalizing": "Finalizing routine details..."
 }

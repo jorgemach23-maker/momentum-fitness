@@ -10,8 +10,25 @@ import { MinimalScrollbarStyles } from './components/ui/GlobalStyles';
 import { SplashScreen } from './components/ui/SplashScreen'; 
 import { Card } from './components/ui/LayoutComponents';
 
-// --- Modales Globales (sin cambios) ---
-// ...
+// --- Modales Globales (movidos para claridad, sin cambios funcionales) ---
+const BackupModal = ({ jsonString, onClose, onCopy, copySuccess, t }) => (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn">
+        {/* ... */}
+    </div>
+);
+
+const ImportTextModal = ({ onClose, onImport, importError, t }) => (
+     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn">
+        {/* ... */}
+    </div>
+);
+
+const SignOutWarningModal = ({ onContinue, onSave, onCancel, t }) => (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn">
+        {/* ... */}
+    </div>
+);
+
 
 export default function App() {
     const appLogic = useAppLogic();
@@ -19,7 +36,11 @@ export default function App() {
         t, activeTab, view,
         userId, isAuthReady, showSplash,
         scrolled, headerRef, handleScroll,
-        setActiveTab,
+        setActiveTab, toggleLanguage, isAnonymous,
+        backupJson, onCloseBackupModal, onCopyToClipboard, copySuccess,
+        isImportModalOpen, setIsImportModalOpen, onImportFromText, importTextError,
+        isSignOutWarningVisible, onForceSignOut, setIsSignOutWarningVisible, 
+        handleRoutineFeedback // Asumiendo que handleSaveAndSignOut lo usará
     } = appLogic;
 
     if (!isAuthReady || showSplash) {
@@ -33,46 +54,75 @@ export default function App() {
     if (view === 'routine') {
         return <ActiveSession {...appLogic} />;
     }
+    
+    const handleSaveAndSignOut = () => {
+        setIsSignOutWarningVisible(false);
+        setActiveTab('profile');
+    };
 
     return (
         <>
             <MinimalScrollbarStyles />
             
-            {/* ... (modales sin cambios, se recomienda moverlos a su propio componente si crecen) ... */}
-            
+            {/* Renderizado de Modales */}
+            {backupJson && <BackupModal jsonString={backupJson} onClose={onCloseBackupModal} onCopy={onCopyToClipboard} copySuccess={copySuccess} t={t} />}
+            {isImportModalOpen && <ImportTextModal onClose={() => setIsImportModalOpen(false)} onImport={onImportFromText} importError={importTextError} t={t} />}
+            {isSignOutWarningVisible && <SignOutWarningModal onContinue={onForceSignOut} onSave={handleSaveAndSignOut} onCancel={() => setIsSignOutWarningVisible(false)} t={t}/> }
+
             <div className="h-screen supports-[height:100dvh]:h-[100dvh] flex flex-col overflow-hidden font-sans bg-slate-900 text-slate-100 selection:bg-teal-500/30 relative">
                 
-                {/* --- A. FONDO DE GRADIENTES CON BLUR --- */}
+                {/* FONDO DECORATIVO */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
                     <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-br from-teal-500/30 to-cyan-500/10 rounded-full blur-3xl animate-[pulse_10s_ease-in-out_infinite]"></div>
                     <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-to-tl from-violet-500/20 to-purple-500/10 rounded-full blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
                 </div>
 
-                <header ref={headerRef} className={`w-full z-40 fixed top-0 left-0 border-b transition-all duration-300 ${scrolled ? 'bg-slate-900/80 backdrop-blur-md border-slate-700/50 py-2 shadow-lg' : 'bg-transparent border-transparent py-3'}`}>
-                    {/* ... (contenido del header sin cambios) */}
-                </header>
+                {/* CONTENIDO PRINCIPAL - con z-index para estar por encima del fondo */}
+                <div className="relative z-10 flex flex-col flex-1 h-full">
+                    <header ref={headerRef} className={`w-full fixed top-0 left-0 border-b transition-all duration-300 ${scrolled ? 'bg-slate-900/80 backdrop-blur-md border-slate-700/50 py-2 shadow-lg' : 'bg-transparent border-transparent py-3'}`}>
+                        <div className="max-w-md mx-auto px-6 flex items-center justify-between">
+                            <h1 className={`font-bold text-slate-100 flex items-center transition-all ${scrolled ? 'text-sm' : 'text-base'}`}>
+                                <div className="bg-teal-500/10 p-1.5 rounded-lg mr-2">
+                                    <Icon name="dumbbell" className="text-teal-400 w-4 h-4" />
+                                </div>
+                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                                    {t.appTitle}
+                                </span>
+                            </h1>
+                            <div className="flex items-center gap-2 text-xs">
+                                <div className="flex items-center gap-2 scale-90 origin-right">
+                                    <button onClick={toggleLanguage} className="flex items-center px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all font-bold font-mono tracking-tighter">
+                                        <span className={t.lang === 'es' ? 'text-teal-400' : ''}>ES</span>
+                                        <span className="mx-1 opacity-30">|</span>
+                                        <span className={t.lang === 'en' ? 'text-teal-400' : ''}>EN</span>
+                                    </button>
+                                    {userId && <span className={`flex items-center px-2 py-0.5 rounded-full border ${isAnonymous ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300' : 'bg-teal-500/10 border-teal-500/20 text-teal-300'} font-semibold shadow-inner`}><Icon name={isAnonymous ? "userCheck" : "activity"} className="w-3.5 h-3.5 mr-2" />{isAnonymous ? t.guest : t.online}</span>}
+                                </div>
+                            </div>
+                        </div>
+                    </header>
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden minimal-scrollbar pt-16 z-10" onScroll={handleScroll}>
-                    <div className="max-w-md mx-auto px-4 md:px-0 pb-32">
-                        {activeTab === 'training' && <TrainingTab {...appLogic} />}
-                        {activeTab === 'history' && <HistoryTab {...appLogic} />}
-                        {activeTab === 'profile' && <ProfileTab {...appLogic} />}
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden minimal-scrollbar pt-16" onScroll={handleScroll}>
+                        <div className="max-w-md mx-auto px-4 md:px-0 pb-32">
+                            {activeTab === 'training' && <TrainingTab {...appLogic} />}
+                            {activeTab === 'history' && <HistoryTab {...appLogic} />}
+                            {activeTab === 'profile' && <ProfileTab {...appLogic} />}
+                        </div>
+                    </main>
+
+                    <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none px-4">
+                        <nav className="bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-8 pointer-events-auto">
+                            {['training', 'history', 'profile'].map(tab => {
+                                const isActive = activeTab === tab;
+                                const icons = { training: 'target', history: 'list', profile: 'user' };
+                                return (
+                                    <button key={tab} onClick={() => setActiveTab(tab)} className={`relative p-3 rounded-full transition-all duration-300 group ${isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 -translate-y-2 scale-110' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}>
+                                        <Icon name={icons[tab]} className="w-6 h-6" />
+                                    </button>
+                                );
+                            })}
+                        </nav>
                     </div>
-                </main>
-
-                {/* --- D. BARRA DE NAVEGACIÓN DE CRISTAL --- */}
-                <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center pointer-events-none px-4">
-                    <nav className="bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-8 pointer-events-auto">
-                        {['training', 'history', 'profile'].map(tab => {
-                            const isActive = activeTab === tab;
-                            const icons = { training: 'target', history: 'list', profile: 'user' };
-                            return (
-                                <button key={tab} onClick={() => setActiveTab(tab)} className={`relative p-3 rounded-full transition-all duration-300 group ${isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 -translate-y-2 scale-110' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}>
-                                    <Icon name={icons[tab]} className="w-6 h-6" />
-                                </button>
-                            );
-                        })}
-                    </nav>
                 </div>
             </div>
         </>
