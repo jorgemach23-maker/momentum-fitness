@@ -99,7 +99,7 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
 };
 
 // --- 3. TARJETA PRINCIPAL (HERO) ---
-export const HeroRoutineCard = ({ routine, onView, onAdjust }) => {
+export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust }) => {
   if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
   
   const data = routine.routine || routine;
@@ -123,7 +123,7 @@ export const HeroRoutineCard = ({ routine, onView, onAdjust }) => {
            
            <ExerciseListPreview exercises={exercisesList} limit={3} />
            
-           <button onClick={() => onView(routine)} className="w-full py-3.5 bg-teal-500 hover:bg-teal-400 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-900/20 active:scale-[0.98] group-hover:shadow-teal-500/20 mt-2">
+           <button onClick={() => onViewRoutine(routine)} className="w-full py-3.5 bg-teal-500 hover:bg-teal-400 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-900/20 active:scale-[0.98] group-hover:shadow-teal-500/20 mt-2">
                <Icon name="play" className="w-4 h-4 fill-current"/> 
                <span className="tracking-wide text-sm">COMENZAR SESIÓN</span>
            </button>
@@ -133,7 +133,7 @@ export const HeroRoutineCard = ({ routine, onView, onAdjust }) => {
 };
 
 // --- 4. LISTA DE BIBLIOTECA ---
-export const RoutineLibraryList = ({ routines, onView, onAdjust }) => {
+export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust }) => {
   const [expandedId, setExpandedId] = useState(null);
   if (!routines || routines.length === 0) return <div className="text-center py-8 text-xs text-slate-500">No hay opciones extra.</div>;
   
@@ -167,7 +167,7 @@ export const RoutineLibraryList = ({ routines, onView, onAdjust }) => {
                       </div>
                       <div className="flex gap-3 px-1">
                           <button onClick={(e) => { e.stopPropagation(); onAdjust(r); }} className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-bold text-xs hover:bg-slate-700 transition-colors">AJUSTAR</button>
-                          <button onClick={(e) => { e.stopPropagation(); onView(r); }} className="flex-[2] py-2.5 rounded-lg bg-teal-600 text-white font-bold text-xs hover:bg-teal-500 shadow-lg shadow-teal-900/20 transition-colors flex items-center justify-center gap-2"><Icon name="play" className="w-3 h-3 fill-current"/> INICIAR</button>
+                          <button onClick={(e) => { e.stopPropagation(); onViewRoutine(r); }} className="flex-[2] py-2.5 rounded-lg bg-teal-600 text-white font-bold text-xs hover:bg-teal-500 shadow-lg shadow-teal-900/20 transition-colors flex items-center justify-center gap-2"><Icon name="play" className="w-3 h-3 fill-current"/> INICIAR</button>
                       </div>
                   </div>
               )}

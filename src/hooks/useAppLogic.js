@@ -405,7 +405,7 @@ export const useAppLogic = () => {
         }
     }, [t, handlePasswordReset, setAuthError]);
     
-    const handleSignOutRequest = useCallback(() => {
+    const onSignOut = useCallback(() => {
         if (isAnonymous) {
             setIsSignOutWarningVisible(true);
         } else {
@@ -570,7 +570,7 @@ export const useAppLogic = () => {
         onSignIn: handleSignIn,
         onSignUp: handleSignUp,
         onAnonymousSignIn: handleAnonymousSignIn,
-        onSignOutRequest: handleSignOutRequest,
+        onSignOut: onSignOut,
         onForceSignOut: handleForceSignOut,
         onLinkAccount,
         onPasswordReset,

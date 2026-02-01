@@ -61,8 +61,8 @@ const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
 };
 
 export const ActiveSession = ({ 
-    routine, 
-    onRoutineFeedback, 
+    currentRoutine, 
+    handleRoutineFeedback, 
     lang, 
     onExerciseComplete, 
     restSeconds, 
@@ -70,10 +70,10 @@ export const ActiveSession = ({
     setIsSessionActive, 
     isSessionActive,
     sessionSeconds,
-    onBack,
+    handleBackToMain,
     title
 }) => {
-    const routineId = routine.id;
+    const routineId = currentRoutine.id;
     const t = TRANSLATIONS?.[lang || 'es'] || TRANSLATIONS?.['es'] || {};
     const [phase, setPhase] = useState('warmup');
     const [idx, setIdx] = useState(0);
@@ -82,7 +82,7 @@ export const ActiveSession = ({
     
     const isResting = restSeconds > 0;
 
-    const rawExercises = routine.rutinaPrincipal || [];
+    const rawExercises = currentRoutine.rutinaPrincipal || [];
 
     // Separación lógica de fases en el frontend
     const isWarmup = (ex) => {
@@ -232,7 +232,7 @@ export const ActiveSession = ({
 
     const handleNext = () => {
         if (phase === 'warmup') setPhase('workout');
-        else if (phase === 'cooldown') onRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
+        else if (phase === 'cooldown') handleRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
         else if (idx < exercises.length - 1) { setIdx(prev => prev + 1); }
         else setPhase('cooldown');
     };
@@ -269,7 +269,7 @@ export const ActiveSession = ({
             {/* Header Fijo */}
             <header className="shrink-0 p-4 pt-6 bg-slate-900/80 backdrop-blur-md z-30 border-b border-white/5">
                 <div className="flex items-center justify-between mb-4">
-                    <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors active:scale-90">
+                    <button onClick={handleBackToMain} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors active:scale-90">
                         <Icon name="arrowLeft" className="w-6 h-6" />
                     </button>
                     <h1 className="text-xs font-black text-slate-100 uppercase tracking-[0.2em]">{title}</h1>
@@ -357,8 +357,8 @@ export const ActiveSession = ({
                             <ul className="space-y-6 text-left">
                                 {formatWarmup(
                                     phase === 'warmup' 
-                                    ? (routine.calentamiento || warmupEx) // Intenta propiedad directa o array filtrado
-                                    : (routine.enfriamiento || cooldownEx) // Intenta propiedad directa o array filtrado
+                                    ? (currentRoutine.calentamiento || warmupEx) // Intenta propiedad directa o array filtrado
+                                    : (currentRoutine.enfriamiento || cooldownEx) // Intenta propiedad directa o array filtrado
                                 ) || 
                                  formatWarmup(phase === 'warmup' ? t.warmupDesc : t.cooldownDesc)
                                 }
