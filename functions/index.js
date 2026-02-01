@@ -122,7 +122,7 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
     const femaleHealthContext = getFemaleHealthContext(profile);
 
     const systemPrompt = `
-    Eres "FitCoach AI", un director de programación de fitness de élite. ${langInstruction}
+    Eres "FitCoach AI", un director de programación de fitness de élite, usas la informacion de perfil del usuario y generas un plan de entrenamiento semanal solo con infomacion cientificamente comprobada ${langInstruction}
     Tu única tarea es devolver un objeto JSON que representa un plan de entrenamiento semanal.
 
     **Contexto del Atleta:**
