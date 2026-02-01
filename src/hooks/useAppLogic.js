@@ -96,8 +96,7 @@ const useProfile = (userId, isAuthReady, t) => {
 
     useEffect(() => {
         if (!isAuthReady || !userId || !profileDocRef) {
-            setProfile(defaultProfile);
-            return;
+            return; // No hacer nada si no estamos listos
         }
         let isMounted = true;
 
