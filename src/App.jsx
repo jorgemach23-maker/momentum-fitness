@@ -40,7 +40,7 @@ export default function App() {
         backupJson, onCloseBackupModal, onCopyToClipboard, copySuccess,
         isImportModalOpen, setIsImportModalOpen, onImportFromText, importTextError,
         isSignOutWarningVisible, onForceSignOut, setIsSignOutWarningVisible, 
-        handleRoutineFeedback // Asumiendo que handleSaveAndSignOut lo usará
+        handleRoutineFeedback, onRepeatSession // Añadido onRepeatSession
     } = appLogic;
 
     if (!isAuthReady || showSplash) {
@@ -105,7 +105,7 @@ export default function App() {
                     <main className="flex-1 overflow-y-auto overflow-x-hidden minimal-scrollbar pt-16" onScroll={handleScroll}>
                         <div className="max-w-md mx-auto px-4 md:px-0 pb-32">
                             {activeTab === 'training' && <TrainingTab {...appLogic} />}
-                            {activeTab === 'history' && <HistoryTab {...appLogic} />}
+                            {activeTab === 'history' && <HistoryTab {...appLogic} onRepeatSession={onRepeatSession} />}
                             {activeTab === 'profile' && <ProfileTab {...appLogic} />}
                         </div>
                     </main>

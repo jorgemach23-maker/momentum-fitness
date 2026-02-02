@@ -102,7 +102,10 @@
   "realAge": "Chronological",
   "bioAgeAnalysis": "Longevity Analysis",
   "analyzeBioage": "Analyze Bio Age",
-  "analysisComplete": "Analysis complete",
+  "analyzing": "Analyzing biomechanical profile...",
+  "designing": "Designing training cycle...",
+  "optimizing": "Optimizing for hormonal phase...",
+  "finalizing": "Finalizing routine details...",
   "processing": "Processing...",
   "strengthsLabel": "Strengths",
   "weaknessesLabel": "Weaknesses",
@@ -185,14 +188,5 @@
   "considerations": "Wishes / Considerations",
   "profileAutoSaved": "File automatically updated",
   "suggestion": "SUGGESTION",
-  "warmupTitle": "Warm-up",
-  "warmupDesc": "Joint mobility and muscle activation exercises to prepare your body.",
-  "cooldownTitle": "Cool-down",
-  "cooldownDesc": "Gentle stretches to improve recovery and flexibility.",
-"restTimer": "REST",
-  "letsGo": "LET'S GO",
-  "analyzing": "Analyzing biomechanical profile...",
-  "designing": "Designing training cycle...",
-  "optimizing": "Optimizing for hormonal phase...",
-  "finalizing": "Finalizing routine details..."
+  "msgSessionRepeat": "Session duplicated and ready to repeat!"
 }

@@ -15,4 +15,11 @@ This document outlines the plan to restore the Momentum AI application to its or
     *   **Header:** I will redesign the header to make it more dynamic and visually appealing.
     *   **Buttons:** I will update the buttons to give them a modern look and feel, with improved visual feedback.
     *   **Feedback Section:** I will refine the feedback section to make it more user-friendly and intuitive.
-4.  **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.
+4.  **Implement 'Repeat Session' functionality:**
+    *   Added `handleRepeatSession` to `src/hooks/useAppLogic.js` to duplicate a completed routine, reset its status to 'pending', and initiate a new training session.
+    *   Updated `src/App.jsx` to pass `onRepeatSession` to `HistoryTab`.
+    *   Modified `src/components/features/HistoryTab.jsx` to call `onRepeatSession` when the 'REPETIR ESTA SESIÓN' button is clicked.
+    *   Added translation `msgSessionRepeat` to `locales/es.json` and `locales/en.json`.
+5.  **Fix `ReferenceError` in `useAppLogic`:**
+    *   Reordered state declarations in `src/hooks/useAppLogic.js` to ensure `isSessionActive`, `currentRoutineId`, `view`, and their respective setters are initialized before being passed to `useHistory`.
+6.  **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.

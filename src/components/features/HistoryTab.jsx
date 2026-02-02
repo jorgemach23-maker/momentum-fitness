@@ -12,7 +12,7 @@ const formatTime = (seconds) => {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-export default function HistoryTab({ history, onViewRoutine, t, setActiveTab }) {
+export default function HistoryTab({ history, onViewRoutine, t, setActiveTab, onRepeatSession }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [previewRoutine, setPreviewRoutine] = useState(null);
 
@@ -77,7 +77,7 @@ export default function HistoryTab({ history, onViewRoutine, t, setActiveTab }) 
                
                <button 
                 onClick={() => {
-                  onViewRoutine({ ...previewRoutine, status: 'pending' });
+                  onRepeatSession(previewRoutine); // Usar la nueva función
                   if (setActiveTab) setActiveTab('training');
                 }} 
                 className="w-full py-4 bg-teal-500 hover:bg-teal-400 text-slate-900 rounded-xl font-black flex items-center justify-center gap-3 transition-all shadow-lg shadow-teal-900/20 active:scale-[0.98]"

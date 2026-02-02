@@ -5,8 +5,8 @@ import { auth, db } from '../services/firebase';
 import { buildHistoryContext, TRANSLATIONS, calculateSmartRest } from '../utils/helpers';
 import { fetchGeminiWeeklyPlan, fetchGeminiBioageAnalysis } from '../services/gemini';
 
-// --- Force Hot-Reload --- 
-const appId = (typeof __app_id !== 'undefined' ? __app_id : 'momentum-fitness-ai').replace(/[\/.]/g, '_');
+// --- Force Hot-Reload ---
+const appId = (typeof __app_id !== 'undefined' ? __app_id : 'momentum-fitness-ai').replace(/[/.]/g, '_');
 
 // --- Helper for deep object comparison ---
 const deepEqual = (obj1, obj2) => JSON.stringify(obj1) === JSON.stringify(obj2);
@@ -181,7 +181,7 @@ const useProfile = (userId, isAuthReady, t) => {
     
     return { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef };
 };
-const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress) => {
+const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive) => {
     const [history, setHistory] = useState([]);
     
     const routinesColRef = useMemo(() => 
@@ -304,7 +304,53 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         }
     };
 
-    return { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, routinesColRef };
+    const handleRepeatSession = useCallback(async (routineToRepeat) => {
+        if (!routinesColRef || !routineToRepeat) return;
+
+        setLoading(true);
+        setError(null);
+        
+        try {
+            // Create a new ID for the repeated routine
+            const newRoutineId = doc(routinesColRef).id;
+            const newRoutine = {
+                ...routineToRepeat,
+                id: newRoutineId, // Assign new ID
+                status: 'pending', // Reset status to pending
+                createdAt: serverTimestamp(), // New creation timestamp
+                completedAt: null, // Clear completion data
+                feedback: null,
+                notes: null,
+                mode: null,
+                planId: routineToRepeat.planId || `repeated_${Date.now()}` // Keep planId or generate a new one
+            };
+
+            // Remove properties that should not be copied or need to be regenerated
+            delete newRoutine.completedOnDay;
+            delete newRoutine.modifiedAt;
+            
+            const routineRef = doc(routinesColRef, newRoutineId);
+            await setDoc(routineRef, newRoutine); // Save the new routine to Firestore
+
+            // Update local history state
+            setHistory(prevHistory => [...prevHistory, newRoutine]);
+
+            // Start the new session
+            setCurrentRoutineId(newRoutineId);
+            setView('routine');
+            setIsSessionActive(true);
+            setSuccessMessage(t.msgSessionRepeat); // Need to add this translation
+            
+        } catch (err) {
+            console.error("Error repeating session:", err);
+            setError(t.errorSave);
+        } finally {
+            setLoading(false);
+            setTimeout(() => setSuccessMessage(null), 3000);
+        }
+    }, [routinesColRef, setHistory, setCurrentRoutineId, setView, setIsSessionActive, t]);
+
+    return { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, routinesColRef };
 };
 
 export const useAppLogic = () => {
@@ -321,18 +367,20 @@ export const useAppLogic = () => {
     const [isSignOutWarningVisible, setIsSignOutWarningVisible] = useState(false);
     const [generationProgress, setGenerationProgress] = useState(0);
 
-    const { userId, isAnonymous, isAuthReady, authError, setAuthError, handleSignIn, handleSignUp, handleAnonymousSignIn, handleSignOut, handleLinkAccount, handlePasswordReset } = useAuth(t);
-    const { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef } = useProfile(userId, isAuthReady, t);
-    const [error, setError] = useState(null);
-    const { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, routinesColRef } = useHistory(userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress);
-    const [linkAccountError, setLinkAccountError] = useState(null);
-
+    // Declaraciones de estado para la sesión activa movidas aquí
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [sessionSeconds, setSessionSeconds] = useState(0);
     const [restSeconds, setRestSeconds] = useState(0);
     const [isResting, setIsResting] = useState(false);
     const sessionIntervalRef = useRef(null);
     const restIntervalRef = useRef(null);
+
+    const { userId, isAnonymous, isAuthReady, authError, setAuthError, handleSignIn, handleSignUp, handleAnonymousSignIn, handleSignOut, handleLinkAccount, handlePasswordReset } = useAuth(t);
+    const { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef } = useProfile(userId, isAuthReady, t);
+    const [error, setError] = useState(null);
+    const { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, routinesColRef } = useHistory(userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive);
+    const [linkAccountError, setLinkAccountError] = useState(null);
+
 
     const [scrolled, setScrolled] = useState(false);
     const headerRef = useRef(null);
@@ -523,6 +571,8 @@ export const useAppLogic = () => {
     const onAnalyzeBioage = useCallback(() => handleAnalyzeBioage(profile, language), [handleAnalyzeBioage, profile, language]);
     const onAdjustNextSession = useCallback((routine, adjustments) => handleAdjustNextSession(language, routine, adjustments), [handleAdjustNextSession, language]);
 
+    const onRepeatSession = useCallback((routine) => handleRepeatSession(routine), [handleRepeatSession]);
+
     const handleGenerateBackup = useCallback(() => {
         const backupData = { profile, history };
         setBackupJson(JSON.stringify(backupData, null, 2));
@@ -576,7 +626,7 @@ export const useAppLogic = () => {
         onPasswordReset,
         handleViewRoutine, handleBackToMain, handleRoutineFeedback, handleExerciseComplete, setRestSeconds, setIsSessionActive,
         onProfileChange: handleProfileChange, onProfileSave, onAnalyzeBioage,
-        onGeneratePlan, onAdjustNextSession,
+        onGeneratePlan, onAdjustNextSession, onRepeatSession,
         onGenerateBackup: handleGenerateBackup, onCloseBackupModal: handleCloseBackupModal, onCopyToClipboard: handleCopyToClipboard, setIsImportModalOpen,
         onImportFromText: handleImportFromText
     };

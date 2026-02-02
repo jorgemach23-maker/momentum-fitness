@@ -178,5 +178,6 @@
   "myGoal": "Mi Meta",
   "considerations": "Deseos / Consideraciones",
   "profileAutoSaved": "Expediente actualizado automáticamente",
-  "suggestion": "SUGERENCIA"
+  "suggestion": "SUGERENCIA",
+  "msgSessionRepeat": "¡Sesión duplicada y lista para repetir!"
 }
