@@ -22,4 +22,12 @@ This document outlines the plan to restore the Momentum AI application to its or
     *   Added translation `msgSessionRepeat` to `locales/es.json` and `locales/en.json`.
 5.  **Fix `ReferenceError` in `useAppLogic`:**
     *   Reordered state declarations in `src/hooks/useAppLogic.js` to ensure `isSessionActive`, `currentRoutineId`, `view`, and their respective setters are initialized before being passed to `useHistory`.
-6.  **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.
+6.  **Fix `Sign Out` button in deployed version:**
+    *   Adjusted Firebase initialization logic in `src/services/firebase.js` to ensure a consistent and robust configuration loading across `idx` and deployed environments, preventing issues with the logout functionality.
+    *   Implemented a singleton pattern for Firebase initialization to prevent multiple instances of Firebase services, which was the likely cause of the sign-out issue.
+7.  **Implement guest sign out warning:**
+    *   Modified `src/App.jsx` to pass the `isAnonymous` prop to `SignOutWarningModal`.
+    *   Updated `SignOutWarningModal` to display a specific warning for guest users about data loss and offer to create an account.
+    *   Modified `handleSaveAndSignOut` in `src/hooks/useAppLogic.js` to navigate to the 'profile' tab, allowing guest users to create an account and save their data before signing out.
+    *   Added new translation keys (`signOutWarningTitle`, `signOutWarningMessage`, `signOutWarningGuestMessage`, `signOutWarningSaveData`, `signOutWarningContinueWithoutSaving`, `signOutConfirm`) to `locales/es.json`.
+8.  **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.

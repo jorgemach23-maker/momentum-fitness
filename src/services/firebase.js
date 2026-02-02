@@ -1,10 +1,9 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 
 // 1. Prioritize Environment Variables (Vite standard)
-// This is critical for local development where .env might differ from production defaults
 const envConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -16,9 +15,17 @@ const envConfig = {
 };
 
 // 2. Fallback to global config (IDX/Google environments) or Hardcoded Defaults
-// The check for apiKey ensures we don't use an empty object if env vars are missing
-let firebaseConfig = (envConfig.apiKey) ? envConfig : (
-  typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+let firebaseConfig;
+
+if (envConfig.apiKey) {
+  // If any env variable is set, assume all are intended to be from .env
+  firebaseConfig = envConfig;
+} else if (typeof __firebase_config !== 'undefined') {
+  // Fallback to global config provided by the environment (e.g., Firebase Hosting)
+  firebaseConfig = JSON.parse(__firebase_config);
+} else {
+  // Hardcoded defaults for local development or when no other config is available
+  firebaseConfig = {
     apiKey: "AIzaSyDTcSIPkEt2dtyAmlcC1xFVuZ68e8y1SKM",
     authDomain: "momentum-fitness-ai.firebaseapp.com",
     projectId: "momentum-fitness-ai",
@@ -26,22 +33,15 @@ let firebaseConfig = (envConfig.apiKey) ? envConfig : (
     messagingSenderId: "335276198384",
     appId: "1:335276198384:web:ac58a4771d605892203535",
     measurementId: "G-9DJX8R1NX8"
-  }
-);
-
-let app, auth, db, functions; 
-
-try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  // Important: Explicitly set region if your function is not in us-central1 (default)
-  // We verified previously the function is deployed to us-central1, so default is fine.
-  functions = getFunctions(app, 'us-central1'); 
-} catch (e) {
-  console.error("Critical Error initializing Firebase:", e);
-  // Fallback to avoid crashing the whole app immediately on import
-  // Consumers of these exports should check for nulls
+  };
 }
+
+// --- Singleton Initialization ---
+// This ensures we don't initialize the app more than once, which can cause auth state issues in production builds.
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+const functions = getFunctions(app, 'us-central1');
 
 export { app, auth, db, functions };

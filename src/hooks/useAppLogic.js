@@ -466,6 +466,12 @@ export const useAppLogic = () => {
         handleSignOut();
     }, [handleSignOut]);
 
+    // Modified handleSaveAndSignOut to navigate to profile tab
+    const handleSaveAndSignOut = useCallback(() => {
+        setIsSignOutWarningVisible(false);
+        setActiveTab('profile'); // Navigate to profile tab so user can create an account and save data
+    }, [setActiveTab]);
+
     const handleViewRoutine = useCallback((routine) => {
         if(routine && routine.id) {
             setCurrentRoutineId(routine.id);
@@ -622,6 +628,7 @@ export const useAppLogic = () => {
         onAnonymousSignIn: handleAnonymousSignIn,
         onSignOut: onSignOut,
         onForceSignOut: handleForceSignOut,
+        onSaveAndSignOut: handleSaveAndSignOut, // Export the new handler
         onLinkAccount,
         onPasswordReset,
         handleViewRoutine, handleBackToMain, handleRoutineFeedback, handleExerciseComplete, setRestSeconds, setIsSessionActive,

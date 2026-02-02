@@ -23,9 +23,43 @@ const ImportTextModal = ({ onClose, onImport, importError, t }) => (
     </div>
 );
 
-const SignOutWarningModal = ({ onContinue, onSave, onCancel, t }) => (
+const SignOutWarningModal = ({ onContinue, onSave, onCancel, t, isAnonymous }) => (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn">
-        {/* ... */}
+        <Card className="max-w-md w-full p-8 space-y-6 text-center border border-yellow-500/30 bg-gradient-to-br from-slate-800/80 to-slate-900/80 shadow-2xl relative">
+            <Icon name="alertTriangle" className="w-16 h-16 text-yellow-400 mx-auto" />
+            <h2 className="text-3xl font-bold text-white">{t.signOutWarningTitle}</h2>
+            {isAnonymous ? (
+                <p className="text-slate-300 text-lg">
+                    {t.signOutWarningGuestMessage}
+                </p>
+            ) : (
+                <p className="text-slate-300 text-lg">
+                    {t.signOutWarningMessage}
+                </p>
+            )}
+            <div className="flex gap-4 justify-center">
+                {isAnonymous && (
+                    <button
+                        onClick={onSave}
+                        className="flex-1 bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-teal-900/30 transition-colors transform hover:-translate-y-1"
+                    >
+                        {t.signOutWarningSaveData}
+                    </button>
+                )}
+                <button
+                    onClick={onContinue}
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-red-900/30 transition-colors transform hover:-translate-y-1"
+                >
+                    {isAnonymous ? t.signOutWarningContinueWithoutSaving : t.signOutConfirm}
+                </button>
+            </div>
+            <button
+                onClick={onCancel}
+                className="w-full text-center text-slate-400 font-semibold hover:text-white transition-colors mt-4"
+            >
+                {t.cancel}
+            </button>
+        </Card>
     </div>
 );
 
@@ -57,7 +91,7 @@ export default function App() {
     
     const handleSaveAndSignOut = () => {
         setIsSignOutWarningVisible(false);
-        setActiveTab('profile');
+        setActiveTab('profile'); // Navega al perfil para que el usuario pueda crear una cuenta y guardar sus datos
     };
 
     return (
@@ -67,7 +101,7 @@ export default function App() {
             {/* Renderizado de Modales */}
             {backupJson && <BackupModal jsonString={backupJson} onClose={onCloseBackupModal} onCopy={onCopyToClipboard} copySuccess={copySuccess} t={t} />}
             {isImportModalOpen && <ImportTextModal onClose={() => setIsImportModalOpen(false)} onImport={onImportFromText} importError={importTextError} t={t} />}
-            {isSignOutWarningVisible && <SignOutWarningModal onContinue={onForceSignOut} onSave={handleSaveAndSignOut} onCancel={() => setIsSignOutWarningVisible(false)} t={t}/> }
+            {isSignOutWarningVisible && <SignOutWarningModal onContinue={onForceSignOut} onSave={handleSaveAndSignOut} onCancel={() => setIsSignOutWarningVisible(false)} t={t} isAnonymous={isAnonymous} />}
 
             <div className="h-screen supports-[height:100dvh]:h-[100dvh] flex flex-col overflow-hidden font-sans bg-slate-900 text-slate-100 selection:bg-teal-500/30 relative">
                 
