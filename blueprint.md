@@ -43,4 +43,12 @@ This document outlines the plan to restore the Momentum AI application to its or
     *   Updated translation keys (`timeAvailableLabel`) in `locales/es.json` and `locales/en.json`.
 10. **Apply Glassmorphism to RoutineView Buttons:**
     *   Modified `src/components/features/training/TrainingUI.jsx` to apply a glassmorphism design to the "Sugerencia" and "Comenzar Sesión" buttons, including gradients, colored shadows, and inner borders.
-11. **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.
+    *   Removed the "Sugerencia" label in `HeroRoutineCard`.
+    *   Changed the text color of the "Sugerencia" (now just a text) to white.
+11. **Fix "Tiempo disponible" input field default value:**
+    *   Removed the `|| 60` fallback from the `value` prop of the `timeAvailable` `InputField` in `src/components/features/ProfileTab.jsx` to allow the field to be cleared by the user.
+12. **Redesign Training Tab Top Bar:**
+    *   Modified `src/components/features/TrainingTab.jsx` to redesign the top tab bar ("Recomendado" / "Otras Opciones" / "Regenerar").
+    *   Created a single capsule-style container with a glass background (`bg-white/5`, `backdrop-blur`, `rounded-full`, `border`, `border-white/10`, `shadow-2xl`).
+    *   Applied a subtle gradient (`from-teal-500/80 to-emerald-600/80`) and an inner glow (`border border-teal-400/30`) to the active tab button for a glassmorphism effect. The text color of the active button is white.
+13. **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.

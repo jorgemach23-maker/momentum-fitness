@@ -33,7 +33,7 @@
   "finishWorkout": "Finish & Save",
   "whatsNext": "What's Next?",
   "nextSessionTitle": "Next Session: {day}",
-  "nextSessionSub": "The AI will use your feedback to adjust this routine. Get ready!",
+  "nextSessionSub": "The AI will use your feedback to adjust this routine. Let's explore other options!",
   "routineFrom": "Routine from",
   "adjust": "Adjust",
   "generateNewPlan": "Generate New Plan",
@@ -193,5 +193,6 @@
   "considerations": "Wishes / Considerations",
   "profileAutoSaved": "File automatically updated",
   "suggestion": "SUGGESTION",
-  "msgSessionRepeat": "Session duplicated and ready to repeat!"
+  "msgSessionRepeat": "Session duplicated and ready to repeat!",
+  "daysTrainedLabel": "Days trained:"
 }

@@ -25,7 +25,7 @@
   "finishWorkout": "Finalizar y Guardar",
   "whatsNext": "¿Qué sigue?",
   "nextSessionTitle": "Próxima sesión: {day}",
-  "nextSessionSub": "La IA usará tu feedback para ajustar esta rutina. ¡Prepárate!",
+  "nextSessionSub": "La IA usará tu feedback para ajustar esta rutina. ¡Exploremos otras opciones!",
   "routineFrom": "Rutina del",
   "adjust": "Ajustar",
   "generateNewPlan": "Generar Nuevo Plan",
@@ -184,5 +184,6 @@
   "considerations": "Deseos / Consideraciones",
   "profileAutoSaved": "Expediente actualizado automáticamente",
   "suggestion": "SUGERENCIA",
-  "msgSessionRepeat": "¡Sesión duplicada y lista para repetir!"
+  "msgSessionRepeat": "¡Sesión duplicada y lista para repetir!",
+  "daysTrainedLabel": "Días entrenados:"
 }

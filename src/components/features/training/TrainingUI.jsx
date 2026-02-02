@@ -10,25 +10,38 @@ import {
 } from '../../../utils/helpers.js'; 
 
 // --- 1. BARRA DE PROGRESO SEMANAL ---
-export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex }) => (
-  <div className="flex items-center justify-between bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 mb-6 backdrop-blur-sm">
-      <div className="flex flex-col">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tu Racha</span>
-        <span className="text-xs text-slate-300 font-medium">Semana {weekDistribution.length > 0 ? 'Activa' : 'Off'}</span>
-      </div>
-      <div className="flex gap-2">
-        {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
-           const isCompleted = completionLog.has(dayIdx);
-           const isToday = dayIdx === todayIndex;
-           let bgClass = "bg-slate-700/50";
-           let borderClass = "border-transparent";
-           if (isCompleted) bgClass = "bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.5)]";
-           else if (isToday) { bgClass = "bg-slate-800"; borderClass = "border-teal-500 animate-pulse"; }
-           return <div key={dayIdx} className={`w-3 h-3 rounded-full border ${borderClass} ${bgClass} transition-all duration-500`}></div>;
-        })}
-      </div>
-  </div>
-);
+export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex, t }) => {
+  const completedDaysCount = completionLog.size;
+
+  return (
+    <div className="flex items-center justify-between bg-white/5 backdrop-blur rounded-2xl p-4 border border-white/10 shadow-lg mb-6">
+        <div className="flex items-center gap-3">
+            <Icon name="fire" className="w-6 h-6 text-orange-400 drop-shadow-md" />
+            <span className="text-lg font-bold text-white tracking-tight">{t.daysTrainedLabel} {completedDaysCount}</span>
+        </div>
+        <div className="flex gap-2">
+          {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
+             const isCompleted = completionLog.has(dayIdx);
+             const isToday = dayIdx === todayIndex;
+             let bgClass = "bg-slate-700/50";
+             let shadowClass = "shadow-none";
+             let borderClass = "border-slate-700/50";
+
+             if (isCompleted) { 
+                bgClass = "bg-teal-400"; 
+                shadowClass = "shadow-lg shadow-teal-500/50";
+                borderClass = "border-teal-400";
+              } else if (isToday) { 
+                bgClass = "bg-slate-800"; 
+                borderClass = "border-teal-500 animate-pulse"; 
+              }
+
+             return <div key={dayIdx} className={`w-4 h-4 rounded-full border ${borderClass} ${bgClass} ${shadowClass} transition-all duration-500`}></div>;
+          })}
+        </div>
+    </div>
+  );
+};
 
 // --- 2. VISTA PREVIA DE EJERCICIOS ---
 export const ExerciseListPreview = ({ exercises, limit }) => {
@@ -99,7 +112,7 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
 };
 
 // --- 3. TARJETA PRINCIPAL (HERO) ---
-export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust }) => {
+export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompleted }) => {
   if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
   
   const data = routine.routine || routine;
@@ -113,8 +126,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust }) => {
            <div className="flex justify-between items-start mb-4">
               <div className="flex-1 mr-2">
                   <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 rounded-md bg-gradient-to-r from-teal-500/30 to-emerald-600/30 text-teal-300 text-[9px] font-black uppercase tracking-wider border border-teal-500/40 shadow-sm shadow-teal-900/20">Sugerencia</span>
-                      <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono"><Icon name="clock" className="w-3 h-3"/> {data.duracionEstimada || "45 min"}</span>
+                      <span className="flex items-center gap-1 text-[10px] text-white font-mono"><Icon name="clock" className="w-3 h-3"/> {data.duracionEstimada || "45 min"}</span>
                   </div>
                   <h2 className="text-xl font-black text-white leading-tight line-clamp-2 drop-shadow-md">{formatRoutineTitle(routine.diaEnfoque || data.diaEnfoque)}</h2>
               </div>

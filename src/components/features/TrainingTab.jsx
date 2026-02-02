@@ -3,17 +3,17 @@ import { WeeklyProgressBar, HeroRoutineCard, RoutineLibraryList, AdjustSessionVi
 import { Icon } from '../ui/Icon';
 import { GeminiLoader } from '../ui/GeminiLoader';
 
-const TrainingTab = ({ 
-    profile, 
-    onProfileChange, 
-    onGeneratePlan, 
-    onAdjustNextSession, 
-    loading, 
-    successMessage, 
-    errorMessage, 
-    history, 
-    handleViewRoutine, 
-    generationProgress, 
+const TrainingTab = ({
+    profile,
+    onProfileChange,
+    onGeneratePlan,
+    onAdjustNextSession,
+    loading,
+    successMessage,
+    errorMessage,
+    history,
+    handleViewRoutine,
+    generationProgress,
     t
 }) => {
     const [activeTab, setActiveTab] = useState('recommended');
@@ -21,7 +21,7 @@ const TrainingTab = ({
     const [adjustingRoutine, setAdjustingRoutine] = useState(null);
 
     const currentPlanId = profile.currentPlanId;
-    const todayIndex = (new Date().getDay() + 6) % 7; 
+    const todayIndex = (new Date().getDay() + 6) % 7;
 
     const progressText = useMemo(() => {
         if (generationProgress < 30) return t.analyzing;
@@ -42,14 +42,14 @@ const TrainingTab = ({
     };
 
     // 1. Obtener todas las rutinas de la semana actual
-    const currentWeekRoutines = useMemo(() => 
+    const currentWeekRoutines = useMemo(() =>
         history
             .filter(r => r.planId === currentPlanId && r.status !== 'archived_history')
             .sort((a, b) => a.weekDay - b.weekDay)
     , [history, currentPlanId]);
 
     // 2. Identificar la última rutina completada globalmente para saber qué descansar
-    const lastCompleted = useMemo(() => 
+    const lastCompleted = useMemo(() =>
         history
             .filter(r => r.status === 'completed')
             .sort((a, b) => {
@@ -65,7 +65,7 @@ const TrainingTab = ({
         if (pending.length === 0) return { recommendedRoutine: null, libraryRoutines: [], pendingRoutines: [] };
 
         const lastMuscles = lastCompleted ? getMuscleGroups(lastCompleted.diaEnfoque) : new Set();
-        
+
         let recommended = pending.find(r => {
             const currentMuscles = getMuscleGroups(r.diaEnfoque);
             return ![...currentMuscles].some(m => lastMuscles.has(m));
@@ -91,7 +91,7 @@ const TrainingTab = ({
         setAdjustingRoutine(routine);
         setShowAdjustment(true);
     };
-    
+
     return (
         <div className="animate-fadeIn pb-24">
             <div className="space-y-2 mb-4">
@@ -104,36 +104,36 @@ const TrainingTab = ({
             {/* CONTENEDOR DE PESTAÑAS - MEJORADO VISUALMENTE */}
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4 mb-4">
-                    <div className="flex items-center bg-slate-900/80 backdrop-blur-xl p-1.5 rounded-xl border border-white/10 shadow-2xl">
-                        <button 
-                            onClick={() => setActiveTab('recommended')} 
-                            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-lg transition-all duration-500 ease-out uppercase tracking-wider ${
-                                activeTab === 'recommended' 
-                                ? 'bg-teal-500 text-slate-950 shadow-[0_0_20px_rgba(20,184,166,0.4)] scale-[1.02]' 
-                                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                    <div className="flex items-center bg-white/5 backdrop-blur rounded-full p-1 border border-white/10 shadow-2xl">
+                        <button
+                            onClick={() => setActiveTab('recommended')}
+                            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-full transition-all duration-500 ease-out uppercase tracking-wider ${
+                                activeTab === 'recommended'
+                                ? 'bg-gradient-to-r from-teal-500/80 to-emerald-600/80 text-white border border-teal-400/30 shadow-lg shadow-teal-500/40 scale-[1.02]'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
                             }`}
                         >
-                            <Icon name="sparkles" className={`w-3.5 h-3.5 ${activeTab === 'recommended' ? 'text-slate-900' : 'text-slate-600'}`} />
+                            <Icon name="sparkles" className={`w-3.5 h-3.5 ${activeTab === 'recommended' ? 'text-white' : 'text-slate-500'}`} />
                             {t.recommended || "Recomendado"}
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('library')} 
-                            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-lg transition-all duration-500 ease-out uppercase tracking-wider ${
-                                activeTab === 'library' 
-                                ? 'bg-slate-700 text-white shadow-lg scale-[1.02]' 
-                                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                        <button
+                            onClick={() => setActiveTab('library')}
+                            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-full transition-all duration-500 ease-out uppercase tracking-wider ${
+                                activeTab === 'library'
+                                ? 'bg-gradient-to-r from-teal-500/80 to-emerald-600/80 text-white border border-teal-400/30 shadow-lg shadow-teal-500/40 scale-[1.02]'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
                             }`}
                         >
-                            <Icon name="list" className={`w-3.5 h-3.5 ${activeTab === 'library' ? 'text-teal-400' : 'text-slate-600'}`} />
+                            <Icon name="list" className={`w-3.5 h-3.5 ${activeTab === 'library' ? 'text-white' : 'text-slate-500'}`} />
                             {t.moreOptions || "Otras opciones"}
                         </button>
                     </div>
-                    
-                    <button 
-                        onClick={() => onGeneratePlan(profile)} 
+
+                    <button
+                        onClick={() => onGeneratePlan(profile)}
                         className="group flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-800/40 border border-white/5 text-[10px] font-black text-teal-400 hover:bg-teal-500/10 hover:border-teal-500/30 transition-all duration-300 uppercase tracking-widest shadow-xl"
                     >
-                        <Icon name="refresh" className="w-3 h-3 group-hover:rotate-180 transition-transform duration-700" /> 
+                        <Icon name="refresh" className="w-3 h-3 group-hover:rotate-180 transition-transform duration-700" />
                         {t.regenerateCycle}
                     </button>
                 </div>
@@ -154,7 +154,7 @@ const TrainingTab = ({
                                                 <div className="p-1.5 bg-teal-500/10 rounded-lg">
                                                     <Icon name="info" className="w-4 h-4 text-teal-500" />
                                                 </div>
-                                                <span className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                                                <span className="text-[11px] text-white font-medium leading-relaxed">
                                                     {t.suggestionBasedOn} <span className="text-teal-400 font-bold">{lastCompleted.diaEnfoque}</span>.
                                                 </span>
                                             </div>
