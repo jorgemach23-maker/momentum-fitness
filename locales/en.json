@@ -63,7 +63,7 @@
   "myGoalPlaceholder": "Describe your specific goal (e.g., run a marathon, reduce back pain...)",
   "expLevel": "Experience Level",
   "daysWeek": "Days/Week",
-  "timeAvailable": "Time Available (min)",
+  "timeAvailableLabel": "Time available",
   "injuries": "Wishes / Considerations",
   "saveFile": "Save File",
   "fitnessLevel": "Fitness Level",

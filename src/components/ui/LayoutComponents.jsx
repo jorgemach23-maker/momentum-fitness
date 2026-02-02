@@ -3,12 +3,12 @@ import { Icon } from './Icon';
 
 export const Card = ({ children, className = "", onClick }) => <div onClick={onClick} className={`bg-slate-800/40 border border-slate-700/50 rounded-2xl shadow-sm backdrop-blur-xl transition-all duration-300 ${className}`}>{children}</div>;
 
-export const InputField = ({ label, icon, type = "text", name, value, onChange, placeholder, as = 'input', children, className = '' }) => {
+export const InputField = ({ label, icon, type = "text", name, value, onChange, placeholder, as = 'input', children, className = '', unit }) => {
     const commonProps = {
         name,
         value,
         onChange,
-        className: `w-full bg-slate-900/50 border border-slate-700 text-slate-100 rounded-xl py-3 pl-4 pr-10 text-sm focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-colors duration-300 hover:bg-slate-800/50 appearance-none ${className}`
+        className: `w-full bg-slate-900/50 border border-slate-700 text-slate-100 rounded-xl py-3 pl-4 ${unit ? 'pr-14' : 'pr-4'} text-sm focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-colors duration-300 hover:bg-slate-800/50 appearance-none ${className}`
     };
 
     const renderInput = () => {
@@ -27,7 +27,12 @@ export const InputField = ({ label, icon, type = "text", name, value, onChange, 
             case 'textarea':
                 return <textarea {...commonProps} placeholder={placeholder} rows="3" />;
             default:
-                return <input type={type} {...commonProps} placeholder={placeholder} />;
+                return (
+                    <div className="relative">
+                        <input type={type} {...commonProps} placeholder={placeholder} />
+                        {unit && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600 pointer-events-none">{unit}</span>}
+                    </div>
+                );
         }
     };
 
@@ -48,5 +53,3 @@ export const BioageInput = ({ label, name, value, onChange, unit }) => (
     </div>
   </div>
 );
-
-// ... (Resto de los componentes sin cambios)

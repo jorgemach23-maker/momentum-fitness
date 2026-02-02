@@ -35,4 +35,10 @@ This document outlines the plan to restore the Momentum AI application to its or
     *   Integrated `useBackButtonHandler` into `src/App.jsx` to control navigation and display an exit confirmation modal.
     *   Added `ExitAppModal` component in `src/App.jsx` to prompt the user before exiting the application.
     *   Added new translation keys (`exitAppTitle`, `exitAppMessage`, `exitAppConfirm`) to `locales/es.json` and `locales/en.json`.
-9.  **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.
+9.  **Update "Tiempo disponible (MIN)" field:**
+    *   Changed the label of the "Tiempo disponible (MIN)" input field to "Tiempo disponible".
+    *   Added "min" as a unit inside the input field for consistency with other fields.
+    *   Updated `src/components/ui/LayoutComponents.jsx` to include a `unit` prop for `InputField`.
+    *   Updated `src/components/features/ProfileTab.jsx` to pass the `unit="min"` prop to the `timeAvailable` `InputField`.
+    *   Updated translation keys (`timeAvailableLabel`) in `locales/es.json` and `locales/en.json`.
+10. **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.

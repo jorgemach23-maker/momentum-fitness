@@ -114,7 +114,7 @@ export default function ProfileTab(props) {
                     <InputField name="daysPerWeek" as="select" value={profile.daysPerWeek || 3} onChange={onProfileChange} label={t.daysWeek || "Días/Semana"}>
                         {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{d} {t.days || "días"}</option>)}
                     </InputField>
-                    <InputField name="timeAvailable" type="number" value={profile.timeAvailable || 60} onChange={onProfileChange} label={t.timeAvailable || "Minutos/Sesión"} />
+                    <InputField name="timeAvailable" type="number" value={profile.timeAvailable || 60} onChange={onProfileChange} label={t.timeAvailableLabel || "Tiempo disponible"} unit="min" />
                 </div>
                 <InputField as="textarea" name="injuries" value={profile.injuries || ''} onChange={onProfileChange} label={t.injuries || "Deseos / Consideraciones"} placeholder={t.myGoalPlaceholder} />
             </GlassCard>
