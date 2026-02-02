@@ -41,4 +41,6 @@ This document outlines the plan to restore the Momentum AI application to its or
     *   Updated `src/components/ui/LayoutComponents.jsx` to include a `unit` prop for `InputField`.
     *   Updated `src/components/features/ProfileTab.jsx` to pass the `unit="min"` prop to the `timeAvailable` `InputField`.
     *   Updated translation keys (`timeAvailableLabel`) in `locales/es.json` and `locales/en.json`.
-10. **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.
+10. **Apply Glassmorphism to RoutineView Buttons:**
+    *   Modified `src/components/features/training/TrainingUI.jsx` to apply a glassmorphism design to the "Sugerencia" and "Comenzar Sesión" buttons, including gradients, colored shadows, and inner borders.
+11. **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.

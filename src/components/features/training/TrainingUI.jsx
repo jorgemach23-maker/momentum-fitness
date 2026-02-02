@@ -113,7 +113,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust }) => {
            <div className="flex justify-between items-start mb-4">
               <div className="flex-1 mr-2">
                   <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-400 text-[9px] font-black uppercase tracking-wider border border-teal-500/20 shadow-sm shadow-teal-900/20">Sugerencia</span>
+                      <span className="px-2 py-0.5 rounded-md bg-gradient-to-r from-teal-500/30 to-emerald-600/30 text-teal-300 text-[9px] font-black uppercase tracking-wider border border-teal-500/40 shadow-sm shadow-teal-900/20">Sugerencia</span>
                       <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono"><Icon name="clock" className="w-3 h-3"/> {data.duracionEstimada || "45 min"}</span>
                   </div>
                   <h2 className="text-xl font-black text-white leading-tight line-clamp-2 drop-shadow-md">{formatRoutineTitle(routine.diaEnfoque || data.diaEnfoque)}</h2>
@@ -123,7 +123,9 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust }) => {
            
            <ExerciseListPreview exercises={exercisesList} limit={3} />
            
-           <button onClick={() => onViewRoutine(routine)} className="w-full py-3.5 bg-teal-500 hover:bg-teal-400 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-900/20 active:scale-[0.98] group-hover:shadow-teal-500/20 mt-2">
+           <button onClick={() => onViewRoutine(routine)} className="w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-teal-500/40 
+               bg-gradient-to-r from-teal-500 to-emerald-600 
+               border-t border-white/20 hover:shadow-teal-400/60 transition-all flex items-center justify-center gap-2">
                <Icon name="play" className="w-4 h-4 fill-current"/> 
                <span className="tracking-wide text-sm">COMENZAR SESIÓN</span>
            </button>
@@ -167,7 +169,11 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust }) => {
                       </div>
                       <div className="flex gap-3 px-1">
                           <button onClick={(e) => { e.stopPropagation(); onAdjust(r); }} className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-bold text-xs hover:bg-slate-700 transition-colors">AJUSTAR</button>
-                          <button onClick={(e) => { e.stopPropagation(); onViewRoutine(r); }} className="flex-[2] py-2.5 rounded-lg bg-teal-600 text-white font-bold text-xs hover:bg-teal-500 shadow-lg shadow-teal-900/20 transition-colors flex items-center justify-center gap-2"><Icon name="play" className="w-3 h-3 fill-current"/> INICIAR</button>
+                          <button onClick={(e) => { e.stopPropagation(); onViewRoutine(r); }} className="flex-[2] py-2.5 rounded-lg font-bold text-xs shadow-lg shadow-teal-500/40 
+                          bg-gradient-to-r from-teal-500 to-emerald-600 
+                          border-t border-white/20 hover:shadow-teal-400/60 transition-all flex items-center justify-center gap-2">
+                            <Icon name="play" className="w-3 h-3 fill-current"/> INICIAR
+                          </button>
                       </div>
                   </div>
               )}
