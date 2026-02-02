@@ -29,5 +29,10 @@ This document outlines the plan to restore the Momentum AI application to its or
     *   Modified `src/App.jsx` to pass the `isAnonymous` prop to `SignOutWarningModal`.
     *   Updated `SignOutWarningModal` to display a specific warning for guest users about data loss and offer to create an account.
     *   Modified `handleSaveAndSignOut` in `src/hooks/useAppLogic.js` to navigate to the 'profile' tab, allowing guest users to create an account and save their data before signing out.
-    *   Added new translation keys (`signOutWarningTitle`, `signOutWarningMessage`, `signOutWarningGuestMessage`, `signOutWarningSaveData`, `signOutWarningContinueWithoutSaving`, `signOutConfirm`) to `locales/es.json`.
-8.  **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.
+    *   Added new translation keys (`signOutWarningTitle`, `signOutWarningMessage`, `signOutWarningGuestMessage`, `signOutWarningSaveData`, `signOutWarningContinueWithoutSaving`, `signOutConfirm`) to `locales/es.json` and `locales/en.json`.
+8.  **Implement PWA back button logic:**
+    *   Created `useBackButtonHandler` hook in `src/hooks/useBackButtonHandler.js` to manage back button behavior across different views (active session, profile/history, main training view).
+    *   Integrated `useBackButtonHandler` into `src/App.jsx` to control navigation and display an exit confirmation modal.
+    *   Added `ExitAppModal` component in `src/App.jsx` to prompt the user before exiting the application.
+    *   Added new translation keys (`exitAppTitle`, `exitAppMessage`, `exitAppConfirm`) to `locales/es.json` and `locales/en.json`.
+9.  **Final Review:** I will perform a comprehensive review of the application to ensure that all functionalities are working correctly and that the UI is consistent and polished.

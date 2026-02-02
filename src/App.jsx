@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppLogic } from './hooks/useAppLogic';
+import { useBackButtonHandler } from './hooks/useBackButtonHandler'; // Import the new hook
 import TrainingTab from './components/features/TrainingTab';
 import HistoryTab from './components/features/HistoryTab';
 import ProfileTab from './components/features/ProfileTab';
@@ -63,6 +64,32 @@ const SignOutWarningModal = ({ onContinue, onSave, onCancel, t, isAnonymous }) =
     </div>
 );
 
+const ExitAppModal = ({ onConfirm, onCancel, t }) => (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn">
+        <Card className="max-w-md w-full p-8 space-y-6 text-center border border-slate-700/50 bg-gradient-to-br from-slate-800/80 to-slate-900/80 shadow-2xl relative">
+            <Icon name="logOut" className="w-16 h-16 text-slate-400 mx-auto" />
+            <h2 className="text-3xl font-bold text-white">{t.exitAppTitle}</h2>
+            <p className="text-slate-300 text-lg">
+                {t.exitAppMessage}
+            </p>
+            <div className="flex gap-4 justify-center">
+                <button
+                    onClick={onConfirm}
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-red-900/30 transition-colors transform hover:-translate-y-1"
+                >
+                    {t.exitAppConfirm}
+                </button>
+                <button
+                    onClick={onCancel}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-slate-900/30 transition-colors transform hover:-translate-y-1"
+                >
+                    {t.cancel}
+                </button>
+            </div>
+        </Card>
+    </div>
+);
+
 
 export default function App() {
     const appLogic = useAppLogic();
@@ -74,8 +101,21 @@ export default function App() {
         backupJson, onCloseBackupModal, onCopyToClipboard, copySuccess,
         isImportModalOpen, setIsImportModalOpen, onImportFromText, importTextError,
         isSignOutWarningVisible, onForceSignOut, setIsSignOutWarningVisible, 
-        handleRoutineFeedback, onRepeatSession // Añadido onRepeatSession
+        handleRoutineFeedback, onRepeatSession,
+        currentExerciseIndex, setCurrentExerciseIndex, handleBackToMain, isSessionActive
     } = appLogic;
+
+    // Integrate useBackButtonHandler hook
+    const { showExitAppModal, handleConfirmExitApp, handleCancelExitApp } = useBackButtonHandler(
+        view,
+        activeTab,
+        isSessionActive,
+        currentExerciseIndex,
+        setCurrentExerciseIndex,
+        handleBackToMain,
+        setActiveTab,
+        t
+    );
 
     if (!isAuthReady || showSplash) {
         return <SplashScreen show={true} />;
@@ -102,6 +142,7 @@ export default function App() {
             {backupJson && <BackupModal jsonString={backupJson} onClose={onCloseBackupModal} onCopy={onCopyToClipboard} copySuccess={copySuccess} t={t} />}
             {isImportModalOpen && <ImportTextModal onClose={() => setIsImportModalOpen(false)} onImport={onImportFromText} importError={importTextError} t={t} />}
             {isSignOutWarningVisible && <SignOutWarningModal onContinue={onForceSignOut} onSave={handleSaveAndSignOut} onCancel={() => setIsSignOutWarningVisible(false)} t={t} isAnonymous={isAnonymous} />}
+            {showExitAppModal && <ExitAppModal onConfirm={handleConfirmExitApp} onCancel={handleCancelExitApp} t={t} />}
 
             <div className="h-screen supports-[height:100dvh]:h-[100dvh] flex flex-col overflow-hidden font-sans bg-slate-900 text-slate-100 selection:bg-teal-500/30 relative">
                 
