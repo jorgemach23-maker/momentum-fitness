@@ -497,7 +497,7 @@ export const useAppLogic = () => {
 
         const completedRoutineData = {
             status: 'completed',
-            completedAt: new Date(),
+            completedAt: Timestamp.now(), // Use Timestamp.now() for local state
             feedback,
             notes,
             mode,
@@ -507,7 +507,7 @@ export const useAppLogic = () => {
         setHistory(prevHistory =>
             prevHistory.map(r =>
                 r.id === routineId
-                    ? { ...r, ...completedRoutineData, completedAt: Timestamp.fromDate(completedRoutineData.completedAt) }
+                    ? { ...r, ...completedRoutineData }
                     : r
             )
         );
@@ -517,7 +517,7 @@ export const useAppLogic = () => {
 
         try {
             const routineRef = doc(routinesColRef, routineId);
-            await setDoc(routineRef, { ...completedRoutineData, completedAt: serverTimestamp() }, { merge: true });
+            await setDoc(routineRef, { ...completedRoutineData, completedAt: serverTimestamp() }, { merge: true }); // Use serverTimestamp() for Firestore
         } catch (e) {
             console.error("Error saving feedback to Firebase:", e);
             setError(t.errorHistorySave);
