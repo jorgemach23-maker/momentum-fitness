@@ -141,7 +141,30 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
     **REGLAS DE ORO (FORMATO DE SALIDA JSON ESTRICTO):**
     La respuesta DEBE ser un ÚNICO ARRAY JSON, \`[...rutinas]\`. NO incluyas texto, markdown o explicaciones fuera del JSON.
     Cada objeto en el array representa un día de entrenamiento y DEBE seguir esta estructura exacta:
+    
+    **CAMPO 'reps' (Sanitización):**
+     * **Regla General (Ejercicios Simples/Principal):** Devuelve SIEMPRE un **Número Entero** (Int). Eje: `10`, `5`, `1`. NUNCA rangos. (Ej: Si piensas en 8-10, escribe `8`).
+     * **Excepción SUPERSERIES:** Al haber dos ejercicios, NO PUEDES usar un entero. Debes usar un **STRING** con el formato exacto: `"A1: [Int], A2: [Int]"`.
+     * Ej: `"A1: 10, A2: 12"`
+    * **AMRAP:** Si es al fallo, usa ÚNICAMENTE el string `"AMRAP"`. (Prohibido: "Max", "Fallo", "Max reps").
+    * **Tiempo:** Si es por tiempo, usa el formato estricto string: `"DIGITOS + espacio + seg"` (Ej: `"30 seg"`, `"60 seg"`).
 
+    **CAMPO 'ejercicio' (Nomenclatura de Técnicas):**
+    * **Principal:** Nombre limpio (Ej: "Press Banca").
+    * **Drop Sets:** Añade la etiqueta al nombre: `"Nombre (Dropset x3)"`. El valor de `reps` será el de la primera serie efectiva.
+    * **Myo-Reps:** Debes dividir esto en dos objetos consecutivos en el array:
+        * Objeto 1: `"Nombre (Myo-Reps Activación)"` -> Series: 1, Reps: (altas), Descanso: (normal).
+        * Objeto 2: `"Nombre (Myo-Reps Series)"` -> Series: (numero de mini-series), Reps: (bajas), Descanso: (muy corto, ej: 15-20s).
+
+2. **CAMPO 'carga_sugerida' (Manejo de Peso):**
+   * **Regla General:** Número + Unidad (Ej: `"20 kg"`).
+   * **Peso Corporal:** Si es peso corporal, usa el string `"BW"`. **PROHIBIDO poner "0kg", "0" o "/0"**.
+   * **Excepción SUPERSERIES:** Debes desglosar la carga en un STRING.
+     * Ej: `"A1: 20 kg, A2: BW"`
+     * Ej: `"A1: 50 kg, A2: 10 kg"`
+     
+3.  **CAMPO 'carga_sugerida':**
+    * Usa solo el número y unidad o "BW" (Bodyweight). (Ej: "20 kg", "BW")
     {
       "diaEnfoque": "<Descripción. EJ: 'Empuje (Pecho/Hombro/Tríceps)'>",
       "rutinaPrincipal": [
@@ -176,7 +199,7 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
     1.  **ETIQUETADO DE BLOQUES:**
         -   Los primeros ejercicios (preparación/movilidad) **DEBEN** tener \`"tipo_bloque": "calentamiento"\`.
         -   Los últimos ejercicios (vuelta a la calma/estiramiento) **DEBEN** tener \`"tipo_bloque": "enfriamiento"\`.
-        -   El núcleo del entrenamiento es \`"principal"\` o \`"superserie"\`.
+        -   El núcleo del entrenamiento es \`"principal"\` o \`"superserie"\.
         -   **PROHIBIDO** usar "General", "Movilidad" o "Activación" en \`tipo_bloque\`. Úsalos solo como parte del nombre del ejercicio.
     2.  **SUPERSERIES:** \`tipo_bloque\` DEBE ser "superserie". ADEMÁS de concatenar en \`ejercicio\` (formato "A1: X + A2: Y"), **DEBES INCLUIR** los campos \`ejercicioA\` y \`ejercicioB\` con los nombres limpios.
     3.  **CARGA:** Para superseries, \`carga_sugerida\` debe ser "A1: X, A2: Y".
