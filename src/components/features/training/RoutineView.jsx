@@ -2,6 +2,28 @@ import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { cleanExerciseTitle, formatRoutineTitle } from '../../../utils/helpers';
 
+/**
+ * Parsea un objeto de ejercicio de tipo superserie y devuelve las dos partes.
+ * @param {object} exercise - El objeto de ejercicio.
+ * @returns {{partA: string, partB: string}} Las dos partes del ejercicio.
+ */
+const parseSupersetExercises = (exercise) => {
+    if (exercise.ejercicioA && exercise.ejercicioB) {
+        return {
+            partA: cleanExerciseTitle(exercise.ejercicioA),
+            partB: cleanExerciseTitle(exercise.ejercicioB)
+        };
+    }
+    const parts = exercise.ejercicio
+        .split(/\s*\+\s*|\s+y\s+/i)
+        .map(p => cleanExerciseTitle(p.replace(/[A-Z][12][:.)\s]*/gi, '').trim()))
+        .filter(Boolean);
+    return {
+        partA: parts[0] || "Ejercicio A",
+        partB: parts[1] || "Ejercicio B"
+    };
+};
+
 const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const t = {
@@ -11,10 +33,10 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
 
     if (!routine || !routine.rutinaPrincipal) return null;
 
-    // FILTRO VISUAL: Mostrar solo los bloques de entrenamiento real
-    const mainExercises = routine.rutinaPrincipal.filter(e => {
-        const bloqueType = (e.tipo_bloque || e.bloque || "").toLowerCase();
-        return bloqueType === 'principal' || bloqueType === 'superserie';
+    // LÓGICA DE FILTRADO DEFINITIVA: Excluir cualquier bloque que CONTENGA "calentamiento" o "enfriamiento".
+    const mainExercises = routine.rutinaPrincipal.filter(exercise => {
+        const tipo_bloque = (exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
+        return !tipo_bloque.includes('calentamiento') && !tipo_bloque.includes('enfriamiento');
     });
 
     const displayedExercises = isExpanded ? mainExercises : mainExercises.slice(0, 3);
@@ -23,49 +45,13 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
     let supersetCounter = 0;
 
     const renderExercise = (exercise, index) => {
-        // Normalización: Gemini usa 'bloque', pero el código a veces usa 'tipo_bloque'
-        const bloqueType = (exercise.bloque || exercise.tipo_bloque || "").toLowerCase();
-        
-        // Detección mejorada
-        const isSuperset = bloqueType.includes('superserie') || 
-                           /\+/.test(exercise.ejercicio) || 
-                           /[A-Z]2[:\s]/i.test(exercise.ejercicio) ||
-                           /\s+y\s+/i.test(exercise.ejercicio);
+        const tipo_bloque = (exercise.bloque || exercise.tipo_bloque || "").toLowerCase();
+        const isSuperset = tipo_bloque.includes('superserie');
         
         if (isSuperset) {
             const letter = String.fromCharCode(65 + supersetCounter);
             supersetCounter++; 
-
-            let partA, partB;
-
-            // 1. Prioridad ABSOLUTA a los campos explícitos si existen (Solución de raíz)
-            if (exercise.ejercicioA && exercise.ejercicioB) {
-                partA = exercise.ejercicioA;
-                partB = exercise.ejercicioB;
-            } else {
-                // 2. Fallback a la lógica de split robusta
-                let rawParts = [];
-                if (/[A-Z]2[:\s]/i.test(exercise.ejercicio)) {
-                     const match = exercise.ejercicio.match(/[\+\s]*([A-Z]2[:\s].*)/i);
-                     if (match) {
-                         const part2 = match[1];
-                         const part1 = exercise.ejercicio.replace(match[0], '').trim();
-                         rawParts = [part1, part2];
-                     }
-                }
-                if (rawParts.length < 2) rawParts = exercise.ejercicio.split(/\s*\+\s*/);
-                if (rawParts.length < 2) rawParts = exercise.ejercicio.split(/\s+y\s+/i);
-                if (rawParts.length === 0) rawParts = [exercise.ejercicio, ""];
-
-                const parts = rawParts.map(p => {
-                    if (!p) return "";
-                    let cleaned = p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^\+\s*/, '').trim();
-                    return cleanExerciseTitle(cleaned);
-                }).filter(p => p.length > 0);
-
-                partA = parts[0] || "Ejercicio A";
-                partB = parts[1] || "Ejercicio B";
-            }
+            const { partA, partB } = parseSupersetExercises(exercise);
 
             return (
                 <div key={index} className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">

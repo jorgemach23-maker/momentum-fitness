@@ -49,19 +49,36 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
       return <div className="py-2 text-xs text-slate-500 italic text-center">Detalles disponibles al iniciar.</div>;
   }
 
-  const visibleEx = limit ? exercises.slice(0, limit) : exercises;
-  const remaining = limit ? Math.max(0, exercises.length - limit) : 0;
+  // FILTRO ROBUSTO EN PREVIEW: Aplicando el mismo filtro que en RoutineView para consistencia.
+  // Se excluyen ejercicios cuyo tipo_bloque contenga "calentamiento" o "enfriamiento".
+  const filteredExercises = exercises.filter(ex => {
+      const tipo_bloque = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
+      return !tipo_bloque.includes('calentamiento') && !tipo_bloque.includes('enfriamiento');
+  });
+
+  const visibleEx = limit ? filteredExercises.slice(0, limit) : filteredExercises;
+  const remaining = limit ? Math.max(0, filteredExercises.length - limit) : 0;
 
   return (
     <div className="space-y-2 mt-4 mb-4">
        {visibleEx.map((ex, i) => {
-         const isSuperset = ex.tipo_bloque === 'superserie';
+         // Normalización de tipo_bloque para detectar superseries
+         const bloqueType = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
+         const isSuperset = bloqueType.includes('superserie');
          let content = null;
          
          if (isSuperset) {
-             const parts = (ex.ejercicio || "").split('+');
-             const name1 = cleanExerciseTitle(parts[0]);
-             const name2 = cleanExerciseTitle(parts[1] || "").replace(/^[A-Z]\d+[\s.-]*/, ''); 
+             // Lógica de visualización de superserie simplificada para preview
+             let name1, name2;
+             if (ex.ejercicioA && ex.ejercicioB) {
+                 name1 = cleanExerciseTitle(ex.ejercicioA);
+                 name2 = cleanExerciseTitle(ex.ejercicioB);
+             } else {
+                 const parts = (ex.ejercicio || "").split(/\s*\+\s*|\s+y\s+/i);
+                 name1 = cleanExerciseTitle(parts[0] || "Ejercicio A");
+                 name2 = cleanExerciseTitle((parts[1] || "Ejercicio B").replace(/^[A-Z]\d+[\s.-]*/, ''));
+             }
+
              content = ( 
                 <div className="flex flex-col w-full gap-1">
                     <div className="flex justify-between items-baseline">

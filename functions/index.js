@@ -174,11 +174,11 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
 
     **REGLAS ESPECÍFICAS DE VALIDACIÓN (CRÍTICO):**
     1.  **ETIQUETADO DE BLOQUES:**
-        -   Los primeros ejercicios (preparación/movilidad) **DEBEN** tener \`"tipo_bloque": "Calentamiento"\`.
-        -   Los últimos ejercicios (vuelta a la calma/estiramiento) **DEBEN** tener \`"tipo_bloque": "Enfriamiento"\`.
-        -   El núcleo del entrenamiento es \`"Principal"\` o \`"Superserie"\`.
+        -   Los primeros ejercicios (preparación/movilidad) **DEBEN** tener \`"tipo_bloque": "calentamiento"\`.
+        -   Los últimos ejercicios (vuelta a la calma/estiramiento) **DEBEN** tener \`"tipo_bloque": "enfriamiento"\`.
+        -   El núcleo del entrenamiento es \`"principal"\` o \`"superserie"\`.
         -   **PROHIBIDO** usar "General", "Movilidad" o "Activación" en \`tipo_bloque\`. Úsalos solo como parte del nombre del ejercicio.
-    2.  **SUPERSERIES:** \`tipo_bloque\` DEBE ser "Superserie". ADEMÁS de concatenar en \`ejercicio\` (formato "A1: X + A2: Y"), **DEBES INCLUIR** los campos \`ejercicioA\` y \`ejercicioB\` con los nombres limpios.
+    2.  **SUPERSERIES:** \`tipo_bloque\` DEBE ser "superserie". ADEMÁS de concatenar en \`ejercicio\` (formato "A1: X + A2: Y"), **DEBES INCLUIR** los campos \`ejercicioA\` y \`ejercicioB\` con los nombres limpios.
     3.  **CARGA:** Para superseries, \`carga_sugerida\` debe ser "A1: X, A2: Y".
     4.  **NUNCA** incluyas un campo de descripción o técnica.
 
