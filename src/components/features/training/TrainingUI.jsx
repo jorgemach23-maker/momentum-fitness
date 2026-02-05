@@ -6,7 +6,8 @@ import { InputField } from '../../ui/InputField.jsx';
 import { GeminiLoader } from '../../ui/GeminiLoader.jsx';
 import { 
   formatRoutineTitle, 
-  cleanExerciseTitle 
+  cleanExerciseTitle,
+  isWarmupOrCooldown // Importación del helper centralizado
 } from '../../../utils/helpers.js'; 
 
 // --- 1. BARRA DE PROGRESO SEMANAL ---
@@ -49,12 +50,8 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
       return <div className="py-2 text-xs text-slate-500 italic text-center">Detalles disponibles al iniciar.</div>;
   }
 
-  // FILTRO ROBUSTO EN PREVIEW: Aplicando el mismo filtro que en RoutineView para consistencia.
-  // Se excluyen ejercicios cuyo tipo_bloque contenga "calentamiento" o "enfriamiento".
-  const filteredExercises = exercises.filter(ex => {
-      const tipo_bloque = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
-      return !tipo_bloque.includes('calentamiento') && !tipo_bloque.includes('enfriamiento');
-  });
+  // FILTRO ROBUSTO CENTRALIZADO: Usar el helper isWarmupOrCooldown.
+  const filteredExercises = exercises.filter(ex => !isWarmupOrCooldown(ex));
 
   const visibleEx = limit ? filteredExercises.slice(0, limit) : filteredExercises;
   const remaining = limit ? Math.max(0, filteredExercises.length - limit) : 0;
@@ -62,13 +59,11 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
   return (
     <div className="space-y-2 mt-4 mb-4">
        {visibleEx.map((ex, i) => {
-         // Normalización de tipo_bloque para detectar superseries
          const bloqueType = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
          const isSuperset = bloqueType.includes('superserie');
          let content = null;
          
          if (isSuperset) {
-             // Lógica de visualización de superserie simplificada para preview
              let name1, name2;
              if (ex.ejercicioA && ex.ejercicioB) {
                  name1 = cleanExerciseTitle(ex.ejercicioA);
@@ -133,7 +128,10 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
   if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
   
   const data = routine.routine || routine;
-  const exercisesList = Array.isArray(data.rutinaPrincipal) ? data.rutinaPrincipal : [];
+  // FILTRADO CENTRALIZADO Y ROBUSTO
+  const exercisesList = Array.isArray(data.rutinaPrincipal) 
+    ? data.rutinaPrincipal.filter(ex => !isWarmupOrCooldown(ex))
+    : [];
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-xl p-5 mb-4 group">
@@ -173,8 +171,12 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust }) => {
        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Otras Opciones</h3>
        {routines.map((r) => {
          const isExpanded = expandedId === r.id;
-         const data = r.routine || r; // Normalización de datos corregida
-         const exercisesList = Array.isArray(data.rutinaPrincipal) ? data.rutinaPrincipal : [];
+         const data = r.routine || r; 
+         
+         // FILTRADO CENTRALIZADO Y ROBUSTO
+         const exercisesList = Array.isArray(data.rutinaPrincipal) 
+            ? data.rutinaPrincipal.filter(ex => !isWarmupOrCooldown(ex))
+            : [];
 
          return (
            <div key={r.id} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-slate-800 border-teal-500/30 ring-1 ring-teal-500/20' : 'bg-slate-800/40 border-slate-700/50'}`}>

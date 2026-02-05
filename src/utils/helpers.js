@@ -4,6 +4,31 @@ import en from '../../locales/en.json';
 // Patched to load translations from JSON files, ensuring updates are reflected.
 export const TRANSLATIONS = { es, en };
 
+/**
+ * Determina si un ejercicio pertenece a un bloque de calentamiento o enfriamiento.
+ * Normaliza el string eliminando acentos y espacios extra para una comparación robusta.
+ * @param {object} exercise - El objeto de ejercicio a evaluar.
+ * @returns {boolean} True si es calentamiento o enfriamiento, False si es principal/superserie.
+ */
+export const isWarmupOrCooldown = (exercise) => {
+    if (!exercise) return false;
+    // Obtener el tipo de bloque de cualquiera de las propiedades posibles
+    const rawType = (exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
+    
+    // Normalizar: eliminar acentos/diacríticos (ej: calentamiento -> calentamiento, enfriamiento -> enfriamiento)
+    // Esto previene errores si la IA responde "Calentamiento" con tilde o variaciones.
+    const normalizedType = rawType.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+    // Comprobar palabras clave
+    return normalizedType.includes('calentamiento') || 
+           normalizedType.includes('enfriamiento') || 
+           normalizedType.includes('warmup') || 
+           normalizedType.includes('cooldown') ||
+           normalizedType.includes('activacion') || // Extra seguridad
+           normalizedType.includes('vuelta a la calma'); // Extra seguridad
+};
+
+
 export const calculateSmartRest = (profile, exercise) => {
     let restTime = 60; 
     const goal = profile?.mainGoal || '';

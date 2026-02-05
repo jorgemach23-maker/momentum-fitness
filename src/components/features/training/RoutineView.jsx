@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
-import { cleanExerciseTitle, formatRoutineTitle } from '../../../utils/helpers';
+import { cleanExerciseTitle, formatRoutineTitle, isWarmupOrCooldown } from '../../../utils/helpers';
 
 /**
  * Parsea un objeto de ejercicio de tipo superserie y devuelve las dos partes.
@@ -33,11 +33,8 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
 
     if (!routine || !routine.rutinaPrincipal) return null;
 
-    // LÓGICA DE FILTRADO DEFINITIVA: Excluir cualquier bloque que CONTENGA "calentamiento" o "enfriamiento".
-    const mainExercises = routine.rutinaPrincipal.filter(exercise => {
-        const tipo_bloque = (exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
-        return !tipo_bloque.includes('calentamiento') && !tipo_bloque.includes('enfriamiento');
-    });
+    // LÓGICA DE FILTRADO DEFINITIVA: Excluir bloques de calentamiento o enfriamiento usando helper centralizado.
+    const mainExercises = routine.rutinaPrincipal.filter(exercise => !isWarmupOrCooldown(exercise));
 
     const displayedExercises = isExpanded ? mainExercises : mainExercises.slice(0, 3);
     const hiddenCount = mainExercises.length - displayedExercises.length;
