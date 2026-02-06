@@ -148,7 +148,14 @@ const TrainingTab = ({
                             <>
                                 {recommendedRoutine ? (
                                     <div className="animate-fadeIn">
-                                        <HeroRoutineCard routine={recommendedRoutine} onViewRoutine={handleViewRoutine} onAdjust={() => handleOpenAdjustment(recommendedRoutine)} t={t}/>
+                                        <HeroRoutineCard 
+                                            routine={recommendedRoutine} 
+                                            onViewRoutine={handleViewRoutine} 
+                                            onAdjust={() => handleOpenAdjustment(recommendedRoutine)} 
+                                            t={t} 
+                                            profile={profile}
+                                            lastCompleted={lastCompleted}
+                                        />
                                         {lastCompleted && (
                                             <div className="mt-4 px-4 py-3 bg-slate-900/50 rounded-2xl border border-white/5 flex items-center gap-3 shadow-inner">
                                                 <div className="p-1.5 bg-teal-500/10 rounded-lg">
@@ -167,7 +174,13 @@ const TrainingTab = ({
                         )}
                         {activeTab === 'library' && (
                             <div className="animate-fadeIn">
-                                <RoutineLibraryList routines={libraryRoutines} onViewRoutine={handleViewRoutine} onAdjust={handleOpenAdjustment} t={t} />
+                                <RoutineLibraryList 
+                                    routines={libraryRoutines} 
+                                    onViewRoutine={handleViewRoutine} 
+                                    onAdjust={handleOpenAdjustment} 
+                                    t={t} 
+                                    profile={profile}
+                                />
                                 {libraryRoutines.length === 0 && recommendedRoutine && (
                                     <div className="text-center py-10 opacity-50"><p className="text-xs text-slate-500">{t.onlyRecommendedLeft}</p></div>
                                 )}

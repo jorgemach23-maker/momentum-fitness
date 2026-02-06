@@ -10,6 +10,13 @@ import {
   isWarmupOrCooldown // Importación del helper centralizado
 } from '../../../utils/helpers.js'; 
 
+// Helper para obtener la duración correcta
+const getDuration = (routine, profile) => {
+    if (routine?.duracionEstimada) return routine.duracionEstimada;
+    if (profile?.timeAvailable) return `${profile.timeAvailable} min`;
+    return "45 min";
+};
+
 // --- 1. BARRA DE PROGRESO SEMANAL ---
 export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex, t }) => {
   const completedDaysCount = completionLog.size;
@@ -124,7 +131,7 @@ export const ExerciseListPreview = ({ exercises, limit }) => {
 };
 
 // --- 3. TARJETA PRINCIPAL (HERO) ---
-export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompleted }) => {
+export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompleted, profile }) => {
   if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
   
   const data = routine.routine || routine;
@@ -132,6 +139,8 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
   const exercisesList = Array.isArray(data.rutinaPrincipal) 
     ? data.rutinaPrincipal.filter(ex => !isWarmupOrCooldown(ex))
     : [];
+    
+  const duration = getDuration(data, profile);
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-xl p-5 mb-4 group">
@@ -141,7 +150,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
            <div className="flex justify-between items-start mb-4">
               <div className="flex-1 mr-2">
                   <div className="flex items-center gap-2 mb-2">
-                      <span className="flex items-center gap-1 text-[10px] text-white font-mono"><Icon name="clock" className="w-3 h-3"/> {data.duracionEstimada || "45 min"}</span>
+                      <span className="flex items-center gap-1 text-[10px] text-white font-mono"><Icon name="clock" className="w-3 h-3"/> {duration}</span>
                   </div>
                   <h2 className="text-xl font-black text-white leading-tight line-clamp-2 drop-shadow-md">{formatRoutineTitle(routine.diaEnfoque || data.diaEnfoque)}</h2>
               </div>
@@ -162,7 +171,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
 };
 
 // --- 4. LISTA DE BIBLIOTECA ---
-export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust }) => {
+export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile }) => {
   const [expandedId, setExpandedId] = useState(null);
   if (!routines || routines.length === 0) return <div className="text-center py-8 text-xs text-slate-500">No hay opciones extra.</div>;
   
@@ -177,6 +186,8 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust }) => {
          const exercisesList = Array.isArray(data.rutinaPrincipal) 
             ? data.rutinaPrincipal.filter(ex => !isWarmupOrCooldown(ex))
             : [];
+            
+         const duration = getDuration(data, profile);
 
          return (
            <div key={r.id} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-slate-800 border-teal-500/30 ring-1 ring-teal-500/20' : 'bg-slate-800/40 border-slate-700/50'}`}>
@@ -185,7 +196,7 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust }) => {
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-teal-500 text-slate-900 shadow-lg shadow-teal-500/20' : 'bg-slate-900 text-slate-500 border border-slate-700'}`}><Icon name="dumbbell" className="w-5 h-5" /></div>
                     <div>
                         <h4 className={`text-sm font-bold ${isExpanded ? 'text-white' : 'text-slate-300'}`}>{formatRoutineTitle(r.diaEnfoque)}</h4>
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">{data.duracionEstimada || "45 min"}</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">{duration}</p>
                     </div>
                  </div>
                  <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180 text-teal-500' : 'text-slate-600'}`}>

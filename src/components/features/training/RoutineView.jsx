@@ -24,7 +24,7 @@ const parseSupersetExercises = (exercise) => {
     };
 };
 
-const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
+const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing, profile }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const t = {
         es: { suggestion: 'SUGERENCIA', adjust: 'Ajustar', start: 'Comenzar Sesión', more: 'ejercicios más' },
@@ -40,6 +40,15 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
     const hiddenCount = mainExercises.length - displayedExercises.length;
 
     let supersetCounter = 0;
+
+    // Calcular duración robusta
+    const getDuration = () => {
+        if (routine.duracionEstimada) return routine.duracionEstimada;
+        if (profile?.timeAvailable) return `${profile.timeAvailable} min`;
+        return '45 min';
+    };
+
+    const duration = getDuration();
 
     const renderExercise = (exercise, index) => {
         const tipo_bloque = (exercise.bloque || exercise.tipo_bloque || "").toLowerCase();
@@ -85,7 +94,7 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing }) => {
                         <span className="bg-teal-500/10 text-teal-400 text-[10px] font-bold uppercase px-2 py-1 rounded">{t.suggestion}</span>
                         <div className="flex items-center gap-1.5 text-slate-400 text-xs">
                             <Icon name="timer" className="w-3.5 h-3.5" />
-                            <span>{routine.duracionEstimada || '45 min'}</span>
+                            <span>{duration}</span>
                         </div>
                     </div>
                     <h2 className="text-xl font-black text-white">{formatRoutineTitle(routine.diaEnfoque)}</h2>
