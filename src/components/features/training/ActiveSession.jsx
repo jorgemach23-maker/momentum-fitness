@@ -284,19 +284,19 @@ export const ActiveSession = ({
                                     <div className="bg-slate-800/20 rounded-3xl border border-slate-700/30 p-4 space-y-4 shadow-xl">
                                         <div className="flex justify-between items-start gap-4">
                                             <div className="flex-1 min-w-0 flex items-center">
-                                                <span className="text-sm font-black text-cyan-400 bg-cyan-900/20 px-2.5 py-1 rounded-md border border-cyan-500/20 mr-3 uppercase">{currentLetter}1</span>
+                                                <span className="text-base font-black text-cyan-400 bg-cyan-900/20 px-2.5 py-1 rounded-md border border-cyan-500/20 mr-3 uppercase">{currentLetter}1</span>
                                                 <h3 className="text-2xl font-black text-white leading-tight break-words flex-1 text-center">{partA}</h3>
                                             </div>
-                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+tecnica`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
+                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
                                         </div>
                                         <div className="flex items-center gap-2 px-2 opacity-30"><div className="h-px flex-1 bg-slate-600"></div><Icon name="link2" className="w-3 h-3 text-slate-500"/><div className="h-px flex-1 bg-slate-600"></div></div>
                                         {partB && (
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="flex-1 min-w-0 flex items-center">
-                                                    <span className="text-sm font-black text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded-md border border-blue-500/20 mr-3 uppercase">{currentLetter}2</span>
+                                                    <span className="text-base font-black text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded-md border border-blue-500/20 mr-3 uppercase">{currentLetter}2</span>
                                                     <h3 className="text-2xl font-black text-white leading-tight break-words flex-1 text-center">{partB}</h3>
                                                 </div>
-                                                <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+tecnica`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
+                                                <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+short`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
                                             </div>
                                         )}
                                     </div>
@@ -312,15 +312,15 @@ export const ActiveSession = ({
                                 <div className={`grid ${isSuperset ? 'grid-cols-[1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[1fr_1fr_60px]'} gap-2 bg-black/30 p-3 text-center border-b border-slate-700 text-slate-400`}>
                                     {isSuperset ? (
                                         <>
-                                            <Icon name="repeat" className="mx-auto w-5 h-5 text-cyan-400" />
-                                            <Icon name="dumbbell" className="mx-auto w-5 h-5 text-cyan-400" />
-                                            <Icon name="repeat" className="mx-auto w-5 h-5 text-blue-400" />
-                                            <Icon name="dumbbell" className="mx-auto w-5 h-5 text-blue-400" />
+                                            <Icon name="repeat" className="mx-auto w-6 h-6 text-cyan-400" />
+                                            <Icon name="dumbbell" className="mx-auto w-6 h-6 text-cyan-400" />
+                                            <Icon name="repeat" className="mx-auto w-6 h-6 text-blue-400" />
+                                            <Icon name="dumbbell" className="mx-auto w-6 h-6 text-blue-400" />
                                         </>
                                     ) : (
                                         <>
-                                            <Icon name="repeat" className="mx-auto w-5 h-5" />
-                                            <Icon name="dumbbell" className="mx-auto w-5 h-5" />
+                                            <Icon name="repeat" className="mx-auto w-6 h-6" />
+                                            <Icon name="dumbbell" className="mx-auto w-6 h-6" />
                                         </>
                                     )}
                                     <Icon name="check" className="mx-auto w-4 h-4 opacity-30"/>
