@@ -12,20 +12,48 @@ export const TRANSLATIONS = { es, en };
  */
 export const isWarmupOrCooldown = (exercise) => {
     if (!exercise) return false;
-    // Obtener el tipo de bloque de cualquiera de las propiedades posibles
-    const rawType = (exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
     
-    // Normalizar: eliminar acentos/diacríticos (ej: calentamiento -> calentamiento, enfriamiento -> enfriamiento)
-    // Esto previene errores si la IA responde "Calentamiento" con tilde o variaciones.
-    const normalizedType = rawType.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    // Obtener todas las posibles fuentes de "tipo de bloque"
+    const rawType = (exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
+    const rawName = (exercise.ejercicio || "").toLowerCase();
+    
+    // Función helper para normalizar strings (quitar acentos)
+    const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-    // Comprobar palabras clave
-    return normalizedType.includes('calentamiento') || 
-           normalizedType.includes('enfriamiento') || 
-           normalizedType.includes('warmup') || 
-           normalizedType.includes('cooldown') ||
-           normalizedType.includes('activacion') || // Extra seguridad
-           normalizedType.includes('vuelta a la calma'); // Extra seguridad
+    const normalizedType = normalize(rawType);
+    const normalizedName = normalize(rawName);
+
+    // Lista exhaustiva de palabras clave
+    const keywords = [
+        'calentamiento', 'warmup', 'warm-up', 'warm up',
+        'enfriamiento', 'cooldown', 'cool-down', 'cool down',
+        'movilidad', 'mobility',
+        'activacion', 'activation',
+        'estiramiento', 'stretching',
+        'rotacion', 'rotation',
+        'liberacion', 'release',
+        'vuelta a la calma', 'vuelta calma',
+        'cardio suave', 'caminata', 'trote suave',
+        'foam roller', 'rodillo',
+        'dinamico', 'dynamic' // A veces "Estiramiento Dinámico"
+    ];
+
+    // Verificar si alguna palabra clave está en el tipo o en el nombre del ejercicio (si el tipo es ambiguo)
+    const typeMatch = keywords.some(k => normalizedType.includes(k));
+    
+    // Solo verificar el nombre si parece ser explícitamente un ejercicio de calentamiento/movilidad puro
+    // y no un ejercicio principal que casualmente tiene una palabra clave (ej: "Press Rotacional" es un ejercicio, no calentamiento).
+    // Pero para "Rotación Articular" sí es calentamiento.
+    // Para mayor seguridad, priorizamos el 'tipo_bloque' que define la IA.
+    if (typeMatch) return true;
+
+    // Caso especial: Si la IA puso el ejercicio en una lista separada de 'calentamiento' o 'enfriamiento' en la estructura JSON,
+    // eso se maneja en el componente padre. Pero si está mezclado en la lista principal, dependemos de estas flags.
+    
+    // Si el tipo es 'cardio' o 'aerobico' y está al principio o final, podría ser calentamiento/enfriamiento, 
+    // pero es arriesgado filtrarlo solo por eso. Nos quedamos con la detección semántica fuerte.
+
+    return false;
 };
 
 
