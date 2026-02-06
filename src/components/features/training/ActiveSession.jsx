@@ -303,14 +303,26 @@ export const ActiveSession = ({
                                 ) : (
                                     <div className="flex justify-between items-start pt-2 bg-slate-800/10 p-4 rounded-3xl border border-slate-700/20">
                                         <h2 className="text-4xl font-black text-white leading-[1.1] break-words flex-1 pr-4">{partA}</h2>
-                                        <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+tecnica`, '_blank')} className="shrink-0 p-3 rounded-2xl bg-slate-800 text-red-500 border border-slate-700 shadow-xl active:scale-95 transition-all"><Icon name="youtube" className="w-6 h-6" /></button>
+                                        <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="shrink-0 p-3 rounded-2xl bg-slate-800 text-red-500 border border-slate-700 shadow-xl active:scale-95 transition-all"><Icon name="youtube" className="w-6 h-6" /></button>
                                     </div>
                                 )}
                             </div>
 
                             <div className="flex flex-col bg-slate-900/60 border border-slate-700/50 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                                <div className={`grid ${isSuperset ? 'grid-cols-[1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[1fr_1fr_60px]'} gap-2 bg-black/30 p-3 text-xs font-black uppercase text-center border-b border-slate-700 text-slate-400 tracking-wider`}>
-                                    {isSuperset ? (<><span className="text-cyan-400">Reps A</span><span className="text-cyan-400">Kg A</span><span className="text-blue-400">Reps B</span><span className="text-blue-400">Kg B</span></>) : (<><span className="col-span-1">Repeticiones</span><span className="col-span-1">Carga</span></>)}
+                                <div className={`grid ${isSuperset ? 'grid-cols-[1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[1fr_1fr_60px]'} gap-2 bg-black/30 p-3 text-center border-b border-slate-700 text-slate-400`}>
+                                    {isSuperset ? (
+                                        <>
+                                            <Icon name="repeat" className="mx-auto w-5 h-5 text-cyan-400" />
+                                            <Icon name="dumbbell" className="mx-auto w-5 h-5 text-cyan-400" />
+                                            <Icon name="repeat" className="mx-auto w-5 h-5 text-blue-400" />
+                                            <Icon name="dumbbell" className="mx-auto w-5 h-5 text-blue-400" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icon name="repeat" className="mx-auto w-5 h-5" />
+                                            <Icon name="dumbbell" className="mx-auto w-5 h-5" />
+                                        </>
+                                    )}
                                     <Icon name="check" className="mx-auto w-4 h-4 opacity-30"/>
                                 </div>
                                 <div className="divide-y divide-slate-800/50">
