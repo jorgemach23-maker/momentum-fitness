@@ -13,10 +13,10 @@ import {
 // Componente helper para mostrar valores numéricos estilo Matrix
 const MatrixValue = ({ value, unit, subtext }) => {
     return (
-        <div className="w-24 h-24 bg-slate-900/90 rounded-2xl border border-slate-700/50 p-2 flex flex-col items-center justify-center shrink-0 shadow-lg backdrop-blur-sm">
-            <span className="text-white font-bold text-3xl tabular-nums leading-none tracking-tight">{value}</span>
-            <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-1">{unit}</span>
-            {subtext && <span className="text-slate-600 text-[9px] font-medium leading-none mt-0.5">{subtext}</span>}
+        <div className="w-20 h-20 bg-slate-900/90 rounded-2xl border border-slate-700/50 p-2 flex flex-col items-center justify-center shrink-0 shadow-lg backdrop-blur-sm pointer-events-none select-none">
+            <span className="text-white font-bold text-2xl tabular-nums leading-none tracking-tight">{value}</span>
+            <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider mt-1">{unit}</span>
+            {subtext && <span className="text-slate-600 text-[8px] font-medium leading-none mt-0.5">{subtext}</span>}
         </div>
     );
 };
@@ -32,11 +32,13 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => 
     }, [initialLoad]);
 
     const handleTouchStart = (e) => {
+        e.stopPropagation(); // Prevenir click en el contenedor padre
         lastUpdateY.current = e.touches[0].clientY;
         setIsInteracting(true);
     };
 
     const handleTouchMove = (e) => {
+        e.stopPropagation(); // Prevenir propagación
         e.preventDefault();
         const currentY = e.touches[0].clientY;
         const deltaY = lastUpdateY.current - currentY;
@@ -75,7 +77,7 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => 
     }
 
     // Estilos dinámicos para feedback visual al interactuar
-    const containerClass = `relative w-24 h-24 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-all duration-200 cursor-ns-resize select-none touch-none ${
+    const containerClass = `relative w-20 h-20 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-all duration-200 cursor-ns-resize select-none touch-none ${
         isInteracting 
         ? 'bg-teal-900/80 border-teal-500/50 scale-105 shadow-[0_0_20px_rgba(20,184,166,0.3)] z-10' 
         : 'bg-slate-900/90 border-slate-700/50 shadow-lg backdrop-blur-sm'
@@ -88,15 +90,16 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => 
         <div 
             onTouchStart={handleTouchStart} 
             onTouchMove={handleTouchMove} 
-            onTouchEnd={() => setIsInteracting(false)} 
+            onTouchEnd={(e) => { e.stopPropagation(); setIsInteracting(false); }}
+            onClick={(e) => e.stopPropagation()} // Importante: evita disparar el toggle de serie
             className={containerClass}>
             
             {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-2 animate-pulse" />}
             
-            <span className={`${textClass} font-bold text-3xl tabular-nums leading-none tracking-tight`}>
+            <span className={`${textClass} font-bold text-2xl tabular-nums leading-none tracking-tight`}>
                 {displayValue}
             </span>
-            <span className={`${unitClass} text-[10px] uppercase font-bold tracking-wider mt-1 text-center leading-tight px-1`}>
+            <span className={`${unitClass} text-[9px] uppercase font-bold tracking-wider mt-1 text-center leading-tight px-1`}>
                 {unit}
             </span>
             
@@ -347,7 +350,6 @@ export const ActiveSession = ({
                             </div>
 
                             <div className="flex flex-col bg-slate-900/60 border border-slate-700/50 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                                {/* Encabezado del grid eliminado o simplificado porque ahora los items son auto-descriptivos */}
                                 <div className="divide-y divide-slate-800/50">
                                     {(activeExercise.componentes || []).map((set, setIdx) => {
                                         const isDone = completedSets[`${idx}-${setIdx}`]?.completed;
@@ -358,9 +360,24 @@ export const ActiveSession = ({
                                         const repsB = isSuperset ? formatRepsDisplay(set.repeticiones_ejercicioB) : null;
 
                                         return (
-                                            <div key={setIdx} className={`p-4 transition-colors ${isDone ? 'bg-teal-500/10' : ''}`}>
-                                                {/* Contenedor flexible para los items Matrix */}
-                                                <div className="flex flex-wrap items-center justify-center gap-4 mb-3">
+                                            <div 
+                                                key={setIdx} 
+                                                className={`relative p-4 transition-all duration-300 cursor-pointer ${isDone ? 'bg-teal-500/30' : 'active:bg-slate-800/30 hover:bg-slate-800/10'}`}
+                                                onClick={() => toggleSetCompletion(setIdx)}
+                                                role="button"
+                                                tabIndex={0}
+                                            >
+                                                {/* Indicador de check */}
+                                                <div className="absolute top-4 right-4 z-0">
+                                                    {isDone ? (
+                                                        <Icon name="check" className="w-8 h-8 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110 transition-all duration-300" />
+                                                    ) : (
+                                                        <div className="w-8 h-8 rounded-full border-2 border-slate-700 opacity-50 transition-all duration-300 group-hover:border-slate-500"></div>
+                                                    )}
+                                                </div>
+
+                                                {/* Contenido principal centrado */}
+                                                <div className="flex flex-wrap items-center justify-center gap-4 relative z-10 py-2">
                                                     {isSuperset ? (
                                                         <>
                                                             {/* Ejercicio A */}
@@ -370,8 +387,7 @@ export const ActiveSession = ({
                                                                 <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
                                                             </div>
                                                             
-                                                            {/* Separador sutil */}
-                                                            <div className="w-px h-16 bg-slate-700/30 hidden sm:block"></div>
+                                                            <div className="w-px h-16 bg-slate-700/30 hidden sm:block mx-2"></div>
                                                             
                                                             {/* Ejercicio B */}
                                                             <div className="flex gap-2 relative">
@@ -386,13 +402,6 @@ export const ActiveSession = ({
                                                             <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
                                                         </>
                                                     )}
-                                                </div>
-
-                                                {/* Botón de Check centrado abajo */}
-                                                <div className="flex justify-center">
-                                                     <button onClick={() => toggleSetCompletion(setIdx)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-all border shadow-lg font-bold tracking-widest text-sm ${isDone ? 'bg-teal-500 text-white border-teal-400 shadow-teal-500/20 scale-[0.98]' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 active:scale-95'}`}>
-                                                        {isDone ? <><Icon name="check" className="w-5 h-5" /> COMPLETADO</> : "MARCAR SERIE"}
-                                                     </button>
                                                 </div>
                                             </div>
                                         );
@@ -422,7 +431,7 @@ export const ActiveSession = ({
 
                 {!isResting && (
                     <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-4">
-                        <div className="pointer-events-auto flex items-center bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-8 pointer-events-auto">
+                        <div className="pointer-events-auto flex items-center bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-8">
                             <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 hover:text-white rounded-full transition-colors active:scale-90"><Icon name="arrowLeft" className="w-5 h-5"/></button>
                             <button onClick={() => setIsSessionActive(!isSessionActive)} className={`p-4 rounded-full shadow-2xl transition-all active:scale-90 ${!isSessionActive ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300'}`}><Icon name={!isSessionActive ? "play" : "pause"} className="w-6 h-6 fill-current"/></button>
                             <button onClick={handleNext} className={`p-3 rounded-full transition-colors active:scale-90 ${phase === 'cooldown' ? 'text-teal-400' : 'text-slate-500 hover:text-white'}`}><Icon name={phase === 'cooldown' ? 'check' : 'arrowRight'} className="w-5 h-5"/></button>
