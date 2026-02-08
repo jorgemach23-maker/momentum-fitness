@@ -341,7 +341,6 @@ export const ActiveSession = ({
                                             onClick={() => toggleSetCompletion(setIdx)}
                                             className={`group relative flex items-center gap-2 p-3 rounded-[2.5rem] transition-all duration-300 border ${isDone ? 'bg-teal-500/20 border-teal-500/40' : 'bg-slate-900/60 border-white/5 active:bg-slate-800'}`}
                                         >
-                                            {/* Reducción 40% en círculo de sesión (w-8 h-8) */}
                                             <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ml-1">
                                                 {isDone ? (
                                                     <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.5)]">
@@ -354,7 +353,6 @@ export const ActiveSession = ({
                                                 )}
                                             </div>
 
-                                            {/* Ajuste para ocupar el 90% restante */}
                                             <div className="flex-1 flex flex-wrap items-center justify-end gap-2 overflow-hidden">
                                                 {isSuperset ? (
                                                     <>
@@ -396,22 +394,27 @@ export const ActiveSession = ({
                     )}
                 </div>
 
-                <div className="shrink-0 p-4 pb-8 bg-gradient-to-t from-black via-black/90 to-transparent">
+                {/* DOCK FLOTANTE */}
+                <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
                     {phase === 'workout' ? (
-                        <div className="flex items-center gap-4 bg-slate-900/80 border border-white/10 rounded-full p-2 backdrop-blur-xl shadow-2xl">
-                            <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 active:scale-75"><Icon name="arrowLeft" className="w-5 h-5"/></button>
-                            <div className="flex-1 flex items-center justify-center gap-6">
-                                <button onClick={() => setIsSessionActive(!isSessionActive)} className={`w-12 h-12 xs:w-14 xs:h-14 rounded-full flex items-center justify-center transition-all ${!isSessionActive ? 'bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'bg-slate-800 text-slate-400'}`}>
-                                    <Icon name={!isSessionActive ? "play" : "pause"} className="w-6 h-6 fill-current"/>
+                        <div className="pointer-events-auto flex items-center gap-6 bg-slate-900/90 border border-white/10 rounded-full p-2 pr-6 pl-4 backdrop-blur-xl shadow-2xl">
+                            <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 active:scale-75 hover:text-white transition-colors"><Icon name="arrowLeft" className="w-5 h-5"/></button>
+                            
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setIsSessionActive(!isSessionActive)} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${!isSessionActive ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-slate-800 text-slate-400 border border-white/5'}`}>
+                                    <Icon name={!isSessionActive ? "play" : "pause"} className="w-5 h-5 fill-current"/>
                                 </button>
-                                <div className="text-lg xs:text-xl font-mono font-black text-teal-400 tracking-tighter tabular-nums">
+                                <div className="text-lg font-mono font-black text-teal-400 tracking-tighter tabular-nums min-w-[3.5rem] text-center">
                                     {formatDuration(sessionSeconds)}
                                 </div>
                             </div>
-                            <button onClick={handleNext} className="p-3 text-slate-500 active:scale-75"><Icon name="arrowRight" className="w-5 h-5"/></button>
+
+                            <button onClick={handleNext} className="p-3 text-slate-500 active:scale-75 hover:text-white transition-colors"><Icon name="arrowRight" className="w-5 h-5"/></button>
                         </div>
                     ) : (
-                        <button onClick={handleNext} className={`w-full py-5 ${phase === 'warmup' ? 'bg-orange-500 shadow-orange-500/20' : 'bg-teal-500 shadow-teal-500/20'} text-white font-black rounded-3xl shadow-2xl active:scale-[0.98] transition-all text-sm tracking-[0.2em] uppercase`}>{phase === 'warmup' ? t.startMain : t.finishComplete}</button>
+                        <button onClick={handleNext} className="pointer-events-auto w-full max-w-sm py-4 bg-teal-500 shadow-lg shadow-teal-500/20 text-white font-black rounded-2xl active:scale-[0.98] transition-all text-xs tracking-[0.2em] uppercase backdrop-blur-md border border-white/10">
+                            {phase === 'warmup' ? t.startMain : t.finishComplete}
+                        </button>
                     )}
                 </div>
 
