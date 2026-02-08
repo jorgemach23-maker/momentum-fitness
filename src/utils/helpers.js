@@ -13,10 +13,17 @@ export const TRANSLATIONS = { es, en };
 export const isWarmupOrCooldown = (exercise) => {
     if (!exercise) return false;
     
-    // Obtener todas las posibles fuentes de "tipo de bloque"
+    // Obtener todas las posibles fuentes de "tipo de bloque" o "fase de sesión"
+    // Prioridad: fase_sesion (nuevo backend) > tipo_bloque/bloque (legacy)
+    const rawPhase = (exercise.fase_sesion || "").toLowerCase();
     const rawType = (exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
     const rawName = (exercise.ejercicio || "").toLowerCase();
     
+    // Si fase_sesion está definido explícitamente por el nuevo backend
+    if (rawPhase === 'warmup' || rawPhase === 'cooldown' || rawPhase === 'calentamiento' || rawPhase === 'enfriamiento') {
+        return true;
+    }
+
     // Función helper para normalizar strings (quitar acentos)
     const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
@@ -64,12 +71,14 @@ export const calculateSmartRest = (profile, exercise) => {
     else if (goal.includes('Hipertrofia') || goal.includes('Hypertrophy')) restTime = 90;
     else if (goal.includes('Grasa') || goal.includes('Cardio') || goal.includes('Fat')) restTime = 45;
     
-    if (exercise?.tipo_bloque === 'superserie') {
+    const tipo = (exercise?.fase_sesion || exercise?.tipo_bloque || "").toLowerCase();
+
+    if (tipo === 'superserie') {
         if (goal.includes('Fuerza') || goal.includes('Strength')) restTime = 180;
         else restTime = 60; 
     }
     
-    if (exercise?.tipo_bloque !== 'superserie') {
+    if (tipo !== 'superserie') {
         const hrr = parseFloat(profile?.bioage?.hrr) || 0;
         const vo2 = parseFloat(profile?.bioage?.vo2max) || 0;
         if (hrr > 30 && vo2 > 45) restTime -= 15;
@@ -157,6 +166,9 @@ export const formatRoutineTitle = (title) => {
 
 export const formatRepsDisplay = (str) => { 
     if (!str) return "--"; 
+    // Si ya viene con formato texto corto (backend nuevo: '12-15' o 'Falló'), devolverlo.
+    if (String(str).length < 10 && !/\d/.test(str)) return str;
+
     let val = String(str).replace(/segundos?|segun\w*/gi, 'seg').replace(/minutos?|mins?/gi, 'min');
     if (/min|seg|sec|m\b|s\b/i.test(val)) return val.substring(0, 8); 
     const nums = val.match(/\d+/); 
