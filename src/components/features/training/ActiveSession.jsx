@@ -10,19 +10,25 @@ import {
     isCooldown 
 } from '../../../utils/helpers.js';
 
-// Componente helper para mostrar valores numéricos estilo Matrix
-const MatrixValue = ({ value, unit, subtext }) => {
+// Componente helper para mostrar valores numéricos estilo Matrix - Tamaños responsivos
+const MatrixValue = ({ value, unit, subtext, label }) => {
     return (
-        <div className="w-20 h-20 bg-slate-900/90 rounded-2xl border border-slate-700/50 p-2 flex flex-col items-center justify-center shrink-0 shadow-lg backdrop-blur-sm pointer-events-none select-none">
-            <span className="text-white font-bold text-2xl tabular-nums leading-none tracking-tight">{value}</span>
-            <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider mt-1">{unit}</span>
-            {subtext && <span className="text-slate-600 text-[8px] font-medium leading-none mt-0.5">{subtext}</span>}
+        // Reducción 10% adicional en tamaño base (w-[4.3rem])
+        <div className="relative w-[4.3rem] h-[4.3rem] xs:w-20 xs:h-20 bg-slate-900/90 rounded-2xl border border-slate-700/50 p-2 flex flex-col items-center justify-center shrink-0 shadow-lg backdrop-blur-sm pointer-events-none select-none overflow-hidden">
+            {label && (
+                <span className="absolute top-0 left-0 bg-slate-800/80 text-[8px] font-black text-slate-400 px-1.5 py-0.5 rounded-br-lg border-r border-b border-slate-700/50 z-10">
+                    {label}
+                </span>
+            )}
+            <span className="text-white font-bold text-base xs:text-lg tabular-nums leading-none tracking-tight mt-1">{value}</span>
+            <span className="text-slate-500 text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5">{unit}</span>
+            {subtext && <span className="text-slate-600 text-[7px] font-medium leading-none mt-0.5 text-center px-1 truncate w-full">{subtext}</span>}
         </div>
     );
 };
 
-// Componente AdjustableLoad con estilo Matrix
-const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => {
+// Componente AdjustableLoad con estilo Matrix - Tamaños responsivos
+const AdjustableLoadMatrix = ({ initialLoad, onUpdate, label }) => {
     const [load, setLoad] = useState(initialLoad === null ? 0 : initialLoad);
     const [isInteracting, setIsInteracting] = useState(false);
     const lastUpdateY = useRef(0);
@@ -32,13 +38,13 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => 
     }, [initialLoad]);
 
     const handleTouchStart = (e) => {
-        e.stopPropagation(); // Prevenir click en el contenedor padre
+        e.stopPropagation();
         lastUpdateY.current = e.touches[0].clientY;
         setIsInteracting(true);
     };
 
     const handleTouchMove = (e) => {
-        e.stopPropagation(); // Prevenir propagación
+        e.stopPropagation();
         e.preventDefault();
         const currentY = e.touches[0].clientY;
         const deltaY = lastUpdateY.current - currentY;
@@ -52,13 +58,12 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => 
         }
     };
     
-    // Parseo del valor y la unidad
     let displayValue = "0";
     let unit = "KG";
     
     if (initialLoad === 0 || initialLoad === null) {
         displayValue = "BW";
-        unit = "Peso Corporal";
+        unit = "Peso";
     } else {
         const str = formatLoadDisplay(initialLoad);
         const match = str.match(/([\d.]+)\s*(.*)/);
@@ -66,18 +71,17 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => 
             displayValue = match[1];
             unit = match[2] || "KG";
         } else {
-            // Fallback si formatLoadDisplay devuelve algo raro (ej "BW")
              if (str === "BW") {
                  displayValue = "BW";
-                 unit = "Peso Corporal";
+                 unit = "Peso";
              } else {
                  displayValue = str;
              }
         }
     }
 
-    // Estilos dinámicos para feedback visual al interactuar
-    const containerClass = `relative w-20 h-20 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-all duration-200 cursor-ns-resize select-none touch-none ${
+    // Reducción 10% adicional en tamaño base (w-[4.3rem])
+    const containerClass = `relative w-[4.3rem] h-[4.3rem] xs:w-20 xs:h-20 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-all duration-200 cursor-ns-resize select-none touch-none overflow-hidden ${
         isInteracting 
         ? 'bg-teal-900/80 border-teal-500/50 scale-105 shadow-[0_0_20px_rgba(20,184,166,0.3)] z-10' 
         : 'bg-slate-900/90 border-slate-700/50 shadow-lg backdrop-blur-sm'
@@ -91,19 +95,23 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => 
             onTouchStart={handleTouchStart} 
             onTouchMove={handleTouchMove} 
             onTouchEnd={(e) => { e.stopPropagation(); setIsInteracting(false); }}
-            onClick={(e) => e.stopPropagation()} // Importante: evita disparar el toggle de serie
+            onClick={(e) => e.stopPropagation()}
             className={containerClass}>
             
-            {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-2 animate-pulse" />}
-            
-            <span className={`${textClass} font-bold text-2xl tabular-nums leading-none tracking-tight`}>
-                {displayValue}
-            </span>
-            <span className={`${unitClass} text-[9px] uppercase font-bold tracking-wider mt-1 text-center leading-tight px-1`}>
-                {unit}
-            </span>
-            
-            {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-2 animate-pulse" />}
+            {label && (
+                <span className={`absolute top-0 left-0 text-[8px] font-black px-1.5 py-0.5 rounded-br-lg border-r border-b z-20 ${
+                    label.includes('A1') ? 'bg-cyan-900/40 text-cyan-400 border-cyan-500/20' : 
+                    label.includes('A2') ? 'bg-blue-900/40 text-blue-400 border-blue-500/20' : 
+                    'bg-slate-800/80 text-slate-400 border-slate-700/50'
+                }`}>
+                    {label}
+                </span>
+            )}
+
+            {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-1.5 animate-pulse" />}
+            <span className={`${textClass} font-bold text-base xs:text-lg tabular-nums leading-none tracking-tight mt-1`}>{displayValue}</span>
+            <span className={`${unitClass} text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5 text-center leading-tight px-1`}>{unit}</span>
+            {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-1.5 animate-pulse" />}
         </div>
     );
 };
@@ -129,13 +137,10 @@ export const ActiveSession = ({
     const [currentLoads, setCurrentLoads] = useState({});
     
     const isResting = restSeconds > 0;
-
     const rawExercises = currentRoutine.rutinaPrincipal || [];
-
     const warmupEx = rawExercises.filter(isWarmup);
     const cooldownEx = rawExercises.filter(isCooldown);
     const exercises = rawExercises.filter(e => !isWarmup(e) && !isCooldown(e));
-
     const activeExercise = phase === 'workout' ? exercises[idx] : null;
     const nextExercise = phase === 'workout' && idx + 1 < exercises.length ? exercises[idx + 1] : null;
 
@@ -183,14 +188,6 @@ export const ActiveSession = ({
                  rawParts = [part1, part2];
              }
         }
-        else if (rawParts.length < 2) {
-            const a1a2Match = title.match(/A1[:\s]*(.+?)\s*A2[:\s]*(.+)/i);
-            if (a1a2Match) rawParts = [a1a2Match[1], a1a2Match[2]];
-        }
-        else if (rawParts.length < 2) {
-            const yMatch = title.match(/(.*?)\s+\by\b\s+(.*)/i);
-            if (yMatch) rawParts = [yMatch[1], yMatch[2]];
-        }
         const parts = rawParts.map(p => {
              if (!p) return "";
              return cleanExerciseTitle(p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^\+\s*/, '').trim());
@@ -224,9 +221,7 @@ export const ActiveSession = ({
         };
         (activeExercise.componentes || []).forEach((set, setIdx) => {
             initialLoads[`${idx}-${setIdx}-A`] = parseLoad(set.carga_sugeridaA ?? set.carga_sugerida, partA);
-            if (isSuperset) {
-                initialLoads[`${idx}-${setIdx}-B`] = parseLoad(set.carga_sugeridaB, partB);
-            }
+            if (isSuperset) initialLoads[`${idx}-${setIdx}-B`] = parseLoad(set.carga_sugeridaB, partB);
         });
         setCurrentLoads(initialLoads);
     }, [activeExercise, idx, isSuperset, partA, partB]);
@@ -244,20 +239,16 @@ export const ActiveSession = ({
         if (isNowDone) {
             const setInfo = activeExercise.componentes[setIndex];
             const loadA = currentLoads[`${idx}-${setIndex}-A`];
-            const finalLoadA = loadA === null ? 0 : loadA;
-            const setData = { completed: true, ejercicio: activeExercise.ejercicio, load: finalLoadA, reps: setInfo.repeticiones_ejercicioA ?? setInfo.repeticiones_ejercicio };
+            const setData = { completed: true, ejercicio: activeExercise.ejercicio, load: loadA === null ? 0 : loadA, reps: setInfo.repeticiones_ejercicioA ?? setInfo.repeticiones_ejercicio };
             if (isSuperset) { 
                 const loadB = currentLoads[`${idx}-${setIndex}-B`];
-                const finalLoadB = loadB === null ? 0 : loadB;
-                setData.loadB = finalLoadB; 
+                setData.loadB = loadB === null ? 0 : loadB; 
                 setData.repsB = setInfo.repeticiones_ejercicioB; 
             }
             setCompletedSets(prev => ({ ...prev, [key]: setData }));
             if (onExerciseComplete) onExerciseComplete(activeExercise);
-            
             const restTime = activeExercise.descanso_segs || activeExercise.descanso_entre_series || 60;
             setRestSeconds(restTime);
-
         } else {
             const { [key]: _, ...rest } = completedSets;
             setCompletedSets(rest);
@@ -267,7 +258,7 @@ export const ActiveSession = ({
     const handleNext = () => {
         if (phase === 'warmup') setPhase('workout');
         else if (phase === 'cooldown') handleRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
-        else if (idx < exercises.length - 1) { setIdx(prev => prev + 1); }
+        else if (idx < exercises.length - 1) setIdx(prev => prev + 1);
         else setPhase('cooldown');
     };
 
@@ -281,192 +272,175 @@ export const ActiveSession = ({
                 </li>
             ));
         }
-        if (typeof data === 'string') {
-             return data.split(/[.\n-]/).filter(s => s.trim().length > 3).map((s, i) => (
-                <li key={i} className="flex items-start gap-3 text-left">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
-                    <span className="text-slate-300 text-sm leading-relaxed font-medium">{s.trim()}</span>
-                </li>
-            ));
-        }
         return null; 
     };
 
     return (
         <div className="h-screen w-full bg-black flex flex-col overflow-hidden relative selection:bg-teal-500/30">
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-                <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-br from-teal-500/30 to-cyan-500/10 rounded-full blur-3xl animate-[pulse_10s_ease-in-out_infinite]"></div>
-                <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-to-tl from-violet-500/20 to-purple-500/10 rounded-full blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
+                <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-br from-teal-500/10 to-cyan-500/5 rounded-full blur-3xl"></div>
             </div>
 
-            <div className="relative z-10 flex flex-col flex-1 h-full">
-                <header className="shrink-0 p-4 pt-6 z-30 border-b border-transparent">
+            <div className="relative z-10 flex flex-col h-full">
+                <header className="shrink-0 p-4 pt-6">
                     <div className="flex items-center justify-between mb-4">
-                        <button onClick={handleBackToMain} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors active:scale-90">
-                            <Icon name="arrowLeft" className="w-6 h-6" />
-                        </button>
-                        <h1 className="text-sm font-black text-slate-100 uppercase tracking-[0.2em]">{title}</h1>
+                        <button onClick={handleBackToMain} className="p-2 -ml-2 text-slate-400 active:scale-90"><Icon name="arrowLeft" className="w-6 h-6" /></button>
+                        <h1 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] truncate max-w-[60%]">{title}</h1>
                         <div className="w-10"></div>
                     </div>
-                    <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 px-1">
-                        <span>{phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : `Ejercicio ${idx + 1} de ${exercises.length}`}</span>
-                        <span>{`${Math.round(progressPercent)}%`}</span>
+                    <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                        <span>{phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : `EJE ${idx + 1}/${exercises.length}`}</span>
+                        <span className="text-teal-500">{`${Math.round(progressPercent)}%`}</span>
                     </div>
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-teal-500 transition-all duration-700 ease-out shadow-[0_0_10px_rgba(20,184,166,0.4)]" style={{ width: `${progressPercent}%` }}></div>
+                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.5)] transition-all duration-700" style={{ width: `${progressPercent}%` }}></div>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto px-4 pb-40 minimal-scrollbar animate-fadeIn pt-4">
+                <div className="flex-1 overflow-y-auto px-4 pb-32 minimal-scrollbar pt-2">
                     {phase === 'workout' && activeExercise ? (
                         <div className="flex flex-col space-y-6">
-                            <div className="relative">
+                            <div className="bg-slate-900/40 rounded-3xl border border-white/5 p-4 shadow-xl backdrop-blur-md">
                                 {isSuperset ? (
-                                    <div className="bg-slate-800/20 rounded-3xl border border-slate-700/30 p-4 space-y-4 shadow-xl">
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1 min-w-0 flex items-center">
-                                                <span className="text-base font-black text-cyan-400 bg-cyan-900/20 px-2.5 py-1 rounded-md border border-cyan-500/20 mr-3 uppercase">{currentLetter}1</span>
-                                                <h3 className="text-2xl font-black text-white leading-tight break-words flex-1 text-center">{partA}</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <span className="shrink-0 text-[10px] font-black bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">A1</span>
+                                                <h3 className="text-lg xs:text-xl font-bold text-white truncate">{partA}</h3>
                                             </div>
-                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
+                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="p-2 text-red-500 bg-white/5 rounded-xl active:scale-95"><Icon name="youtube" className="w-5 h-5" /></button>
                                         </div>
-                                        <div className="flex items-center gap-2 px-2 opacity-30"><div className="h-px flex-1 bg-slate-600"></div><Icon name="link2" className="w-3 h-3 text-slate-500"/><div className="h-px flex-1 bg-slate-600"></div></div>
-                                        {partB && (
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="flex-1 min-w-0 flex items-center">
-                                                    <span className="text-base font-black text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded-md border border-blue-500/20 mr-3 uppercase">{currentLetter}2</span>
-                                                    <h3 className="text-2xl font-black text-white leading-tight break-words flex-1 text-center">{partB}</h3>
-                                                </div>
-                                                <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+short`, '_blank')} className="shrink-0 p-2 rounded-xl bg-slate-700 text-red-500 active:scale-95 transition-transform shadow-lg"><Icon name="youtube" className="w-5 h-5" /></button>
+                                        <div className="h-px bg-white/5 w-full"></div>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <span className="shrink-0 text-[10px] font-black bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/30">A2</span>
+                                                <h3 className="text-lg xs:text-xl font-bold text-white truncate">{partB}</h3>
                                             </div>
-                                        )}
+                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+short`, '_blank')} className="p-2 text-red-500 bg-white/5 rounded-xl active:scale-95"><Icon name="youtube" className="w-5 h-5" /></button>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="flex justify-between items-start pt-2 bg-slate-800/10 p-4 rounded-3xl border border-slate-700/20">
-                                        <h2 className="text-4xl font-black text-white leading-[1.1] break-words flex-1 pr-4">{partA}</h2>
-                                        <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="shrink-0 p-3 rounded-2xl bg-slate-800 text-red-500 border border-slate-700 shadow-xl active:scale-95 transition-all"><Icon name="youtube" className="w-6 h-6" /></button>
+                                    <div className="flex justify-between items-start">
+                                        <h2 className="text-2xl font-black text-white leading-tight pr-4">{partA}</h2>
+                                        <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="p-2 text-red-500 bg-white/5 rounded-xl active:scale-95"><Icon name="youtube" className="w-5 h-5" /></button>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex flex-col bg-slate-900/60 border border-slate-700/50 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                                <div className="divide-y divide-slate-800/50">
-                                    {(activeExercise.componentes || []).map((set, setIdx) => {
-                                        const isDone = completedSets[`${idx}-${setIdx}`]?.completed;
-                                        const valA = currentLoads[`${idx}-${setIdx}-A`];
-                                        const valB = currentLoads[`${idx}-${setIdx}-B`];
-                                        
-                                        const repsA = formatRepsDisplay(set.repeticiones_ejercicioA ?? set.repeticiones_ejercicio);
-                                        const repsB = isSuperset ? formatRepsDisplay(set.repeticiones_ejercicioB) : null;
+                            <div className="space-y-4">
+                                {(activeExercise.componentes || []).map((set, setIdx) => {
+                                    const isDone = completedSets[`${idx}-${setIdx}`]?.completed;
+                                    const valA = currentLoads[`${idx}-${setIdx}-A`];
+                                    const valB = currentLoads[`${idx}-${setIdx}-B`];
+                                    const repsA = formatRepsDisplay(set.repeticiones_ejercicioA ?? set.repeticiones_ejercicio);
+                                    const repsB = isSuperset ? formatRepsDisplay(set.repeticiones_ejercicioB) : null;
 
-                                        return (
-                                            <div 
-                                                key={setIdx} 
-                                                className={`relative p-4 transition-all duration-300 cursor-pointer ${isDone ? 'bg-teal-500/30' : 'active:bg-slate-800/30 hover:bg-slate-800/10'}`}
-                                                onClick={() => toggleSetCompletion(setIdx)}
-                                                role="button"
-                                                tabIndex={0}
-                                            >
-                                                {/* Indicador de check */}
-                                                <div className="absolute top-4 right-4 z-0">
-                                                    {isDone ? (
-                                                        <Icon name="check" className="w-8 h-8 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110 transition-all duration-300" />
-                                                    ) : (
-                                                        <div className="w-8 h-8 rounded-full border-2 border-slate-700 opacity-50 transition-all duration-300 group-hover:border-slate-500"></div>
-                                                    )}
-                                                </div>
-
-                                                {/* Contenido principal centrado */}
-                                                <div className="flex flex-wrap items-center justify-center gap-4 relative z-10 py-2">
-                                                    {isSuperset ? (
-                                                        <>
-                                                            {/* Ejercicio A */}
-                                                            <div className="flex gap-2 relative">
-                                                                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black text-cyan-400 bg-cyan-900/40 px-1.5 rounded border border-cyan-500/20 z-20">A1</span>
-                                                                <MatrixValue value={repsA} unit="REPS" />
-                                                                <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
-                                                            </div>
-                                                            
-                                                            <div className="w-px h-16 bg-slate-700/30 hidden sm:block mx-2"></div>
-                                                            
-                                                            {/* Ejercicio B */}
-                                                            <div className="flex gap-2 relative">
-                                                                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black text-blue-400 bg-blue-900/40 px-1.5 rounded border border-blue-500/20 z-20">A2</span>
-                                                                <MatrixValue value={repsB} unit="REPS" />
-                                                                <AdjustableLoadMatrix initialLoad={valB} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'B', nl)} />
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <MatrixValue value={repsA} unit="REPS" />
-                                                            <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
-                                                        </>
-                                                    )}
-                                                </div>
+                                    return (
+                                        <div 
+                                            key={setIdx} 
+                                            onClick={() => toggleSetCompletion(setIdx)}
+                                            className={`group relative flex items-center gap-2 p-3 rounded-[2.5rem] transition-all duration-300 border ${isDone ? 'bg-teal-500/20 border-teal-500/40' : 'bg-slate-900/60 border-white/5 active:bg-slate-800'}`}
+                                        >
+                                            {/* Reducción 40% en círculo de sesión (w-8 h-8) */}
+                                            <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ml-1">
+                                                {isDone ? (
+                                                    <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.5)]">
+                                                        <Icon name="check" className="w-4 h-4 text-white" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full border border-slate-700 flex items-center justify-center text-slate-500 font-black text-[10px]">
+                                                        {setIdx + 1}
+                                                    </div>
+                                                )}
                                             </div>
-                                        );
-                                    })}
-                                </div>
+
+                                            {/* Ajuste para ocupar el 90% restante */}
+                                            <div className="flex-1 flex flex-wrap items-center justify-end gap-2 overflow-hidden">
+                                                {isSuperset ? (
+                                                    <>
+                                                        <div className="flex gap-1.5 xs:gap-2">
+                                                            <MatrixValue value={repsA} unit="REPS" label="A1" />
+                                                            <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} label="A1" />
+                                                        </div>
+                                                        <div className="w-px h-12 bg-white/10 hidden sm:block"></div>
+                                                        <div className="flex gap-1.5 xs:gap-2">
+                                                            <MatrixValue value={repsB} unit="REPS" label="A2" />
+                                                            <AdjustableLoadMatrix initialLoad={valB} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'B', nl)} label="A2" />
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex gap-2">
+                                                        <MatrixValue value={repsA} unit="REPS" />
+                                                        <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center py-10">
-                            <div className={`w-24 h-24 rounded-3xl ${phase === 'warmup' ? 'bg-orange-500/10 shadow-[0_0_40px_rgba(249,115,22,0.1)]' : 'bg-blue-500/10 shadow-[0_0_40px_rgba(59,130,246,0.1)]'} flex items-center justify-center mb-6 animate-pulse`}><Icon name={phase === 'warmup' ? "flame" : "wind"} className={`w-12 h-12 ${phase === 'warmup' ? 'text-orange-500' : 'text-blue-400'}`}/></div>
-                            <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{phase === 'warmup' ? t.warmupTitle : t.cooldownTitle}</h2>
-                            <div className="bg-slate-800/30 rounded-[2rem] border border-slate-700/50 p-8 mb-10 w-full backdrop-blur-sm">
-                                <ul className="space-y-6 text-left">
-                                    {formatWarmup(
-                                        phase === 'warmup' 
-                                        ? (currentRoutine.calentamiento || warmupEx)
-                                        : (currentRoutine.enfriamiento || cooldownEx)
-                                    ) || 
-                                     formatWarmup(phase === 'warmup' ? t.warmupDesc : t.cooldownDesc)
-                                    }
+                        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+                            <div className={`w-20 h-20 rounded-3xl ${phase === 'warmup' ? 'bg-orange-500/10' : 'bg-blue-500/10'} flex items-center justify-center mb-6 animate-pulse`}>
+                                <Icon name={phase === 'warmup' ? "flame" : "wind"} className={`w-10 h-10 ${phase === 'warmup' ? 'text-orange-500' : 'text-blue-400'}`}/>
+                            </div>
+                            <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tight">{phase === 'warmup' ? t.warmupTitle : t.cooldownTitle}</h2>
+                            <div className="bg-slate-900/60 border border-white/5 rounded-[2rem] p-6 mb-10 w-full max-w-sm backdrop-blur-md">
+                                <ul className="space-y-4">
+                                    {formatWarmup(phase === 'warmup' ? (currentRoutine.calentamiento || warmupEx) : (currentRoutine.enfriamiento || cooldownEx)) || 
+                                     <li className="text-slate-400 text-sm italic">Prepárate para la sesión</li>}
                                 </ul>
                             </div>
-                            <button onClick={handleNext} className={`w-full py-5 ${phase === 'warmup' ? 'bg-orange-500 shadow-orange-500/20' : 'bg-teal-500 shadow-teal-500/20'} text-white font-black rounded-3xl shadow-2xl active:scale-[0.98] transition-all text-sm tracking-[0.2em]`}>{phase === 'warmup' ? t.startMain : t.finishComplete}</button>
                         </div>
                     )}
                 </div>
 
-                {!isResting && (
-                    <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-4">
-                        <div className="pointer-events-auto flex items-center bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-8">
-                            <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 hover:text-white rounded-full transition-colors active:scale-90"><Icon name="arrowLeft" className="w-5 h-5"/></button>
-                            <button onClick={() => setIsSessionActive(!isSessionActive)} className={`p-4 rounded-full shadow-2xl transition-all active:scale-90 ${!isSessionActive ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300'}`}><Icon name={!isSessionActive ? "play" : "pause"} className="w-6 h-6 fill-current"/></button>
-                            <button onClick={handleNext} className={`p-3 rounded-full transition-colors active:scale-90 ${phase === 'cooldown' ? 'text-teal-400' : 'text-slate-500 hover:text-white'}`}><Icon name={phase === 'cooldown' ? 'check' : 'arrowRight'} className="w-5 h-5"/></button>
+                <div className="shrink-0 p-4 pb-8 bg-gradient-to-t from-black via-black/90 to-transparent">
+                    {phase === 'workout' ? (
+                        <div className="flex items-center gap-4 bg-slate-900/80 border border-white/10 rounded-full p-2 backdrop-blur-xl shadow-2xl">
+                            <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 active:scale-75"><Icon name="arrowLeft" className="w-5 h-5"/></button>
+                            <div className="flex-1 flex items-center justify-center gap-6">
+                                <button onClick={() => setIsSessionActive(!isSessionActive)} className={`w-12 h-12 xs:w-14 xs:h-14 rounded-full flex items-center justify-center transition-all ${!isSessionActive ? 'bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'bg-slate-800 text-slate-400'}`}>
+                                    <Icon name={!isSessionActive ? "play" : "pause"} className="w-6 h-6 fill-current"/>
+                                </button>
+                                <div className="text-lg xs:text-xl font-mono font-black text-teal-400 tracking-tighter tabular-nums">
+                                    {formatDuration(sessionSeconds)}
+                                </div>
+                            </div>
+                            <button onClick={handleNext} className="p-3 text-slate-500 active:scale-75"><Icon name="arrowRight" className="w-5 h-5"/></button>
                         </div>
-                        <div className="w-px h-8 bg-white/10"></div>
-                        <div className="flex items-center gap-2 pr-5 pl-1 font-mono font-black text-xl text-teal-400 tracking-tighter tabular-nums"><Icon name="timer" className="w-4 h-4 opacity-50" /><span>{formatDuration(sessionSeconds)}</span></div>
-                    </div>
-                )}
+                    ) : (
+                        <button onClick={handleNext} className={`w-full py-5 ${phase === 'warmup' ? 'bg-orange-500 shadow-orange-500/20' : 'bg-teal-500 shadow-teal-500/20'} text-white font-black rounded-3xl shadow-2xl active:scale-[0.98] transition-all text-sm tracking-[0.2em] uppercase`}>{phase === 'warmup' ? t.startMain : t.finishComplete}</button>
+                    )}
+                </div>
 
                 {isResting && (
                     <div className="absolute inset-0 z-[60] bg-slate-950/98 flex flex-col animate-fadeIn backdrop-blur-3xl p-6 text-center">
                         <div className="flex-1 flex flex-col items-center justify-center">
                             <div className="relative shrink-0 flex flex-col items-center">
                                 <div className="absolute -inset-10 bg-teal-500 blur-[120px] opacity-20 animate-pulse rounded-full"></div>
-                                <div className="text-[160px] font-black text-white tabular-nums leading-none tracking-tighter relative z-10">{String(restSeconds).padStart(2, '0')}</div>
+                                <div className="text-[120px] xs:text-[160px] font-black text-white tabular-nums leading-none tracking-tighter relative z-10">{String(restSeconds).padStart(2, '0')}</div>
                                 <h3 className="text-sm font-black text-teal-400 uppercase tracking-[0.6em] animate-pulse mt-4">{t.restTimer || "DESCANSO"}</h3>
                             </div>
                         </div>
 
-                        <div className="w-full max-w-sm shrink-0 pb-8">
+                        <div className="w-full max-w-sm mx-auto shrink-0 pb-8">
                             <div className="bg-black/20 rounded-2xl p-4 mb-6 text-left">
-                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">{t.nextSession}</h4>
+                                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">{t.nextSession}</h4>
                                 {nextExercise ? (
-                                    <div className="text-lg font-bold text-white bg-slate-800/40 p-4 rounded-lg">
+                                    <div className="text-base font-bold text-white bg-slate-800/40 p-4 rounded-lg truncate">
                                         {nextIsSuperset ? `${nextPartA} + ${nextPartB}` : nextPartA}
                                     </div>
                                 ) : (
-                                    <div className="text-lg font-bold text-white bg-slate-800/40 p-4 rounded-lg">
+                                    <div className="text-base font-bold text-white bg-slate-800/40 p-4 rounded-lg">
                                         {t.cooldownTitle || 'Enfriamiento'}
                                     </div>
                                 )}
                             </div>
                             <div className="space-y-4">
-                                <button onClick={() => setRestSeconds(0)} className="w-full py-6 rounded-2xl bg-teal-600 text-white font-black flex items-center justify-center gap-3 text-lg shadow-[0_20px_40px_rgba(20,184,166,0.2)] active:scale-95 transition-all uppercase tracking-widest"><Icon name="play" className="w-6 h-6 fill-current"/> {t.letsGo || "CONTINUAR"}</button>
-                                <button onClick={() => setRestSeconds(s => s + 30)} className="w-full py-4 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-300 font-black active:scale-95 transition-all text-sm tracking-widest">+30 SEGUNDOS</button>
+                                <button onClick={() => setRestSeconds(0)} className="w-full py-5 rounded-2xl bg-teal-600 text-white font-black flex items-center justify-center gap-3 text-lg shadow-[0_20px_40px_rgba(20,184,166,0.2)] active:scale-95 transition-all uppercase tracking-widest"><Icon name="play" className="w-5 h-5 fill-current"/> {t.letsGo || "CONTINUAR"}</button>
+                                <button onClick={() => setRestSeconds(s => s + 30)} className="w-full py-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-300 font-bold active:scale-95 transition-all text-xs tracking-widest">+30 SEGUNDOS</button>
                             </div>
                         </div>
                     </div>
