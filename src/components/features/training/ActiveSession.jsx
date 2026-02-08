@@ -6,11 +6,23 @@ import {
     formatRepsDisplay, 
     formatLoadDisplay,
     formatDuration,
-    isWarmup, // Nueva importación
-    isCooldown // Nueva importación
+    isWarmup, 
+    isCooldown 
 } from '../../../utils/helpers.js';
 
-const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
+// Componente helper para mostrar valores numéricos estilo Matrix
+const MatrixValue = ({ value, unit, subtext }) => {
+    return (
+        <div className="w-24 h-24 bg-slate-900/90 rounded-2xl border border-slate-700/50 p-2 flex flex-col items-center justify-center shrink-0 shadow-lg backdrop-blur-sm">
+            <span className="text-white font-bold text-3xl tabular-nums leading-none tracking-tight">{value}</span>
+            <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-1">{unit}</span>
+            {subtext && <span className="text-slate-600 text-[9px] font-medium leading-none mt-0.5">{subtext}</span>}
+        </div>
+    );
+};
+
+// Componente AdjustableLoad con estilo Matrix
+const AdjustableLoadMatrix = ({ initialLoad, onUpdate, isSuperset = false }) => {
     const [load, setLoad] = useState(initialLoad === null ? 0 : initialLoad);
     const [isInteracting, setIsInteracting] = useState(false);
     const lastUpdateY = useRef(0);
@@ -38,22 +50,57 @@ const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
         }
     };
     
-    const displayValue = formatLoadDisplay(initialLoad);
-    const isBw = initialLoad === 0;
-    const sizeClass = isSuperset ? "text-xl" : "text-3xl";
+    // Parseo del valor y la unidad
+    let displayValue = "0";
+    let unit = "KG";
+    
+    if (initialLoad === 0 || initialLoad === null) {
+        displayValue = "BW";
+        unit = "Peso Corporal";
+    } else {
+        const str = formatLoadDisplay(initialLoad);
+        const match = str.match(/([\d.]+)\s*(.*)/);
+        if (match) {
+            displayValue = match[1];
+            unit = match[2] || "KG";
+        } else {
+            // Fallback si formatLoadDisplay devuelve algo raro (ej "BW")
+             if (str === "BW") {
+                 displayValue = "BW";
+                 unit = "Peso Corporal";
+             } else {
+                 displayValue = str;
+             }
+        }
+    }
+
+    // Estilos dinámicos para feedback visual al interactuar
+    const containerClass = `relative w-24 h-24 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-all duration-200 cursor-ns-resize select-none touch-none ${
+        isInteracting 
+        ? 'bg-teal-900/80 border-teal-500/50 scale-105 shadow-[0_0_20px_rgba(20,184,166,0.3)] z-10' 
+        : 'bg-slate-900/90 border-slate-700/50 shadow-lg backdrop-blur-sm'
+    }`;
+    
+    const textClass = isInteracting ? 'text-teal-400' : 'text-white';
+    const unitClass = isInteracting ? 'text-teal-500/70' : 'text-slate-500';
 
     return (
         <div 
             onTouchStart={handleTouchStart} 
             onTouchMove={handleTouchMove} 
             onTouchEnd={() => setIsInteracting(false)} 
-            style={{ touchAction: 'none' }} 
-            className={`relative flex flex-col items-center justify-center h-14 rounded-xl border transition-all duration-200 cursor-ns-resize ${isInteracting ? 'bg-teal-900/40 border-teal-500/50 scale-105 shadow-[0_0_20px_rgba(20,184,166,0.2)] z-10' : (isBw ? 'bg-slate-800/30 border-slate-700/30' : 'bg-slate-800/50 border-slate-700/50')}`}>
-            {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-1 animate-pulse" />}
-            <span className={`${sizeClass} font-black leading-none tabular-nums ${isBw ? 'text-slate-500 uppercase tracking-tighter' : 'text-teal-400'}`}>
+            className={containerClass}>
+            
+            {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-2 animate-pulse" />}
+            
+            <span className={`${textClass} font-bold text-3xl tabular-nums leading-none tracking-tight`}>
                 {displayValue}
             </span>
-            {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-1 animate-pulse" />}
+            <span className={`${unitClass} text-[10px] uppercase font-bold tracking-wider mt-1 text-center leading-tight px-1`}>
+                {unit}
+            </span>
+            
+            {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-2 animate-pulse" />}
         </div>
     );
 };
@@ -82,10 +129,8 @@ export const ActiveSession = ({
 
     const rawExercises = currentRoutine.rutinaPrincipal || [];
 
-    // LÓGICA DE FASES ACTUALIZADA: Usando helpers centralizados
     const warmupEx = rawExercises.filter(isWarmup);
     const cooldownEx = rawExercises.filter(isCooldown);
-    // Filtrar para obtener solo los ejercicios principales (ni warmup ni cooldown)
     const exercises = rawExercises.filter(e => !isWarmup(e) && !isCooldown(e));
 
     const activeExercise = phase === 'workout' ? exercises[idx] : null;
@@ -302,43 +347,53 @@ export const ActiveSession = ({
                             </div>
 
                             <div className="flex flex-col bg-slate-900/60 border border-slate-700/50 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                                <div className={`grid ${isSuperset ? 'grid-cols-[1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[1fr_1fr_60px]'} gap-2 bg-black/30 p-3 text-center border-b border-slate-700 text-slate-400`}>
-                                    {isSuperset ? (
-                                        <>
-                                            <Icon name="repeat" className="mx-auto w-6 h-6 text-cyan-400" />
-                                            <Icon name="dumbbell" className="mx-auto w-6 h-6 text-cyan-400" />
-                                            <Icon name="repeat" className="mx-auto w-6 h-6 text-blue-400" />
-                                            <Icon name="dumbbell" className="mx-auto w-6 h-6 text-blue-400" />
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Icon name="repeat" className="mx-auto w-6 h-6" />
-                                            <Icon name="dumbbell" className="mx-auto w-6 h-6" />
-                                        </>
-                                    )}
-                                    <Icon name="check" className="mx-auto w-4 h-4 opacity-30"/>
-                                </div>
+                                {/* Encabezado del grid eliminado o simplificado porque ahora los items son auto-descriptivos */}
                                 <div className="divide-y divide-slate-800/50">
                                     {(activeExercise.componentes || []).map((set, setIdx) => {
                                         const isDone = completedSets[`${idx}-${setIdx}`]?.completed;
                                         const valA = currentLoads[`${idx}-${setIdx}-A`];
                                         const valB = currentLoads[`${idx}-${setIdx}-B`];
+                                        
+                                        const repsA = formatRepsDisplay(set.repeticiones_ejercicioA ?? set.repeticiones_ejercicio);
+                                        const repsB = isSuperset ? formatRepsDisplay(set.repeticiones_ejercicioB) : null;
+
                                         return (
-                                            <div key={setIdx} className={`grid ${isSuperset ? 'grid-cols-[1fr_1fr_1fr_1fr_50px]' : 'grid-cols-[1fr_1fr_60px]'} gap-2 items-center p-3 transition-colors ${isDone ? 'bg-teal-500/10' : ''}`}>
-                                                {isSuperset ? (
-                                                    <>
-                                                        <div className="flex items-center justify-center h-14 bg-cyan-900/10 rounded-xl border border-cyan-900/20 text-2xl font-black text-cyan-100 tabular-nums">{formatRepsDisplay(set.repeticiones_ejercicioA ?? set.repeticiones_ejercicio)}</div>
-                                                        <AdjustableLoad initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} isSuperset={true} />
-                                                        <div className="flex items-center justify-center h-14 bg-blue-900/10 rounded-xl border border-blue-900/20 text-2xl font-black text-blue-100 tabular-nums">{formatRepsDisplay(set.repeticiones_ejercicioB)}</div>
-                                                        <AdjustableLoad initialLoad={valB} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'B', nl)} isSuperset={true} />
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div className="flex items-center justify-center h-14 bg-slate-800/50 rounded-xl border border-slate-700/50 text-3xl font-black text-white tabular-nums">{formatRepsDisplay(set.repeticiones_ejercicio)}</div>
-                                                        <AdjustableLoad initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
-                                                    </>
-                                                )}
-                                                <button onClick={() => toggleSetCompletion(setIdx)} className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all border shadow-lg ${isDone ? 'bg-teal-500 text-white border-teal-400 shadow-teal-500/20 scale-90' : 'bg-slate-800 border-slate-700 text-slate-600 active:bg-slate-700'}`}><Icon name="check" className="w-6 h-6" /></button>
+                                            <div key={setIdx} className={`p-4 transition-colors ${isDone ? 'bg-teal-500/10' : ''}`}>
+                                                {/* Contenedor flexible para los items Matrix */}
+                                                <div className="flex flex-wrap items-center justify-center gap-4 mb-3">
+                                                    {isSuperset ? (
+                                                        <>
+                                                            {/* Ejercicio A */}
+                                                            <div className="flex gap-2 relative">
+                                                                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black text-cyan-400 bg-cyan-900/40 px-1.5 rounded border border-cyan-500/20 z-20">A1</span>
+                                                                <MatrixValue value={repsA} unit="REPS" />
+                                                                <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
+                                                            </div>
+                                                            
+                                                            {/* Separador sutil */}
+                                                            <div className="w-px h-16 bg-slate-700/30 hidden sm:block"></div>
+                                                            
+                                                            {/* Ejercicio B */}
+                                                            <div className="flex gap-2 relative">
+                                                                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black text-blue-400 bg-blue-900/40 px-1.5 rounded border border-blue-500/20 z-20">A2</span>
+                                                                <MatrixValue value={repsB} unit="REPS" />
+                                                                <AdjustableLoadMatrix initialLoad={valB} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'B', nl)} />
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <MatrixValue value={repsA} unit="REPS" />
+                                                            <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                {/* Botón de Check centrado abajo */}
+                                                <div className="flex justify-center">
+                                                     <button onClick={() => toggleSetCompletion(setIdx)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-all border shadow-lg font-bold tracking-widest text-sm ${isDone ? 'bg-teal-500 text-white border-teal-400 shadow-teal-500/20 scale-[0.98]' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 active:scale-95'}`}>
+                                                        {isDone ? <><Icon name="check" className="w-5 h-5" /> COMPLETADO</> : "MARCAR SERIE"}
+                                                     </button>
+                                                </div>
                                             </div>
                                         );
                                     })}
