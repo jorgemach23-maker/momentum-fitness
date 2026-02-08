@@ -5,7 +5,9 @@ import {
     cleanExerciseTitle, 
     formatRepsDisplay, 
     formatLoadDisplay,
-    formatDuration
+    formatDuration,
+    isWarmup, // Nueva importación
+    isCooldown // Nueva importación
 } from '../../../utils/helpers.js';
 
 const AdjustableLoad = ({ initialLoad, onUpdate, isSuperset = false }) => {
@@ -80,19 +82,10 @@ export const ActiveSession = ({
 
     const rawExercises = currentRoutine.rutinaPrincipal || [];
 
-    const isWarmup = (ex) => {
-        const b = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
-        return /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(b) || 
-               /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i.test(ex.ejercicio);
-    };
-    
-    const isCooldown = (ex) => {
-        const b = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
-        return /enfriamiento|cool.?down|vuelta.*calma/i.test(b) || /enfriamiento|vuelta.*calma/i.test(ex.ejercicio);
-    };
-
+    // LÓGICA DE FASES ACTUALIZADA: Usando helpers centralizados
     const warmupEx = rawExercises.filter(isWarmup);
     const cooldownEx = rawExercises.filter(isCooldown);
+    // Filtrar para obtener solo los ejercicios principales (ni warmup ni cooldown)
     const exercises = rawExercises.filter(e => !isWarmup(e) && !isCooldown(e));
 
     const activeExercise = phase === 'workout' ? exercises[idx] : null;

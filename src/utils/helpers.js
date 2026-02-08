@@ -4,65 +4,52 @@ import en from '../../locales/en.json';
 // Patched to load translations from JSON files, ensuring updates are reflected.
 export const TRANSLATIONS = { es, en };
 
+// --- Lógica de clasificación de ejercicios basada en Regex de ActiveSession ---
+
 /**
- * Determina si un ejercicio pertenece a un bloque de calentamiento o enfriamiento.
- * Normaliza el string eliminando acentos y espacios extra para una comparación robusta.
- * @param {object} exercise - El objeto de ejercicio a evaluar.
- * @returns {boolean} True si es calentamiento o enfriamiento, False si es principal/superserie.
+ * Determina si un ejercicio es de calentamiento usando Regex probados.
+ * @param {object} exercise 
+ * @returns {boolean}
  */
-export const isWarmupOrCooldown = (exercise) => {
+export const isWarmup = (exercise) => {
     if (!exercise) return false;
+    const b = (exercise.tipo_bloque || exercise.bloque || exercise.fase_sesion || "").toLowerCase();
+    const name = (exercise.ejercicio || "").toLowerCase();
     
-    // Obtener todas las posibles fuentes de "tipo de bloque" o "fase de sesión"
-    // Prioridad: fase_sesion (nuevo backend) > tipo_bloque/bloque (legacy)
-    const rawPhase = (exercise.fase_sesion || "").toLowerCase();
-    const rawType = (exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
-    const rawName = (exercise.ejercicio || "").toLowerCase();
+    // Si fase_sesion es explícitamente 'warmup' o 'calentamiento' (backend nuevo)
+    if (b === 'warmup' || b === 'calentamiento') return true;
+
+    const regex = /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i;
     
-    // Si fase_sesion está definido explícitamente por el nuevo backend
-    if (rawPhase === 'warmup' || rawPhase === 'cooldown' || rawPhase === 'calentamiento' || rawPhase === 'enfriamiento') {
-        return true;
-    }
-
-    // Función helper para normalizar strings (quitar acentos)
-    const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
-    const normalizedType = normalize(rawType);
-    const normalizedName = normalize(rawName);
-
-    // Lista exhaustiva de palabras clave
-    const keywords = [
-        'calentamiento', 'warmup', 'warm-up', 'warm up',
-        'enfriamiento', 'cooldown', 'cool-down', 'cool down',
-        'movilidad', 'mobility',
-        'activacion', 'activation',
-        'estiramiento', 'stretching',
-        'rotacion', 'rotation',
-        'liberacion', 'release',
-        'vuelta a la calma', 'vuelta calma',
-        'cardio suave', 'caminata', 'trote suave',
-        'foam roller', 'rodillo',
-        'dinamico', 'dynamic' // A veces "Estiramiento Dinámico"
-    ];
-
-    // Verificar si alguna palabra clave está en el tipo o en el nombre del ejercicio (si el tipo es ambiguo)
-    const typeMatch = keywords.some(k => normalizedType.includes(k));
-    
-    // Solo verificar el nombre si parece ser explícitamente un ejercicio de calentamiento/movilidad puro
-    // y no un ejercicio principal que casualmente tiene una palabra clave (ej: "Press Rotacional" es un ejercicio, no calentamiento).
-    // Pero para "Rotación Articular" sí es calentamiento.
-    // Para mayor seguridad, priorizamos el 'tipo_bloque' que define la IA.
-    if (typeMatch) return true;
-
-    // Caso especial: Si la IA puso el ejercicio en una lista separada de 'calentamiento' o 'enfriamiento' en la estructura JSON,
-    // eso se maneja en el componente padre. Pero si está mezclado en la lista principal, dependemos de estas flags.
-    
-    // Si el tipo es 'cardio' o 'aerobico' y está al principio o final, podría ser calentamiento/enfriamiento, 
-    // pero es arriesgado filtrarlo solo por eso. Nos quedamos con la detección semántica fuerte.
-
-    return false;
+    return regex.test(b) || regex.test(name);
 };
 
+/**
+ * Determina si un ejercicio es de enfriamiento usando Regex probados.
+ * @param {object} exercise 
+ * @returns {boolean}
+ */
+export const isCooldown = (exercise) => {
+    if (!exercise) return false;
+    const b = (exercise.tipo_bloque || exercise.bloque || exercise.fase_sesion || "").toLowerCase();
+    const name = (exercise.ejercicio || "").toLowerCase();
+
+    // Si fase_sesion es explícitamente 'cooldown' o 'enfriamiento' (backend nuevo)
+    if (b === 'cooldown' || b === 'enfriamiento') return true;
+
+    const regex = /enfriamiento|cool.?down|vuelta.*calma/i;
+    
+    return regex.test(b) || regex.test(name);
+};
+
+/**
+ * Determina si un ejercicio pertenece a un bloque de calentamiento o enfriamiento.
+ * @param {object} exercise - El objeto de ejercicio a evaluar.
+ * @returns {boolean} True si es calentamiento o enfriamiento.
+ */
+export const isWarmupOrCooldown = (exercise) => {
+    return isWarmup(exercise) || isCooldown(exercise);
+};
 
 export const calculateSmartRest = (profile, exercise) => {
     let restTime = 60; 

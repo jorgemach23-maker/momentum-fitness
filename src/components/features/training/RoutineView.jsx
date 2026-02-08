@@ -34,10 +34,11 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing, profile }
     if (!routine || !routine.rutinaPrincipal) return null;
 
     // LÓGICA DE FILTRADO DEFINITIVA: Excluir bloques de calentamiento o enfriamiento usando helper centralizado.
-    const mainExercises = routine.rutinaPrincipal.filter(exercise => !isWarmupOrCooldown(exercise));
+    // Se asegura que routine.rutinaPrincipal sea un array antes de filtrar.
+    const mainExercises = (routine.rutinaPrincipal || []).filter(exercise => !isWarmupOrCooldown(exercise));
 
     const displayedExercises = isExpanded ? mainExercises : mainExercises.slice(0, 3);
-    const hiddenCount = mainExercises.length - displayedExercises.length;
+    const hiddenCount = Math.max(0, mainExercises.length - displayedExercises.length);
 
     let supersetCounter = 0;
 
@@ -105,11 +106,17 @@ const RoutineView = ({ routine, onStart, onAdjust, lang, isProcessing, profile }
             </div>
 
             <div className="space-y-2 mb-4">
-                {displayedExercises.map(renderExercise)}
+                {mainExercises.length > 0 ? (
+                    displayedExercises.map(renderExercise)
+                ) : (
+                     <div className="text-center py-4 text-slate-500 italic text-sm">
+                        <p>No hay ejercicios principales asignados.</p>
+                    </div>
+                )}
             </div>
 
             {hiddenCount > 0 && (
-                <button onClick={() => setIsExpanded(true)} className="w-full text-center text-xs font-bold text-slate-400 py-2 mb-4">
+                <button onClick={() => setIsExpanded(true)} className="w-full text-center text-xs font-bold text-slate-400 py-2 mb-4 hover:text-white transition-colors">
                     + {hiddenCount} {t.more}
                 </button>
             )}
