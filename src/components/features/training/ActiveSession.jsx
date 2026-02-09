@@ -20,7 +20,8 @@ const MatrixValue = ({ value, unit, subtext, label }) => {
                     {label}
                 </span>
             )}
-            <span className="text-white font-bold text-base xs:text-lg tabular-nums leading-none tracking-tight mt-1">{value}</span>
+            {/* Aumento 50% en tamaño de fuente (text-3xl xs:text-4xl) */}
+            <span className="text-white font-bold text-2xl xs:text-4xl tabular-nums leading-none tracking-tight mt-1">{value}</span>
             <span className="text-slate-500 text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5">{unit}</span>
             {subtext && <span className="text-slate-600 text-[7px] font-medium leading-none mt-0.5 text-center px-1 truncate w-full">{subtext}</span>}
         </div>
@@ -109,7 +110,8 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, label }) => {
             )}
 
             {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-1.5 animate-pulse" />}
-            <span className={`${textClass} font-bold text-base xs:text-lg tabular-nums leading-none tracking-tight mt-1`}>{displayValue}</span>
+            {/* Aumento 50% en tamaño de fuente (text-3xl xs:text-4xl) */}
+            <span className={`${textClass} font-bold text-2xl xs:text-4xl tabular-nums leading-none tracking-tight mt-1`}>{displayValue}</span>
             <span className={`${unitClass} text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5 text-center leading-tight px-1`}>{unit}</span>
             {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-1.5 animate-pulse" />}
         </div>
@@ -282,18 +284,24 @@ export const ActiveSession = ({
             </div>
 
             <div className="relative z-10 flex flex-col h-full">
-                <header className="shrink-0 p-4 pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <button onClick={handleBackToMain} className="p-2 -ml-2 text-slate-400 active:scale-90"><Icon name="arrowLeft" className="w-6 h-6" /></button>
-                        <h1 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] truncate max-w-[60%]">{title}</h1>
-                        <div className="w-10"></div>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                        <span>{phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : `EJERCICIO ${idx + 1}/${exercises.length}`}</span>
-                        <span className="text-teal-500">{`${Math.round(progressPercent)}%`}</span>
-                    </div>
-                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.5)] transition-all duration-700" style={{ width: `${progressPercent}%` }}></div>
+                {/* Header Integrado - Barra de Progreso y Navegación */}
+                <header className="shrink-0 px-4 pt-6 pb-2 bg-gradient-to-b from-black/80 to-transparent z-40 flex items-center gap-4">
+                    <button onClick={handleBackToMain} className="p-3 bg-slate-900/50 border border-slate-800 rounded-full text-slate-400 active:scale-90 hover:text-white transition-all shadow-lg shrink-0">
+                        <Icon name="arrowLeft" className="w-5 h-5" />
+                    </button>
+                    
+                    <div className="flex-1 flex flex-col justify-center min-w-0">
+                        <div className="flex justify-between items-baseline mb-1.5">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70%]">
+                                {phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : title || `EJERCICIO ${idx + 1}`}
+                            </span>
+                            <span className="text-[10px] font-black text-teal-400 tabular-nums">
+                                {`${Math.round(progressPercent)}%`}
+                            </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/30">
+                            <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 shadow-[0_0_8px_rgba(20,184,166,0.6)] transition-all duration-700 ease-out rounded-full" style={{ width: `${progressPercent}%` }}></div>
+                        </div>
                     </div>
                 </header>
 
@@ -341,6 +349,7 @@ export const ActiveSession = ({
                                             onClick={() => toggleSetCompletion(setIdx)}
                                             className={`group relative flex items-center gap-2 p-3 rounded-[2.5rem] transition-all duration-300 border ${isDone ? 'bg-teal-500/20 border-teal-500/40' : 'bg-slate-900/60 border-white/5 active:bg-slate-800'}`}
                                         >
+                                            {/* Reducción 40% en círculo de sesión (w-8 h-8) */}
                                             <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ml-1">
                                                 {isDone ? (
                                                     <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.5)]">
@@ -353,6 +362,7 @@ export const ActiveSession = ({
                                                 )}
                                             </div>
 
+                                            {/* Ajuste para ocupar el 90% restante */}
                                             <div className="flex-1 flex flex-wrap items-center justify-end gap-2 overflow-hidden">
                                                 {isSuperset ? (
                                                     <>
