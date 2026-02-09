@@ -4,49 +4,34 @@ import en from '../../locales/en.json';
 // Patched to load translations from JSON files, ensuring updates are reflected.
 export const TRANSLATIONS = { es, en };
 
-// --- Lógica de clasificación de ejercicios basada en Regex de ActiveSession ---
+// --- Lógica de clasificación de ejercicios ---
 
-/**
- * Determina si un ejercicio es de calentamiento usando Regex probados.
- * @param {object} exercise 
- * @returns {boolean}
- */
 export const isWarmup = (exercise) => {
     if (!exercise) return false;
     const b = (exercise.tipo_bloque || exercise.bloque || exercise.fase_sesion || "").toLowerCase();
     const name = (exercise.ejercicio || "").toLowerCase();
     
-    // Si fase_sesion es explícitamente 'warmup' o 'calentamiento' (backend nuevo)
     if (b === 'warmup' || b === 'calentamiento') return true;
 
-    const regex = /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|estiramiento|stretching|liberaci[oó]n/i;
+    // Movimos 'estiramiento' a cooldown
+    const regex = /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|liberaci[oó]n/i;
     
     return regex.test(b) || regex.test(name);
 };
 
-/**
- * Determina si un ejercicio es de enfriamiento usando Regex probados.
- * @param {object} exercise 
- * @returns {boolean}
- */
 export const isCooldown = (exercise) => {
     if (!exercise) return false;
     const b = (exercise.tipo_bloque || exercise.bloque || exercise.fase_sesion || "").toLowerCase();
     const name = (exercise.ejercicio || "").toLowerCase();
 
-    // Si fase_sesion es explícitamente 'cooldown' o 'enfriamiento' (backend nuevo)
     if (b === 'cooldown' || b === 'enfriamiento') return true;
 
-    const regex = /enfriamiento|cool.?down|vuelta.*calma/i;
+    // Añadimos keywords para estiramientos
+    const regex = /enfriamiento|cool.?down|vuelta.*calma|estiramiento|stretching/i;
     
     return regex.test(b) || regex.test(name);
 };
 
-/**
- * Determina si un ejercicio pertenece a un bloque de calentamiento o enfriamiento.
- * @param {object} exercise - El objeto de ejercicio a evaluar.
- * @returns {boolean} True si es calentamiento o enfriamiento.
- */
 export const isWarmupOrCooldown = (exercise) => {
     return isWarmup(exercise) || isCooldown(exercise);
 };
@@ -155,21 +140,17 @@ export const formatRepsDisplay = (input, subIndex = 0) => {
     if (!input) return "--"; 
     
     // Soporte para nueva estructura de items (Superseries)
-    // Si input tiene un array 'items', buscamos el índice correspondiente
     if (typeof input === 'object' && input.items && Array.isArray(input.items)) {
         if (input.items[subIndex]) {
-            // Recursión con el item específico
             return formatRepsDisplay(input.items[subIndex]);
         }
     }
 
-    // Si es un objeto (Item específico o estructura antigua), extraer propiedad
     if (typeof input === 'object' && input !== null) {
         if (input.reps_texto) return String(input.reps_texto);
         if (input.reps_textoA && subIndex === 0) return String(input.reps_textoA);
         if (input.reps_textoB && subIndex === 1) return String(input.reps_textoB);
         
-        // Fallbacks numéricos
         const val = input.reps_target ?? input.repeticiones_ejercicio ?? input.reps ?? input.repeticiones ?? "--";
         if (typeof val === 'object') return "--";
         return formatRepsDisplay(val);
@@ -177,7 +158,6 @@ export const formatRepsDisplay = (input, subIndex = 0) => {
 
     const str = String(input);
 
-    // Si ya viene con formato texto corto (backend nuevo: '12-15' o 'Falló'), devolverlo.
     if (str.length < 20 && !/\d/.test(str)) return str;
 
     let val = str.replace(/segundos?|segun\w*/gi, 'seg').replace(/minutos?|mins?/gi, 'min');

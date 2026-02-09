@@ -9,7 +9,6 @@ import {
 
 // Componente helper para mostrar valores numéricos estilo Matrix
 const MatrixValue = ({ value, unit, subtext, label }) => {
-    // Si value es undefined/null, mostramos guión
     const displayValue = (value !== undefined && value !== null) ? value : "--";
     
     return (
@@ -20,7 +19,7 @@ const MatrixValue = ({ value, unit, subtext, label }) => {
                 </span>
             )}
             <span className="text-white font-bold text-xl xs:text-2xl tabular-nums leading-none tracking-tight mt-1">{displayValue}</span>
-            <span className="text-slate-500 text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5">{unit || "REPS"}</span>
+            <span className="text-slate-500 text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5 text-center w-full px-1 line-clamp-2 leading-tight">{unit || "REPS"}</span>
             {subtext && <span className="text-slate-600 text-[7px] font-medium leading-none mt-0.5 text-center px-1 truncate w-full">{subtext}</span>}
         </div>
     );
@@ -57,13 +56,14 @@ const AdjustableLoadMatrix = ({ initialLoad, initialUnit, onUpdate, label }) => 
         }
     };
     
-    // Lógica robusta para unidad
     let displayUnit = initialUnit || "KG";
     let displayValue = load;
 
-    if (displayUnit.toUpperCase() === 'BW' || displayUnit.toUpperCase() === 'BODYWEIGHT') {
-        displayUnit = "Peso"; // Mostrar "Peso" si es BW
-        if (load === 0) displayValue = "BW";
+    if ((load === 0 && displayUnit.toUpperCase() === 'KG') || 
+        displayUnit.toUpperCase() === 'BW' || 
+        displayUnit.toUpperCase() === 'BODYWEIGHT') {
+        displayUnit = "Peso"; 
+        displayValue = "BW";
     }
 
     const containerClass = `relative w-[4.3rem] h-[4.3rem] xs:w-20 xs:h-20 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-all duration-200 cursor-ns-resize select-none touch-none overflow-hidden ${
@@ -119,7 +119,6 @@ export const ActiveSession = ({
     
     // --- ADAPTADOR UNIFICADO ---
     const normalizedBlocks = useMemo(() => {
-        // Helper: Limpiar reps_texto
         const sanitizeRepsText = (text, idx) => {
             if (!text) return "--";
             let clean = String(text);
@@ -136,7 +135,6 @@ export const ActiveSession = ({
             return clean;
         };
 
-        // Helper: Extraer target numérico (REPS)
         const extractTarget = (val) => {
             if (typeof val === 'number') return val;
             if (typeof val === 'string') {
@@ -149,7 +147,6 @@ export const ActiveSession = ({
             return null;
         };
 
-        // Helper: Extraer carga numérica (PESO)
         const extractNumericLoad = (val) => {
             if (typeof val === 'number') return val;
             if (!val) return 0;
@@ -159,7 +156,6 @@ export const ActiveSession = ({
             return match ? parseFloat(match[0]) : 0;
         };
 
-        // Helper para extraer la carga específica de un string concatenado (Legacy)
         const getLoadForIndex = (fullString, index) => {
             if (!fullString) return 0;
             const str = String(fullString);
@@ -178,7 +174,6 @@ export const ActiveSession = ({
             return 0;
         };
 
-        // Helper para dividir strings de repeticiones concatenadas
         const getRepsForIndex = (fullString, index) => {
             if (!fullString) return "--";
             const str = String(fullString);
@@ -423,7 +418,7 @@ export const ActiveSession = ({
                                             <div className="flex items-center gap-3 overflow-hidden">
                                                 {isSuperset && (
                                                     <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded border ${idx === 0 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
-                                                        {idx === 0 ? 'A1' : 'A2'}
+                                                        {`A${idx + 1}`}
                                                     </span>
                                                 )}
                                                 <h3 className="text-lg xs:text-xl font-bold text-white truncate">{item.ejercicio}</h3>
@@ -456,7 +451,7 @@ export const ActiveSession = ({
                                                 )}
                                             </div>
 
-                                            <div className="flex-1 flex flex-wrap items-center justify-end gap-2 overflow-hidden">
+                                            <div className={`flex-1 flex flex-wrap items-center gap-2 overflow-hidden ${isSuperset ? 'justify-end' : 'justify-center'}`}>
                                                 {activeBlock.items.map((item, itemIdx) => {
                                                     const loadKey = `${blockIndex}-${setIdx}-${itemIdx}`;
                                                     const userLoad = userLoads[loadKey];
@@ -470,13 +465,13 @@ export const ActiveSession = ({
                                                                 <MatrixValue 
                                                                     value={item.reps_target} 
                                                                     unit={`${item.reps_texto} REPS`} 
-                                                                    label={isSuperset ? (itemIdx === 0 ? 'A1' : 'A2') : null} 
+                                                                    label={isSuperset ? `A${itemIdx + 1}` : null} 
                                                                 />
                                                                 <AdjustableLoadMatrix 
                                                                     initialLoad={currentLoad}
                                                                     initialUnit={item.peso_unidad}
                                                                     onUpdate={(nl) => handleLoadUpdate(blockIndex, setIdx, itemIdx, nl)}
-                                                                    label={isSuperset ? (itemIdx === 0 ? 'A1' : 'A2') : null}
+                                                                    label={isSuperset ? `A${itemIdx + 1}` : null}
                                                                 />
                                                             </div>
                                                         </React.Fragment>

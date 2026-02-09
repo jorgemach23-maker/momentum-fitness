@@ -165,14 +165,14 @@ La estructura base son **BLOQUES**. Cada bloque contiene un array `items`.
 **CAMPOS POR ITEM (Strict Typing):**
 
 * **fase_sesion:** "warmup" | "main" | "cooldown". (usa EXACTAMENTE esas 3 opciones)
-* **estructura_visual:** "single" | "superset" | "circuit". (usa EXACTAMENTE esas 3 opciones)
-    * Si es "superset", el array `items` DEBE tener 2+ objetos separados.
+* **estructura_visual:** "single" | "superset"  (usa EXACTAMENTE esas 2 opciones)
+    * Si es "superset", el array `items` DEBE tener 2 objetos separados.
 * **ejercicio:** Nombre limpio y único.
 * **tecnica:** String con detalles o null.
 * **reps_target (Integer | Null):** Un solo número ENTERO PURO por objeto. (Ej: `12`). NUNCA un string ni una lista.
 * **reps_texto (String):** Texto visual (Ej: "10-12").
 * **peso_valor (Float):** Un solo número PURO por objeto. (Ej: `20.5`). Si es peso corporal pon `0`.
-* **peso_unidad (String):** "kg", "lbs", "BW". Un solo valor por objeto. Usa "BW" si el ejercicio es con peso corporal, sin carga, body weight y todas sus variantes
+* **peso_unidad (String):** "kg", "lbs", "BW". Un solo valor por objeto. Usa "BW" si peso_valor es igual a `0` o el ejercicio es con peso corporal o sin carga o body weight
 * **descanso_segs (Integer):** Tiempo en segundos.
 
 **EJEMPLO DE SALIDA (Superserie Correcta):**

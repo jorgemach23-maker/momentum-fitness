@@ -77,15 +77,30 @@ const TrainingTab = ({
         return { recommendedRoutine: recommended, libraryRoutines: library };
     }, [currentWeekRoutines, lastCompleted]);
 
+    // LÓGICA CORREGIDA: completionLog se basa en la semana actual, no en el planId
     const completionLog = useMemo(() => {
         const log = new Map();
+        const today = new Date();
+        const dayOfWeek = (today.getDay() + 6) % 7; // Lunes=0, Domingo=6
+        
+        // Clonar para no mutar la fecha original
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - dayOfWeek);
+        startOfWeek.setHours(0, 0, 0, 0);
+
         history.forEach(r => {
-            if (r.planId === currentPlanId && r.status === 'completed' && r.completedOnDay !== undefined) {
-                log.set(r.completedOnDay, r);
+            if (r.status === 'completed' && r.completedAt?.seconds) {
+                const completedDate = new Date(r.completedAt.seconds * 1000);
+                
+                // Si la rutina se completó dentro de la semana actual
+                if (completedDate >= startOfWeek) {
+                    const completedDayIndex = (completedDate.getDay() + 6) % 7;
+                    log.set(completedDayIndex, r);
+                }
             }
         });
         return log;
-    }, [history, currentPlanId]);
+    }, [history]); // Depende solo del historial general
 
     const handleOpenAdjustment = (routine) => {
         setAdjustingRoutine(routine);
