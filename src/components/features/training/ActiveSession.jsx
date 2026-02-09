@@ -9,6 +9,7 @@ import {
 
 // Componente helper para mostrar valores numéricos estilo Matrix
 const MatrixValue = ({ value, unit, subtext, label }) => {
+    // Si value es undefined/null, mostramos guión
     const displayValue = (value !== undefined && value !== null) ? value : "--";
     
     return (
@@ -56,11 +57,12 @@ const AdjustableLoadMatrix = ({ initialLoad, initialUnit, onUpdate, label }) => 
         }
     };
     
+    // Lógica robusta para unidad
     let displayUnit = initialUnit || "KG";
     let displayValue = load;
 
     if (displayUnit.toUpperCase() === 'BW' || displayUnit.toUpperCase() === 'BODYWEIGHT') {
-        displayUnit = "Peso"; 
+        displayUnit = "Peso"; // Mostrar "Peso" si es BW
         if (load === 0) displayValue = "BW";
     }
 
@@ -117,9 +119,11 @@ export const ActiveSession = ({
     
     // --- ADAPTADOR UNIFICADO ---
     const normalizedBlocks = useMemo(() => {
+        // Helper: Limpiar reps_texto
         const sanitizeRepsText = (text, idx) => {
             if (!text) return "--";
             let clean = String(text);
+            
             if (clean.includes('A1:') || clean.includes('A2:') || clean.includes('Ej 1:')) {
                 const regex = new RegExp(`(?:A${idx + 1}|Ej\\s*${idx + 1})[:\\s]*([^,]+)`, 'i');
                 const match = clean.match(regex);
@@ -132,6 +136,7 @@ export const ActiveSession = ({
             return clean;
         };
 
+        // Helper: Extraer target numérico (REPS)
         const extractTarget = (val) => {
             if (typeof val === 'number') return val;
             if (typeof val === 'string') {
@@ -144,15 +149,56 @@ export const ActiveSession = ({
             return null;
         };
 
-        // REPARACIÓN: Extraer carga numérica ignorando prefijos de índice
+        // Helper: Extraer carga numérica (PESO)
         const extractNumericLoad = (val) => {
             if (typeof val === 'number') return val;
             if (!val) return 0;
             const str = String(val);
-            // Elimina prefijos A1: o Ej 1: para evitar falsos positivos (ej: A2 -> 2)
             const cleanStr = str.replace(/^[A-Z]\d+[:\s]*/i, '').replace(/^Ej\s*\d+[:\s]*/i, '');
             const match = cleanStr.match(/[\d.]+/); 
             return match ? parseFloat(match[0]) : 0;
+        };
+
+        // Helper para extraer la carga específica de un string concatenado (Legacy)
+        const getLoadForIndex = (fullString, index) => {
+            if (!fullString) return 0;
+            const str = String(fullString);
+            
+            if (str.includes('+')) {
+                const parts = str.split('+');
+                if (parts[index]) return extractNumericLoad(parts[index]);
+            }
+
+            const regexSpecific = new RegExp(`(?:A${index+1}|Ej\\s*${index+1})[:\\s]*([\\d.]+)`, 'i');
+            const match = str.match(regexSpecific);
+            if (match) return parseFloat(match[1]);
+
+            if (index === 0) return extractNumericLoad(str);
+            
+            return 0;
+        };
+
+        // Helper para dividir strings de repeticiones concatenadas
+        const getRepsForIndex = (fullString, index) => {
+            if (!fullString) return "--";
+            const str = String(fullString);
+            
+            if (str.includes('+')) {
+                const parts = str.split('+');
+                if (parts[index]) return parts[index].trim();
+            }
+            
+            if (str.includes(',')) {
+                const parts = str.split(',');
+                if (parts[index]) return parts[index].trim();
+            }
+
+            if (str.includes('/') && !str.toUpperCase().includes('LADO')) {
+                const parts = str.split('/');
+                if (parts[index]) return parts[index].trim();
+            }
+
+            return str;
         };
 
         // 1. Estructura Nueva (Bloques)
@@ -179,18 +225,16 @@ export const ActiveSession = ({
 
                 if (isConcatSuperset) {
                     const parts = ex.ejercicio.split('+');
-                    const loadParts = (ex.carga_sugerida || "").toString().split('+');
-
                     items = parts.map((part, idx) => {
                         const rawReps = ex.reps || ex.repeticiones_ejercicio;
-                        const cleanRepsText = sanitizeRepsText(ex.reps_texto || String(rawReps || "--"), idx);
-                        const rawLoad = loadParts[idx] || ex.carga_sugerida;
-
+                        const specificReps = getRepsForIndex(rawReps, idx);
+                        const cleanRepsText = sanitizeRepsText(ex.reps_texto || String(specificReps || "--"), idx);
+                        
                         return {
                             ejercicio: part.trim().replace(/^[A-Z]\d+[:\s]*/, ''), 
-                            reps_target: extractTarget(cleanRepsText),
+                            reps_target: extractTarget(specificReps),
                             reps_texto: cleanRepsText,
-                            peso_valor: extractNumericLoad(rawLoad), // Uso helper reparado
+                            peso_valor: getLoadForIndex(ex.carga_sugerida, idx),
                             peso_unidad: "KG",
                             descanso_segs: idx === parts.length - 1 ? (ex.descanso_segs || 60) : 0, 
                             series: ex.series || 3

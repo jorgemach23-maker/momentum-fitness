@@ -172,7 +172,7 @@ La estructura base son **BLOQUES**. Cada bloque contiene un array `items`.
 * **reps_target (Integer | Null):** Un solo número ENTERO PURO por objeto. (Ej: `12`). NUNCA un string ni una lista.
 * **reps_texto (String):** Texto visual (Ej: "10-12").
 * **peso_valor (Float):** Un solo número PURO por objeto. (Ej: `20.5`). Si es peso corporal pon `0`.
-* **peso_unidad (String):** "kg", "lbs", "BW". Un solo valor por objeto.
+* **peso_unidad (String):** "kg", "lbs", "BW". Un solo valor por objeto. Usa "BW" si el ejercicio es con peso corporal, sin carga, body weight y todas sus variantes
 * **descanso_segs (Integer):** Tiempo en segundos.
 
 **EJEMPLO DE SALIDA (Superserie Correcta):**
