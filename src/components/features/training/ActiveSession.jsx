@@ -289,7 +289,7 @@ export const ActiveSession = ({
                         <div className="w-10"></div>
                     </div>
                     <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                        <span>{phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : `EJE ${idx + 1}/${exercises.length}`}</span>
+                        <span>{phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : `EJERCICIO ${idx + 1}/${exercises.length}`}</span>
                         <span className="text-teal-500">{`${Math.round(progressPercent)}%`}</span>
                     </div>
                     <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
