@@ -1,41 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '../../ui/Icon.jsx';
 import { 
     TRANSLATIONS, 
-    cleanExerciseTitle, 
-    formatRepsDisplay, 
-    formatLoadDisplay,
     formatDuration,
     isWarmup, 
     isCooldown 
 } from '../../../utils/helpers.js';
 
-// Componente helper para mostrar valores numéricos estilo Matrix - Tamaños responsivos
+// Componente helper para mostrar valores numéricos estilo Matrix
 const MatrixValue = ({ value, unit, subtext, label }) => {
+    const displayValue = (value !== undefined && value !== null) ? value : "--";
+    
     return (
-        // Reducción 10% adicional en tamaño base (w-[4.3rem])
         <div className="relative w-[4.3rem] h-[4.3rem] xs:w-20 xs:h-20 bg-slate-900/90 rounded-2xl border border-slate-700/50 p-2 flex flex-col items-center justify-center shrink-0 shadow-lg backdrop-blur-sm pointer-events-none select-none overflow-hidden">
             {label && (
                 <span className="absolute top-0 left-0 bg-slate-800/80 text-[8px] font-black text-slate-400 px-1.5 py-0.5 rounded-br-lg border-r border-b border-slate-700/50 z-10">
                     {label}
                 </span>
             )}
-            {/* Aumento 50% en tamaño de fuente (text-3xl xs:text-4xl) */}
-            <span className="text-white font-bold text-2xl xs:text-4xl tabular-nums leading-none tracking-tight mt-1">{value}</span>
-            <span className="text-slate-500 text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5">{unit}</span>
+            <span className="text-white font-bold text-xl xs:text-2xl tabular-nums leading-none tracking-tight mt-1">{displayValue}</span>
+            <span className="text-slate-500 text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5">{unit || "REPS"}</span>
             {subtext && <span className="text-slate-600 text-[7px] font-medium leading-none mt-0.5 text-center px-1 truncate w-full">{subtext}</span>}
         </div>
     );
 };
 
-// Componente AdjustableLoad con estilo Matrix - Tamaños responsivos
-const AdjustableLoadMatrix = ({ initialLoad, onUpdate, label }) => {
-    const [load, setLoad] = useState(initialLoad === null ? 0 : initialLoad);
+// Componente AdjustableLoad con estilo Matrix
+const AdjustableLoadMatrix = ({ initialLoad, initialUnit, onUpdate, label }) => {
+    const [load, setLoad] = useState(initialLoad ?? 0);
     const [isInteracting, setIsInteracting] = useState(false);
     const lastUpdateY = useRef(0);
 
     useEffect(() => {
-        setLoad(initialLoad === null ? 0 : initialLoad);
+        setLoad(initialLoad ?? 0);
     }, [initialLoad]);
 
     const handleTouchStart = (e) => {
@@ -59,29 +56,14 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, label }) => {
         }
     };
     
-    let displayValue = "0";
-    let unit = "KG";
-    
-    if (initialLoad === 0 || initialLoad === null) {
-        displayValue = "BW";
-        unit = "Peso";
-    } else {
-        const str = formatLoadDisplay(initialLoad);
-        const match = str.match(/([\d.]+)\s*(.*)/);
-        if (match) {
-            displayValue = match[1];
-            unit = match[2] || "KG";
-        } else {
-             if (str === "BW") {
-                 displayValue = "BW";
-                 unit = "Peso";
-             } else {
-                 displayValue = str;
-             }
-        }
+    let displayUnit = initialUnit || "KG";
+    let displayValue = load;
+
+    if (displayUnit.toUpperCase() === 'BW' || displayUnit.toUpperCase() === 'BODYWEIGHT') {
+        displayUnit = "Peso"; 
+        if (load === 0) displayValue = "BW";
     }
 
-    // Reducción 10% adicional en tamaño base (w-[4.3rem])
     const containerClass = `relative w-[4.3rem] h-[4.3rem] xs:w-20 xs:h-20 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-all duration-200 cursor-ns-resize select-none touch-none overflow-hidden ${
         isInteracting 
         ? 'bg-teal-900/80 border-teal-500/50 scale-105 shadow-[0_0_20px_rgba(20,184,166,0.3)] z-10' 
@@ -110,9 +92,8 @@ const AdjustableLoadMatrix = ({ initialLoad, onUpdate, label }) => {
             )}
 
             {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-1.5 animate-pulse" />}
-            {/* Aumento 50% en tamaño de fuente (text-3xl xs:text-4xl) */}
-            <span className={`${textClass} font-bold text-2xl xs:text-4xl tabular-nums leading-none tracking-tight mt-1`}>{displayValue}</span>
-            <span className={`${unitClass} text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5 text-center leading-tight px-1`}>{unit}</span>
+            <span className={`${textClass} font-bold text-xl xs:text-2xl tabular-nums leading-none tracking-tight mt-1`}>{displayValue}</span>
+            <span className={`${unitClass} text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5 text-center leading-tight px-1`}>{displayUnit}</span>
             {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-1.5 animate-pulse" />}
         </div>
     );
@@ -133,18 +114,143 @@ export const ActiveSession = ({
 }) => {
     const routineId = currentRoutine.id;
     const t = TRANSLATIONS?.[lang || 'es'] || TRANSLATIONS?.['es'] || {};
-    const [phase, setPhase] = useState('warmup');
-    const [idx, setIdx] = useState(0);
-    const [completedSets, setCompletedSets] = useState({});
-    const [currentLoads, setCurrentLoads] = useState({});
     
+    // --- ADAPTADOR UNIFICADO ---
+    const normalizedBlocks = useMemo(() => {
+        const sanitizeRepsText = (text, idx) => {
+            if (!text) return "--";
+            let clean = String(text);
+            if (clean.includes('A1:') || clean.includes('A2:') || clean.includes('Ej 1:')) {
+                const regex = new RegExp(`(?:A${idx + 1}|Ej\\s*${idx + 1})[:\\s]*([^,]+)`, 'i');
+                const match = clean.match(regex);
+                if (match) return match[1].trim();
+            }
+            if (clean.includes('+')) {
+                const parts = clean.split('+');
+                if (parts[idx]) return parts[idx].trim();
+            }
+            return clean;
+        };
+
+        const extractTarget = (val) => {
+            if (typeof val === 'number') return val;
+            if (typeof val === 'string') {
+                const cleanVal = val.replace(/^[A-Z]\d+[:\s]*/i, '').replace(/^Ej\s*\d+[:\s]*/i, '');
+                const matchRange = cleanVal.match(/-(\d+)/);
+                if (matchRange) return parseInt(matchRange[1], 10);
+                const matchNum = cleanVal.match(/(\d+)/);
+                if (matchNum) return parseInt(matchNum[1], 10);
+            }
+            return null;
+        };
+
+        // REPARACIÓN: Extraer carga numérica ignorando prefijos de índice
+        const extractNumericLoad = (val) => {
+            if (typeof val === 'number') return val;
+            if (!val) return 0;
+            const str = String(val);
+            // Elimina prefijos A1: o Ej 1: para evitar falsos positivos (ej: A2 -> 2)
+            const cleanStr = str.replace(/^[A-Z]\d+[:\s]*/i, '').replace(/^Ej\s*\d+[:\s]*/i, '');
+            const match = cleanStr.match(/[\d.]+/); 
+            return match ? parseFloat(match[0]) : 0;
+        };
+
+        // 1. Estructura Nueva (Bloques)
+        if (currentRoutine.bloques && Array.isArray(currentRoutine.bloques) && currentRoutine.bloques.length > 0) {
+            return currentRoutine.bloques.map(b => ({
+                ...b,
+                items: Array.isArray(b.items) ? b.items.map((item, idx) => {
+                    const cleanRepsText = sanitizeRepsText(item.reps_texto, idx);
+                    return {
+                        ...item,
+                        reps_texto: cleanRepsText,
+                        reps_target: item.reps_target ?? extractTarget(cleanRepsText)
+                    };
+                }) : []
+            }));
+        }
+
+        // 2. Estructura Legacy (RutinaPrincipal)
+        const legacyExercises = currentRoutine.rutinaPrincipal || [];
+        if (legacyExercises.length > 0) {
+            return legacyExercises.map(ex => {
+                const isConcatSuperset = ex.ejercicio.includes('+');
+                let items = [];
+
+                if (isConcatSuperset) {
+                    const parts = ex.ejercicio.split('+');
+                    const loadParts = (ex.carga_sugerida || "").toString().split('+');
+
+                    items = parts.map((part, idx) => {
+                        const rawReps = ex.reps || ex.repeticiones_ejercicio;
+                        const cleanRepsText = sanitizeRepsText(ex.reps_texto || String(rawReps || "--"), idx);
+                        const rawLoad = loadParts[idx] || ex.carga_sugerida;
+
+                        return {
+                            ejercicio: part.trim().replace(/^[A-Z]\d+[:\s]*/, ''), 
+                            reps_target: extractTarget(cleanRepsText),
+                            reps_texto: cleanRepsText,
+                            peso_valor: extractNumericLoad(rawLoad), // Uso helper reparado
+                            peso_unidad: "KG",
+                            descanso_segs: idx === parts.length - 1 ? (ex.descanso_segs || 60) : 0, 
+                            series: ex.series || 3
+                        };
+                    });
+                } else {
+                    const rawReps = ex.reps || ex.repeticiones_ejercicio;
+                    const cleanRepsText = sanitizeRepsText(ex.reps_texto || String(rawReps || "--"), 0);
+                    
+                    items = [{
+                        ejercicio: ex.ejercicio,
+                        reps_target: extractTarget(cleanRepsText),
+                        reps_texto: cleanRepsText,
+                        peso_valor: parseFloat(ex.carga_sugerida) || 0,
+                        peso_unidad: "KG",
+                        series: ex.series || 3,
+                        descanso_segs: ex.descanso_segs || 60
+                    }];
+                }
+
+                return {
+                    fase_sesion: isWarmup(ex) ? 'warmup' : isCooldown(ex) ? 'cooldown' : 'main',
+                    estructura_visual: isConcatSuperset ? 'superset' : 'single',
+                    items: items
+                };
+            });
+        }
+
+        return [];
+    }, [currentRoutine]);
+
+    // --- FILTRADO ---
+    const warmupBlocks = normalizedBlocks.filter(isWarmup);
+    const cooldownBlocks = normalizedBlocks.filter(isCooldown);
+    const workoutBlocks = normalizedBlocks.filter(b => !isWarmup(b) && !isCooldown(b));
+
+    const [phase, setPhase] = useState(() => {
+        if (warmupBlocks.length > 0) return 'warmup';
+        if (workoutBlocks.length > 0) return 'workout';
+        return cooldownBlocks.length > 0 ? 'cooldown' : 'workout'; 
+    });
+
+    const [blockIndex, setBlockIndex] = useState(0); 
+    const [completedSets, setCompletedSets] = useState({});
+    const [userLoads, setUserLoads] = useState({});
+
     const isResting = restSeconds > 0;
-    const rawExercises = currentRoutine.rutinaPrincipal || [];
-    const warmupEx = rawExercises.filter(isWarmup);
-    const cooldownEx = rawExercises.filter(isCooldown);
-    const exercises = rawExercises.filter(e => !isWarmup(e) && !isCooldown(e));
-    const activeExercise = phase === 'workout' ? exercises[idx] : null;
-    const nextExercise = phase === 'workout' && idx + 1 < exercises.length ? exercises[idx + 1] : null;
+
+    const activeBlock = phase === 'workout' ? workoutBlocks[blockIndex] : null;
+    
+    const activeWarmupItems = warmupBlocks.flatMap(b => b.items || []);
+    const activeCooldownItems = cooldownBlocks.flatMap(b => b.items || []);
+
+    const nextBlock = phase === 'workout' && blockIndex + 1 < workoutBlocks.length 
+        ? workoutBlocks[blockIndex + 1] 
+        : (phase === 'workout' && cooldownBlocks.length > 0 ? cooldownBlocks[0] : null);
+
+    const isSuperset = activeBlock?.estructura_visual === 'superset' || (activeBlock?.items?.length > 1);
+    
+    const progressPercent = phase === 'warmup' ? 0 : phase === 'cooldown' ? 100 : ((blockIndex + 1) / Math.max(workoutBlocks.length, 1)) * 100;
 
     useEffect(() => {
         if (isResting) {
@@ -161,96 +267,39 @@ export const ActiveSession = ({
         }
     }, [isResting, setRestSeconds]);
 
-    const detectSuperset = (ex) => {
-        if (!ex) return false;
-        const bloqueType = (ex.bloque || ex.tipo_bloque || "").toLowerCase();
-        return bloqueType.includes('superserie') || /\+/.test(ex.ejercicio) || /[A-Z]2[:\s]/i.test(ex.ejercicio);
-    };
-
-    const isSuperset = detectSuperset(activeExercise);
-
-    const getSupersetLetter = (currentIndex) => {
-        let count = 0;
-        for (let i = 0; i < currentIndex; i++) {
-            if (detectSuperset(exercises[i])) count++;
-        }
-        return String.fromCharCode(65 + count);
-    };
-
-    const currentLetter = getSupersetLetter(idx);
-
-    const getExerciseParts = (title) => {
-        if (!title) return ["Ejercicio 1", "Ejercicio 2"];
-        let rawParts = title.split(/\s*\+\s*/);
-        if (/[A-Z]2[:\s]/i.test(title)) {
-             const match = title.match(/[\+\s]*([A-Z]2[:\s].*)/i);
-             if (match) {
-                 const part2 = match[1];
-                 const part1 = title.replace(match[0], '').trim();
-                 rawParts = [part1, part2];
-             }
-        }
-        const parts = rawParts.map(p => {
-             if (!p) return "";
-             return cleanExerciseTitle(p.replace(/[A-Z][12][:.)\s]*/gi, '').replace(/^\+\s*/, '').trim());
-        }).filter(p => p.length > 0);
-        return [parts[0] || "Ejercicio A", parts[1] || "Ejercicio B"];
-    };
-
-    const [partA, partB] = isSuperset 
-        ? (activeExercise?.ejercicioA && activeExercise?.ejercicioB 
-            ? [activeExercise.ejercicioA, activeExercise.ejercicioB]
-            : getExerciseParts(activeExercise?.ejercicio))
-        : [cleanExerciseTitle(activeExercise?.ejercicio), null];
-        
-    const nextIsSuperset = detectSuperset(nextExercise);
-    const [nextPartA, nextPartB] = nextIsSuperset 
-        ? (nextExercise?.ejercicioA && nextExercise?.ejercicioB 
-            ? [nextExercise.ejercicioA, nextExercise.ejercicioB]
-            : getExerciseParts(nextExercise?.ejercicio))
-        : [cleanExerciseTitle(nextExercise?.ejercicio), null];
-
-    useEffect(() => {
-        if (!activeExercise) return;
-        const initialLoads = {};
-        const isBodyweightByName = (name) => /burpee|salto|jump|plank|flexion|push.?up|dominada|pull.?up|crunch|abdominal|mountain|climber|silla|air|calistenia|fondos/i.test(name || "");
-        const parseLoad = (val, exerciseName) => {
-            if (typeof val === 'string' && val.toUpperCase() === 'BW') return 0;
-            const num = parseFloat(val);
-            if (!isNaN(num)) return num;
-            if (isBodyweightByName(exerciseName)) return 0;
-            return null;
-        };
-        (activeExercise.componentes || []).forEach((set, setIdx) => {
-            initialLoads[`${idx}-${setIdx}-A`] = parseLoad(set.carga_sugeridaA ?? set.carga_sugerida, partA);
-            if (isSuperset) initialLoads[`${idx}-${setIdx}-B`] = parseLoad(set.carga_sugeridaB, partB);
-        });
-        setCurrentLoads(initialLoads);
-    }, [activeExercise, idx, isSuperset, partA, partB]);
-
-    const progressPercent = phase === 'warmup' ? 0 : phase === 'cooldown' ? 100 : ((idx + 1) / exercises.length) * 100;
-
-    const handleLoadUpdate = (exIdx, setIdx, part, newLoad) => {
-        const key = `${exIdx}-${setIdx}-${part}`;
-        setCurrentLoads(prev => ({ ...prev, [key]: newLoad }));
+    const handleLoadUpdate = (bIdx, sIdx, itemIdx, newLoad) => {
+        const key = `${bIdx}-${sIdx}-${itemIdx}`;
+        setUserLoads(prev => ({ ...prev, [key]: newLoad }));
     };
 
     const toggleSetCompletion = (setIndex) => {
-        const key = `${idx}-${setIndex}`;
+        const key = `${blockIndex}-${setIndex}`;
         const isNowDone = !completedSets[key]?.completed;
+        
         if (isNowDone) {
-            const setInfo = activeExercise.componentes[setIndex];
-            const loadA = currentLoads[`${idx}-${setIndex}-A`];
-            const setData = { completed: true, ejercicio: activeExercise.ejercicio, load: loadA === null ? 0 : loadA, reps: setInfo.repeticiones_ejercicioA ?? setInfo.repeticiones_ejercicio };
-            if (isSuperset) { 
-                const loadB = currentLoads[`${idx}-${setIndex}-B`];
-                setData.loadB = loadB === null ? 0 : loadB; 
-                setData.repsB = setInfo.repeticiones_ejercicioB; 
+            const setData = { completed: true };
+            
+            if (activeBlock && activeBlock.items) {
+                activeBlock.items.forEach((item, itemIdx) => {
+                    const loadKey = `${blockIndex}-${setIndex}-${itemIdx}`;
+                    const finalLoad = userLoads[loadKey] ?? item.peso_valor;
+                    
+                    setData[`exercise_${itemIdx}`] = {
+                        ejercicio: item.ejercicio,
+                        reps: item.reps_target,
+                        load: finalLoad
+                    };
+                });
             }
+
             setCompletedSets(prev => ({ ...prev, [key]: setData }));
-            if (onExerciseComplete) onExerciseComplete(activeExercise);
-            const restTime = activeExercise.descanso_segs || activeExercise.descanso_entre_series || 60;
+            
+            if (onExerciseComplete) onExerciseComplete(activeBlock);
+            
+            const lastItem = activeBlock.items[activeBlock.items.length - 1];
+            const restTime = lastItem?.descanso_segs || activeBlock.descanso_segs || 60;
             setRestSeconds(restTime);
+
         } else {
             const { [key]: _, ...rest } = completedSets;
             setCompletedSets(rest);
@@ -258,23 +307,37 @@ export const ActiveSession = ({
     };
 
     const handleNext = () => {
-        if (phase === 'warmup') setPhase('workout');
-        else if (phase === 'cooldown') handleRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
-        else if (idx < exercises.length - 1) setIdx(prev => prev + 1);
-        else setPhase('cooldown');
+        if (phase === 'warmup') {
+            if (workoutBlocks.length > 0) {
+                setPhase('workout');
+                setBlockIndex(0);
+            } else if (cooldownBlocks.length > 0) {
+                setPhase('cooldown');
+            } else {
+                handleRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
+            }
+        }
+        else if (phase === 'workout') {
+            if (blockIndex < workoutBlocks.length - 1) { 
+                setBlockIndex(prev => prev + 1); 
+            } else {
+                if (cooldownBlocks.length > 0) setPhase('cooldown');
+                else handleRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
+            }
+        }
+        else if (phase === 'cooldown') {
+            handleRoutineFeedback?.(routineId, { sets: completedSets }, "", "completed");
+        }
     };
 
-    const formatWarmup = (data) => {
-        if (!data) return null;
-        if (Array.isArray(data)) {
-             return data.map((ex, i) => (
-                <li key={i} className="flex items-start gap-3 text-left">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
-                    <span className="text-slate-300 text-sm leading-relaxed font-medium">{ex.ejercicio || ex}</span>
-                </li>
-            ));
-        }
-        return null; 
+    const formatWarmupList = (items) => {
+        if (!items || items.length === 0) return null;
+        return items.map((item, i) => (
+            <li key={i} className="flex items-start gap-3 text-left">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
+                <span className="text-slate-300 text-sm leading-relaxed font-medium">{item.ejercicio}</span>
+            </li>
+        ));
     };
 
     return (
@@ -284,7 +347,7 @@ export const ActiveSession = ({
             </div>
 
             <div className="relative z-10 flex flex-col h-full">
-                {/* Header Integrado - Barra de Progreso y Navegación */}
+                {/* Header Integrado */}
                 <header className="shrink-0 px-4 pt-6 pb-2 bg-gradient-to-b from-black/80 to-transparent z-40 flex items-center gap-4">
                     <button onClick={handleBackToMain} className="p-3 bg-slate-900/50 border border-slate-800 rounded-full text-slate-400 active:scale-90 hover:text-white transition-all shadow-lg shrink-0">
                         <Icon name="arrowLeft" className="w-5 h-5" />
@@ -293,7 +356,7 @@ export const ActiveSession = ({
                     <div className="flex-1 flex flex-col justify-center min-w-0">
                         <div className="flex justify-between items-baseline mb-1.5">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70%]">
-                                {phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : title || `EJERCICIO ${idx + 1}`}
+                                {phase === 'warmup' ? t.warmupTitle : phase === 'cooldown' ? t.cooldownTitle : activeBlock?.items[0]?.ejercicio || `BLOQUE ${blockIndex + 1}`}
                             </span>
                             <span className="text-[10px] font-black text-teal-400 tabular-nums">
                                 {`${Math.round(progressPercent)}%`}
@@ -306,42 +369,30 @@ export const ActiveSession = ({
                 </header>
 
                 <div className="flex-1 overflow-y-auto px-4 pb-32 minimal-scrollbar pt-2">
-                    {phase === 'workout' && activeExercise ? (
+                    {phase === 'workout' && activeBlock ? (
                         <div className="flex flex-col space-y-6">
+                            {/* TITULO Y VIDEO DEL BLOQUE */}
                             <div className="bg-slate-900/40 rounded-3xl border border-white/5 p-4 shadow-xl backdrop-blur-md">
-                                {isSuperset ? (
-                                    <div className="space-y-4">
+                                {activeBlock.items.map((item, idx) => (
+                                    <div key={idx} className={idx > 0 ? "mt-4 pt-4 border-t border-white/5" : ""}>
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-3 overflow-hidden">
-                                                <span className="shrink-0 text-[10px] font-black bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">A1</span>
-                                                <h3 className="text-lg xs:text-xl font-bold text-white truncate">{partA}</h3>
+                                                {isSuperset && (
+                                                    <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded border ${idx === 0 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
+                                                        {idx === 0 ? 'A1' : 'A2'}
+                                                    </span>
+                                                )}
+                                                <h3 className="text-lg xs:text-xl font-bold text-white truncate">{item.ejercicio}</h3>
                                             </div>
-                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="p-2 text-red-500 bg-white/5 rounded-xl active:scale-95"><Icon name="youtube" className="w-5 h-5" /></button>
-                                        </div>
-                                        <div className="h-px bg-white/5 w-full"></div>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <span className="shrink-0 text-[10px] font-black bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/30">A2</span>
-                                                <h3 className="text-lg xs:text-xl font-bold text-white truncate">{partB}</h3>
-                                            </div>
-                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partB}+short`, '_blank')} className="p-2 text-red-500 bg-white/5 rounded-xl active:scale-95"><Icon name="youtube" className="w-5 h-5" /></button>
+                                            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${item.ejercicio}+short`, '_blank')} className="p-2 text-red-500 bg-white/5 rounded-xl active:scale-95"><Icon name="youtube" className="w-5 h-5" /></button>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="flex justify-between items-start">
-                                        <h2 className="text-2xl font-black text-white leading-tight pr-4">{partA}</h2>
-                                        <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${partA}+short`, '_blank')} className="p-2 text-red-500 bg-white/5 rounded-xl active:scale-95"><Icon name="youtube" className="w-5 h-5" /></button>
-                                    </div>
-                                )}
+                                ))}
                             </div>
 
                             <div className="space-y-4">
-                                {(activeExercise.componentes || []).map((set, setIdx) => {
-                                    const isDone = completedSets[`${idx}-${setIdx}`]?.completed;
-                                    const valA = currentLoads[`${idx}-${setIdx}-A`];
-                                    const valB = currentLoads[`${idx}-${setIdx}-B`];
-                                    const repsA = formatRepsDisplay(set.repeticiones_ejercicioA ?? set.repeticiones_ejercicio);
-                                    const repsB = isSuperset ? formatRepsDisplay(set.repeticiones_ejercicioB) : null;
+                                {Array.from({ length: activeBlock.items[0]?.series || 3 }).map((_, setIdx) => {
+                                    const isDone = completedSets[`${blockIndex}-${setIdx}`]?.completed;
 
                                     return (
                                         <div 
@@ -349,7 +400,6 @@ export const ActiveSession = ({
                                             onClick={() => toggleSetCompletion(setIdx)}
                                             className={`group relative flex items-center gap-2 p-3 rounded-[2.5rem] transition-all duration-300 border ${isDone ? 'bg-teal-500/20 border-teal-500/40' : 'bg-slate-900/60 border-white/5 active:bg-slate-800'}`}
                                         >
-                                            {/* Reducción 40% en círculo de sesión (w-8 h-8) */}
                                             <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ml-1">
                                                 {isDone ? (
                                                     <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.5)]">
@@ -362,26 +412,32 @@ export const ActiveSession = ({
                                                 )}
                                             </div>
 
-                                            {/* Ajuste para ocupar el 90% restante */}
                                             <div className="flex-1 flex flex-wrap items-center justify-end gap-2 overflow-hidden">
-                                                {isSuperset ? (
-                                                    <>
-                                                        <div className="flex gap-1.5 xs:gap-2">
-                                                            <MatrixValue value={repsA} unit="REPS" label="A1" />
-                                                            <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} label="A1" />
-                                                        </div>
-                                                        <div className="w-px h-12 bg-white/10 hidden sm:block"></div>
-                                                        <div className="flex gap-1.5 xs:gap-2">
-                                                            <MatrixValue value={repsB} unit="REPS" label="A2" />
-                                                            <AdjustableLoadMatrix initialLoad={valB} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'B', nl)} label="A2" />
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <div className="flex gap-2">
-                                                        <MatrixValue value={repsA} unit="REPS" />
-                                                        <AdjustableLoadMatrix initialLoad={valA} onUpdate={(nl) => handleLoadUpdate(idx, setIdx, 'A', nl)} />
-                                                    </div>
-                                                )}
+                                                {activeBlock.items.map((item, itemIdx) => {
+                                                    const loadKey = `${blockIndex}-${setIdx}-${itemIdx}`;
+                                                    const userLoad = userLoads[loadKey];
+                                                    const currentLoad = userLoad !== undefined ? userLoad : item.peso_valor;
+
+                                                    return (
+                                                        <React.Fragment key={itemIdx}>
+                                                            {itemIdx > 0 && <div className="w-px h-12 bg-white/10 hidden sm:block mx-4"></div>}
+                                                            
+                                                            <div className="flex gap-1.5 xs:gap-2">
+                                                                <MatrixValue 
+                                                                    value={item.reps_target} 
+                                                                    unit={`${item.reps_texto} REPS`} 
+                                                                    label={isSuperset ? (itemIdx === 0 ? 'A1' : 'A2') : null} 
+                                                                />
+                                                                <AdjustableLoadMatrix 
+                                                                    initialLoad={currentLoad}
+                                                                    initialUnit={item.peso_unidad}
+                                                                    onUpdate={(nl) => handleLoadUpdate(blockIndex, setIdx, itemIdx, nl)}
+                                                                    label={isSuperset ? (itemIdx === 0 ? 'A1' : 'A2') : null}
+                                                                />
+                                                            </div>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     );
@@ -396,19 +452,22 @@ export const ActiveSession = ({
                             <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tight">{phase === 'warmup' ? t.warmupTitle : t.cooldownTitle}</h2>
                             <div className="bg-slate-900/60 border border-white/5 rounded-[2rem] p-6 mb-10 w-full max-w-sm backdrop-blur-md">
                                 <ul className="space-y-4">
-                                    {formatWarmup(phase === 'warmup' ? (currentRoutine.calentamiento || warmupEx) : (currentRoutine.enfriamiento || cooldownEx)) || 
-                                     <li className="text-slate-400 text-sm italic">Prepárate para la sesión</li>}
+                                    {phase === 'warmup' && activeWarmupItems.length > 0 
+                                        ? formatWarmupList(activeWarmupItems)
+                                        : phase === 'cooldown' && activeCooldownItems.length > 0
+                                            ? formatWarmupList(activeCooldownItems)
+                                            : <li className="text-slate-400 text-sm italic">Prepárate para la sesión</li>
+                                    }
                                 </ul>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* DOCK FLOTANTE */}
                 <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
                     {phase === 'workout' ? (
                         <div className="pointer-events-auto flex items-center gap-6 bg-slate-900/90 border border-white/10 rounded-full p-2 pr-6 pl-4 backdrop-blur-xl shadow-2xl">
-                            <button onClick={() => idx > 0 && setIdx(idx-1)} className="p-3 text-slate-500 active:scale-75 hover:text-white transition-colors"><Icon name="arrowLeft" className="w-5 h-5"/></button>
+                            <button onClick={() => blockIndex > 0 && setBlockIndex(blockIndex - 1)} className="p-3 text-slate-500 active:scale-75 hover:text-white transition-colors"><Icon name="arrowLeft" className="w-5 h-5"/></button>
                             
                             <div className="flex items-center gap-4">
                                 <button onClick={() => setIsSessionActive(!isSessionActive)} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${!isSessionActive ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-slate-800 text-slate-400 border border-white/5'}`}>
@@ -441,9 +500,9 @@ export const ActiveSession = ({
                         <div className="w-full max-w-sm mx-auto shrink-0 pb-8">
                             <div className="bg-black/20 rounded-2xl p-4 mb-6 text-left">
                                 <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">{t.nextSession}</h4>
-                                {nextExercise ? (
+                                {nextBlock ? (
                                     <div className="text-base font-bold text-white bg-slate-800/40 p-4 rounded-lg truncate">
-                                        {nextIsSuperset ? `${nextPartA} + ${nextPartB}` : nextPartA}
+                                        {nextBlock.items.map(i => i.ejercicio).join(" + ")}
                                     </div>
                                 ) : (
                                     <div className="text-base font-bold text-white bg-slate-800/40 p-4 rounded-lg">

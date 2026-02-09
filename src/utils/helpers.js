@@ -151,13 +151,43 @@ export const formatRoutineTitle = (title) => {
     return clean.trim() || "Entrenamiento";
 };
 
-export const formatRepsDisplay = (str) => { 
-    if (!str) return "--"; 
-    // Si ya viene con formato texto corto (backend nuevo: '12-15' o 'Falló'), devolverlo.
-    if (String(str).length < 10 && !/\d/.test(str)) return str;
+export const formatRepsDisplay = (input, subIndex = 0) => { 
+    if (!input) return "--"; 
+    
+    // Soporte para nueva estructura de items (Superseries)
+    // Si input tiene un array 'items', buscamos el índice correspondiente
+    if (typeof input === 'object' && input.items && Array.isArray(input.items)) {
+        if (input.items[subIndex]) {
+            // Recursión con el item específico
+            return formatRepsDisplay(input.items[subIndex]);
+        }
+    }
 
-    let val = String(str).replace(/segundos?|segun\w*/gi, 'seg').replace(/minutos?|mins?/gi, 'min');
-    if (/min|seg|sec|m\b|s\b/i.test(val)) return val.substring(0, 8); 
+    // Si es un objeto (Item específico o estructura antigua), extraer propiedad
+    if (typeof input === 'object' && input !== null) {
+        if (input.reps_texto) return String(input.reps_texto);
+        if (input.reps_textoA && subIndex === 0) return String(input.reps_textoA);
+        if (input.reps_textoB && subIndex === 1) return String(input.reps_textoB);
+        
+        // Fallbacks numéricos
+        const val = input.reps_target ?? input.repeticiones_ejercicio ?? input.reps ?? input.repeticiones ?? "--";
+        if (typeof val === 'object') return "--";
+        return formatRepsDisplay(val);
+    }
+
+    const str = String(input);
+
+    // Si ya viene con formato texto corto (backend nuevo: '12-15' o 'Falló'), devolverlo.
+    if (str.length < 20 && !/\d/.test(str)) return str;
+
+    let val = str.replace(/segundos?|segun\w*/gi, 'seg').replace(/minutos?|mins?/gi, 'min');
+    
+    if (/AMRAP/i.test(val)) return "AMRAP";
+    
+    if (/^\d+-\d+$/.test(val)) return val;
+
+    if (/min|seg|sec|m\b|s\b/i.test(val)) return val.substring(0, 10); 
+    
     const nums = val.match(/\d+/); 
     return nums ? nums[0] : "--"; 
 };
