@@ -18,7 +18,7 @@ const MatrixValue = ({ value, unit, subtext, label }) => {
                     {label}
                 </span>
             )}
-            <span className="text-white font-bold text-xl xs:text-2xl tabular-nums leading-none tracking-tight mt-1">{displayValue}</span>
+            <span className="text-white font-bold text-3xl xs:text-4xl tabular-nums leading-none tracking-tight mt-1">{displayValue}</span>
             <span className="text-slate-500 text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5 text-center w-full px-1 line-clamp-2 leading-tight">{unit || "REPS"}</span>
             {subtext && <span className="text-slate-600 text-[7px] font-medium leading-none mt-0.5 text-center px-1 truncate w-full">{subtext}</span>}
         </div>
@@ -94,7 +94,7 @@ const AdjustableLoadMatrix = ({ initialLoad, initialUnit, onUpdate, label }) => 
             )}
 
             {isInteracting && <Icon name="chevronUp" className="w-3 h-3 text-teal-400 absolute top-1.5 animate-pulse" />}
-            <span className={`${textClass} font-bold text-xl xs:text-2xl tabular-nums leading-none tracking-tight mt-1`}>{displayValue}</span>
+            <span className={`${textClass} font-bold text-3xl xs:text-4xl tabular-nums leading-none tracking-tight mt-1`}>{displayValue}</span>
             <span className={`${unitClass} text-[7px] xs:text-[8px] uppercase font-bold tracking-wider mt-0.5 text-center leading-tight px-1`}>{displayUnit}</span>
             {isInteracting && <Icon name="chevronDown" className="w-3 h-3 text-teal-400 absolute bottom-1.5 animate-pulse" />}
         </div>
@@ -373,8 +373,8 @@ export const ActiveSession = ({
         if (!items || items.length === 0) return null;
         return items.map((item, i) => (
             <li key={i} className="flex items-start gap-3 text-left">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 shrink-0"></span>
-                <span className="text-slate-300 text-sm leading-relaxed font-medium">{item.ejercicio}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-700 mt-2 shrink-0"></span>
+                <span className="text-slate-300 text-xl leading-relaxed font-medium">{item.ejercicio}</span>
             </li>
         ));
     };

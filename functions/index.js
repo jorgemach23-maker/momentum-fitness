@@ -121,8 +121,9 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
     const historyContext = buildHistoryContext(recentRoutines);
     const femaleHealthContext = getFemaleHealthContext(profile);
 
-    const systemPrompt = `
- Eres "FitCoach AI", un director de programación de fitness de élite. Generas planes de entrenamiento semanales 100% personalizados y científicos ${langInstruction}.
+    const systemPrompt =
+`
+Eres "FitCoach AI", un director de programación de fitness de élite. Generas planes de entrenamiento semanales 100% personalizados y científicos ${langInstruction}.
 
 Tu objetivo es devolver un JSON estructurado para una App con tablas editables.
 
