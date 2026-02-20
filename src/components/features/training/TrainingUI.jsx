@@ -148,6 +148,9 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
   // CAMBIO CLAVE: Pasamos 'routineData' en lugar de 'exercises' para que el componente normalice
   const duration = getDuration(data, profile);
 
+  // EXTRAER TÍTULO DE FORMA ROBUSTA
+  const title = formatRoutineTitle(routine.diaEnfoque || data.diaEnfoque || routine.diaNombre || data.diaNombre || "Sesión de Hoy");
+
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-xl p-5 mb-4 group">
        <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none group-hover:bg-teal-500/10 transition-colors duration-500"></div>
@@ -158,7 +161,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
                   <div className="flex items-center gap-2 mb-2">
                       <span className="flex items-center gap-1 text-[10px] text-white font-mono"><Icon name="clock" className="w-3 h-3"/> {duration}</span>
                   </div>
-                  <h2 className="text-xl font-black text-white leading-tight line-clamp-2 drop-shadow-md">{formatRoutineTitle(routine.diaEnfoque || data.diaEnfoque)}</h2>
+                  <h2 className="text-xl font-black text-white leading-tight line-clamp-2 drop-shadow-md">{title}</h2>
               </div>
               <button onClick={(e) => { e.stopPropagation(); onAdjust(); }} className="p-2.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all shadow-lg active:scale-95"><Icon name="settings" className="w-4 h-4" /></button>
            </div>
@@ -190,6 +193,9 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
          
          // CAMBIO CLAVE: Pasamos 'routineData'
          const duration = getDuration(data, profile);
+         
+         // EXTRAER TÍTULO DE FORMA ROBUSTA
+         const title = formatRoutineTitle(r.diaEnfoque || data.diaEnfoque || r.diaNombre || data.diaNombre || "Entrenamiento");
 
          return (
            <div key={r.id} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-slate-800 border-teal-500/30 ring-1 ring-teal-500/20' : 'bg-slate-800/40 border-slate-700/50'}`}>
@@ -197,7 +203,7 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
                  <div className="flex items-center gap-4 flex-1">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-teal-500 text-slate-900 shadow-lg shadow-teal-500/20' : 'bg-slate-900 text-slate-500 border border-slate-700'}`}><Icon name="dumbbell" className="w-5 h-5" /></div>
                     <div>
-                        <h4 className={`text-sm font-bold ${isExpanded ? 'text-white' : 'text-slate-300'}`}>{formatRoutineTitle(r.diaEnfoque)}</h4>
+                        <h4 className={`text-sm font-bold ${isExpanded ? 'text-white' : 'text-slate-300'}`}>{title}</h4>
                         <p className="text-[10px] text-slate-500 font-mono mt-0.5">{duration}</p>
                     </div>
                  </div>
@@ -245,9 +251,12 @@ export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdj
     
     const muscleOptions = [ { category: "Grupos", items: ["Tren Superior", "Tren Inferior", "Core", "Full Body"] }, { category: "Músculos", items: ["Glúteos", "Cuádriceps", "Pecho", "Espalda", "Brazos"] } ];
     
+    // TÍTULO PARA EL MODAL DE AJUSTES
+    const title = nextRoutine.diaEnfoque || nextRoutine.diaNombre || "Ajustar Sesión";
+
     return (
       <Card className="p-6">
-        <div className="flex justify-between items-start mb-6 border-b border-slate-700/50 pb-4"><div><h3 className="text-lg font-bold text-slate-100 flex items-center gap-2"><Icon name="settings" className="w-5 h-5 text-slate-400"/> {nextRoutine.diaEnfoque}</h3></div>{loading && <GeminiLoader progressText={progressText} />}</div>
+        <div className="flex justify-between items-start mb-6 border-b border-slate-700/50 pb-4"><div><h3 className="text-lg font-bold text-slate-100 flex items-center gap-2"><Icon name="settings" className="w-5 h-5 text-slate-400"/> {title}</h3></div>{loading && <GeminiLoader progressText={progressText} />}</div>
         <div className="space-y-6">
            <div className="grid grid-cols-2 gap-6 items-center">
                 <InputField label={t.timeAvailable} icon="clock" type="number" name="timeAvailable" value={profile.timeAvailable} onChange={onProfileChange} />
