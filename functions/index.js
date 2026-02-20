@@ -5,7 +5,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const geminiKey = functions.config().gemini.key;
 const genAI = new GoogleGenerativeAI(geminiKey);
 
-const MODEL_NAME = "models/gemini-2.5-flash-preview-09-2025";
+const MODEL_NAME = "gemini-flash-latest";
 
 // --- FUNCIONES HELPER ---
 const buildHistoryContext = (recentRoutines) => {
@@ -139,41 +139,41 @@ Tu objetivo es devolver un JSON estructurado para una App con tablas editables.
 **INSTRUCCIONES DE LÓGICA DE ENTRENAMIENTO:**
 
 1. **CÁLCULO DINÁMICO DE DESCANSOS (ALGORITMO DE RECUPERACIÓN):**
-   * Sintetiza estas 4 variables para el `descanso_segs`:
+   * Sintetiza estas 4 variables para el "descanso_segs":
      A. **Objetivo:** Fuerza (180-300s), Hipertrofia (90-120s), Metabólico (<60s).
      B. **Demanda:** Compuestos (+descanso) vs Aislamiento (-descanso).
      C. **Lesiones:** +30s extra si la zona es sensible.
      D. **BioEdad:** A mayor carga absoluta (avanzados), mayor descanso necesario.
 
 2. **MANEJO DE REPETICIONES:**
-   * **Regla:** En `reps_target`, pon siempre el **LÍMITE SUPERIOR** del rango.
+   * **Regla:** En "reps_target", pon siempre el **LÍMITE SUPERIOR** del rango.
 
 **REGLAS DE FORMATO JSON (ESTRICTO - ATOMICIDAD):**
 
-La estructura base son **BLOQUES**. Cada bloque contiene un array `items`.
+La estructura base son **BLOQUES**. Cada bloque contiene un array "items".
 
 **🚨 REGLA DE ORO: ATOMICIDAD DE DATOS (ANTI-CONCATENACIÓN):**
 * **CADA OBJETO ES INDEPENDIENTE:** En una Superserie, NUNCA agrupes valores de métricas en un solo campo.
 * **INCORRECTO (PROHIBIDO):**
-   `"reps_target": "10, 12"`  (NO concatenar)
-   `"reps_target": "A1: 10, A2: 10"` (NO concatenar)
-   `"peso_valor": "20 + 15"`  (NO sumar)
-   `"peso_valor": "A1: 10, A2: 10"` (NO concatenar)
+   "reps_target": "10, 12"  (NO concatenar)
+   "reps_target": "A1: 10, A2: 10" (NO concatenar)
+   "peso_valor": "20 + 15"  (NO sumar)
+   "peso_valor": "A1: 10, A2: 10" (NO concatenar)
 * **CORRECTO:**
-   Item 1: `{ "reps_target": 10, "peso_valor": 20 }`
-   Item 2: `{ "reps_target": 12, "peso_valor": 15 }`
+   Item 1: "{ "reps_target": 10, "peso_valor": 20 }"
+   Item 2: "{ "reps_target": 12, "peso_valor": 15 }"
 
 **CAMPOS POR ITEM (Strict Typing):**
 
 * **fase_sesion:** "warmup" | "main" | "cooldown". (usa EXACTAMENTE esas 3 opciones)
 * **estructura_visual:** "single" | "superset"  (usa EXACTAMENTE esas 2 opciones)
-    * Si es "superset", el array `items` DEBE tener 2 objetos separados.
+    * Si es "superset", el array "items" DEBE tener 2 objetos separados.
 * **ejercicio:** Nombre limpio y único.
 * **tecnica:** String con detalles o null.
-* **reps_target (Integer | Null):** Un solo número ENTERO PURO por objeto. (Ej: `12`). NUNCA un string ni una lista.
+* **reps_target (Integer | Null):** Un solo número ENTERO PURO por objeto. (Ej: "12"). NUNCA un string ni una lista.
 * **reps_texto (String):** Texto visual (Ej: "10-12").
-* **peso_valor (Float):** Un solo número PURO por objeto. (Ej: `20.5`). Si es peso corporal pon `0`.
-* **peso_unidad (String):** "kg", "lbs", "BW". Un solo valor por objeto. Usa "BW" si peso_valor es igual a `0` o el ejercicio es con peso corporal o sin carga o body weight
+* **peso_valor (Float):** Un solo número PURO por objeto. (Ej: "20.5"). Si es peso corporal pon "0".
+* **peso_unidad (String):** "kg", "lbs", "BW". Un solo valor por objeto. Usa "BW" si peso_valor es igual a "0" o el ejercicio es con peso corporal o sin carga o body weight
 * **descanso_segs (Integer):** Tiempo en segundos.
 
 **EJEMPLO DE SALIDA (Superserie Correcta):**

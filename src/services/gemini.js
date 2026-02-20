@@ -5,8 +5,24 @@ export const fetchGeminiWeeklyPlan = async (profile, recentRoutines, lang) => {
     const functions = getFunctions();
     const generatePlan = httpsCallable(functions, 'generateGeminiPlan');
     try {
+        console.log("LLAMANDO A LA CLOUD FUNCTION 'generateGeminiPlan'...");
         const result = await generatePlan({ profile, recentRoutines, lang });
-        return result.data;
+        
+        console.log("RESPUESTA RECIBIDA DE LA CLOUD FUNCTION (RAW):", result);
+        console.log("DATOS DEL PLAN (JSON):", result.data);
+        
+        // Verificación rápida si data es un string JSON en lugar de objeto
+        let finalData = result.data;
+        if (typeof finalData === 'string') {
+            try {
+                finalData = JSON.parse(finalData);
+                console.log("DATOS PARSEADOS MANUALMENTE:", finalData);
+            } catch (e) {
+                console.warn("La respuesta parecía un string pero no era JSON válido:", e);
+            }
+        }
+
+        return finalData;
     } catch (error) {
         console.error("Error al llamar a la Cloud Function 'generateGeminiPlan':", error);
         return [{ 
@@ -26,6 +42,7 @@ export const fetchGeminiBioageAnalysis = async (profile, lang) => {
     const analyzeBioage = httpsCallable(functions, 'analyzeBioage');
     try {
         const result = await analyzeBioage({ profile, lang });
+        console.log("RESPUESTA BIOAGE:", result.data);
         return result.data;
     } catch (error) {
         console.error("Error al llamar a la Cloud Function 'analyzeBioage':", error);
