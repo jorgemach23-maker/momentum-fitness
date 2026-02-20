@@ -4,37 +4,63 @@ import en from '../../locales/en.json';
 // Patched to load translations from JSON files, ensuring updates are reflected.
 export const TRANSLATIONS = { es, en };
 
+// --- Lógica de Normalización (NUEVO) ---
+export const normalizeRoutine = (routineData) => {
+    if (!routineData) return { rutinaPrincipal: [] };
+    
+    // Si ya es la estructura plana antigua, devolver tal cual
+    if (routineData.rutinaPrincipal && Array.isArray(routineData.rutinaPrincipal) && !routineData.bloques) {
+        return routineData;
+    }
+
+    // Si viene con estructura de bloques (backend nuevo), aplanar
+    if (routineData.bloques && Array.isArray(routineData.bloques)) {
+        const flatExercises = [];
+        
+        routineData.bloques.forEach(bloque => {
+            if (bloque.items && Array.isArray(bloque.items)) {
+                bloque.items.forEach(item => {
+                    // Propagar propiedades del bloque al item
+                    const enrichedItem = {
+                        ...item,
+                        fase_sesion: bloque.fase_sesion || item.fase_sesion || 'main', // Heredar fase
+                        estructura_visual: bloque.estructura_visual || 'single',
+                        tipo_bloque: bloque.fase_sesion || 'main' // Compatibilidad
+                    };
+                    flatExercises.push(enrichedItem);
+                });
+            }
+        });
+
+        return {
+            ...routineData,
+            rutinaPrincipal: flatExercises
+        };
+    }
+
+    return routineData;
+};
+
 // --- Lógica de clasificación de ejercicios ---
 
-export const isWarmup = (exercise) => {
-    if (!exercise) return false;
-    const b = (exercise.tipo_bloque || exercise.bloque || exercise.fase_sesion || "").toLowerCase();
-    const name = (exercise.ejercicio || "").toLowerCase();
-    
-    if (b === 'warmup' || b === 'calentamiento') return true;
-
-    // Movimos 'estiramiento' a cooldown
-    const regex = /calentamiento|warm.?up|movilidad|mobility|activaci[oó]n|activation|rotaci[oó]n|rotation|liberaci[oó]n/i;
-    
-    return regex.test(b) || regex.test(name);
+// REFACTORIZADO: Ahora solo se basa en la etiqueta explícita de la fase.
+export const isWarmup = (item) => {
+    if (!item) return false;
+    const phase = (item.fase_sesion || item.tipo_bloque || item.bloque || "").toLowerCase();
+    return phase === 'warmup' || phase === 'calentamiento';
 };
 
-export const isCooldown = (exercise) => {
-    if (!exercise) return false;
-    const b = (exercise.tipo_bloque || exercise.bloque || exercise.fase_sesion || "").toLowerCase();
-    const name = (exercise.ejercicio || "").toLowerCase();
-
-    if (b === 'cooldown' || b === 'enfriamiento') return true;
-
-    // Añadimos keywords para estiramientos
-    const regex = /enfriamiento|cool.?down|vuelta.*calma|estiramiento|stretching/i;
-    
-    return regex.test(b) || regex.test(name);
+// REFACTORIZADO: Ahora solo se basa en la etiqueta explícita de la fase.
+export const isCooldown = (item) => {
+    if (!item) return false;
+    const phase = (item.fase_sesion || item.tipo_bloque || item.bloque || "").toLowerCase();
+    return phase === 'cooldown' || phase === 'enfriamiento' || phase === 'vuelta a la calma';
 };
 
-export const isWarmupOrCooldown = (exercise) => {
-    return isWarmup(exercise) || isCooldown(exercise);
+export const isWarmupOrCooldown = (item) => {
+    return isWarmup(item) || isCooldown(item);
 };
+
 
 export const calculateSmartRest = (profile, exercise) => {
     let restTime = 60; 

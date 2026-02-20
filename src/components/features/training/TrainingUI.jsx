@@ -7,7 +7,8 @@ import { GeminiLoader } from '../../ui/GeminiLoader.jsx';
 import { 
   formatRoutineTitle, 
   cleanExerciseTitle,
-  isWarmupOrCooldown // Importación del helper centralizado
+  isWarmupOrCooldown,
+  normalizeRoutine // Importamos la nueva función
 } from '../../../utils/helpers.js'; 
 
 // Helper para obtener la duración correcta
@@ -52,13 +53,22 @@ export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex,
 };
 
 // --- 2. VISTA PREVIA DE EJERCICIOS ---
-export const ExerciseListPreview = ({ exercises, limit }) => {
-  if (!exercises || !Array.isArray(exercises) || exercises.length === 0) {
+export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
+  // ADAPTADOR: Si nos pasan "routineData" (la rutina completa), normalizamos.
+  // Si nos pasan "exercises" directos, usamos eso (legacy).
+  let flatExercises = exercises;
+
+  if (routineData) {
+      const normalized = normalizeRoutine(routineData);
+      flatExercises = normalized.rutinaPrincipal || [];
+  }
+
+  if (!flatExercises || !Array.isArray(flatExercises) || flatExercises.length === 0) {
       return <div className="py-2 text-xs text-slate-500 italic text-center">Detalles disponibles al iniciar.</div>;
   }
 
   // FILTRO ROBUSTO CENTRALIZADO: Usar el helper isWarmupOrCooldown.
-  const filteredExercises = exercises.filter(ex => !isWarmupOrCooldown(ex));
+  const filteredExercises = flatExercises.filter(ex => !isWarmupOrCooldown(ex));
 
   const visibleEx = limit ? filteredExercises.slice(0, limit) : filteredExercises;
   const remaining = limit ? Math.max(0, filteredExercises.length - limit) : 0;
@@ -135,11 +145,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
   if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
   
   const data = routine.routine || routine;
-  // FILTRADO CENTRALIZADO Y ROBUSTO
-  const exercisesList = Array.isArray(data.rutinaPrincipal) 
-    ? data.rutinaPrincipal.filter(ex => !isWarmupOrCooldown(ex))
-    : [];
-    
+  // CAMBIO CLAVE: Pasamos 'routineData' en lugar de 'exercises' para que el componente normalice
   const duration = getDuration(data, profile);
 
   return (
@@ -157,7 +163,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
               <button onClick={(e) => { e.stopPropagation(); onAdjust(); }} className="p-2.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all shadow-lg active:scale-95"><Icon name="settings" className="w-4 h-4" /></button>
            </div>
            
-           <ExerciseListPreview exercises={exercisesList} limit={3} />
+           <ExerciseListPreview routineData={data} limit={3} />
            
            <button onClick={() => onViewRoutine(routine)} className="w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-teal-500/40 
                bg-gradient-to-r from-teal-500 to-emerald-600 
@@ -182,11 +188,7 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
          const isExpanded = expandedId === r.id;
          const data = r.routine || r; 
          
-         // FILTRADO CENTRALIZADO Y ROBUSTO
-         const exercisesList = Array.isArray(data.rutinaPrincipal) 
-            ? data.rutinaPrincipal.filter(ex => !isWarmupOrCooldown(ex))
-            : [];
-            
+         // CAMBIO CLAVE: Pasamos 'routineData'
          const duration = getDuration(data, profile);
 
          return (
@@ -207,7 +209,7 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
               {isExpanded && (
                   <div className="px-4 pb-4 animate-fadeIn">
                       <div className="pt-2 border-t border-slate-700/50 mb-4 bg-slate-900/20 rounded-xl p-2">
-                          <ExerciseListPreview exercises={exercisesList} limit={99} />
+                          <ExerciseListPreview routineData={data} limit={99} />
                       </div>
                       <div className="flex gap-3 px-1">
                           <button onClick={(e) => { e.stopPropagation(); onAdjust(r); }} className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-bold text-xs hover:bg-slate-700 transition-colors">AJUSTAR</button>

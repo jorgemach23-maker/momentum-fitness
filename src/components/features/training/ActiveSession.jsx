@@ -4,7 +4,8 @@ import {
     TRANSLATIONS, 
     formatDuration,
     isWarmup, 
-    isCooldown 
+    isCooldown,
+    normalizeRoutine
 } from '../../../utils/helpers.js';
 
 // Componente helper para mostrar valores numéricos estilo Matrix
@@ -48,7 +49,7 @@ const AdjustableLoadMatrix = ({ initialLoad, initialUnit, onUpdate, label }) => 
         const deltaY = lastUpdateY.current - currentY;
         const sensitivity = 25;
         if (Math.abs(deltaY) > sensitivity) {
-            let newLoad = deltaY > 0 ? Math.min(300, load + 1.25) : Math.max(0, load - 1.25);
+            let newLoad = deltaY > 0 ? Math.min(300, load + 0.5) : Math.max(0, load - 0.5);
             newLoad = Math.round(newLoad * 100) / 100;
             setLoad(newLoad);
             onUpdate(newLoad);
@@ -117,154 +118,53 @@ export const ActiveSession = ({
     const routineId = currentRoutine.id;
     const t = TRANSLATIONS?.[lang || 'es'] || TRANSLATIONS?.['es'] || {};
     
-    // --- ADAPTADOR UNIFICADO ---
+    // --- ADAPTADOR UNIFICADO Y ROBUSTO ---
     const normalizedBlocks = useMemo(() => {
-        const sanitizeRepsText = (text, idx) => {
-            if (!text) return "--";
-            let clean = String(text);
-            
-            if (clean.includes('A1:') || clean.includes('A2:') || clean.includes('Ej 1:')) {
-                const regex = new RegExp(`(?:A${idx + 1}|Ej\\s*${idx + 1})[:\\s]*([^,]+)`, 'i');
-                const match = clean.match(regex);
-                if (match) return match[1].trim();
-            }
-            if (clean.includes('+')) {
-                const parts = clean.split('+');
-                if (parts[idx]) return parts[idx].trim();
-            }
-            return clean;
-        };
-
-        const extractTarget = (val) => {
-            if (typeof val === 'number') return val;
-            if (typeof val === 'string') {
-                const cleanVal = val.replace(/^[A-Z]\d+[:\s]*/i, '').replace(/^Ej\s*\d+[:\s]*/i, '');
-                const matchRange = cleanVal.match(/-(\d+)/);
-                if (matchRange) return parseInt(matchRange[1], 10);
-                const matchNum = cleanVal.match(/(\d+)/);
-                if (matchNum) return parseInt(matchNum[1], 10);
-            }
-            return null;
-        };
-
-        const extractNumericLoad = (val) => {
-            if (typeof val === 'number') return val;
-            if (!val) return 0;
-            const str = String(val);
-            const cleanStr = str.replace(/^[A-Z]\d+[:\s]*/i, '').replace(/^Ej\s*\d+[:\s]*/i, '');
-            const match = cleanStr.match(/[\d.]+/); 
-            return match ? parseFloat(match[0]) : 0;
-        };
-
-        const getLoadForIndex = (fullString, index) => {
-            if (!fullString) return 0;
-            const str = String(fullString);
-            
-            if (str.includes('+')) {
-                const parts = str.split('+');
-                if (parts[index]) return extractNumericLoad(parts[index]);
-            }
-
-            const regexSpecific = new RegExp(`(?:A${index+1}|Ej\\s*${index+1})[:\\s]*([\\d.]+)`, 'i');
-            const match = str.match(regexSpecific);
-            if (match) return parseFloat(match[1]);
-
-            if (index === 0) return extractNumericLoad(str);
-            
-            return 0;
-        };
-
-        const getRepsForIndex = (fullString, index) => {
-            if (!fullString) return "--";
-            const str = String(fullString);
-            
-            if (str.includes('+')) {
-                const parts = str.split('+');
-                if (parts[index]) return parts[index].trim();
-            }
-            
-            if (str.includes(',')) {
-                const parts = str.split(',');
-                if (parts[index]) return parts[index].trim();
-            }
-
-            if (str.includes('/') && !str.toUpperCase().includes('LADO')) {
-                const parts = str.split('/');
-                if (parts[index]) return parts[index].trim();
-            }
-
-            return str;
-        };
-
-        // 1. Estructura Nueva (Bloques)
-        if (currentRoutine.bloques && Array.isArray(currentRoutine.bloques) && currentRoutine.bloques.length > 0) {
+        // 1. Si usamos la nueva estructura de bloques directos
+        if (currentRoutine.bloques && Array.isArray(currentRoutine.bloques)) {
             return currentRoutine.bloques.map(b => ({
                 ...b,
-                items: Array.isArray(b.items) ? b.items.map((item, idx) => {
-                    const cleanRepsText = sanitizeRepsText(item.reps_texto, idx);
-                    return {
-                        ...item,
-                        reps_texto: cleanRepsText,
-                        reps_target: item.reps_target ?? extractTarget(cleanRepsText)
-                    };
-                }) : []
+                fase_sesion: b.fase_sesion || 'main', // Default a main si falta
+                items: Array.isArray(b.items) ? b.items.map(item => ({
+                   ...item,
+                   reps_target: item.reps_target ?? parseInt(item.reps) ?? 0
+                })) : []
             }));
         }
 
-        // 2. Estructura Legacy (RutinaPrincipal)
-        const legacyExercises = currentRoutine.rutinaPrincipal || [];
-        if (legacyExercises.length > 0) {
-            return legacyExercises.map(ex => {
-                const isConcatSuperset = ex.ejercicio.includes('+');
-                let items = [];
+        // 2. Si usamos la estructura plana (rutinaPrincipal), la convertimos a bloques
+        const flatRoutine = normalizeRoutine(currentRoutine).rutinaPrincipal || [];
+        
+        // Agrupar por superseries si es necesario, o crear bloques simples
+        const blocks = [];
+        let currentBlock = null;
 
-                if (isConcatSuperset) {
-                    const parts = ex.ejercicio.split('+');
-                    items = parts.map((part, idx) => {
-                        const rawReps = ex.reps || ex.repeticiones_ejercicio;
-                        const specificReps = getRepsForIndex(rawReps, idx);
-                        const cleanRepsText = sanitizeRepsText(ex.reps_texto || String(specificReps || "--"), idx);
-                        
-                        return {
-                            ejercicio: part.trim().replace(/^[A-Z]\d+[:\s]*/, ''), 
-                            reps_target: extractTarget(specificReps),
-                            reps_texto: cleanRepsText,
-                            peso_valor: getLoadForIndex(ex.carga_sugerida, idx),
-                            peso_unidad: "KG",
-                            descanso_segs: idx === parts.length - 1 ? (ex.descanso_segs || 60) : 0, 
-                            series: ex.series || 3
-                        };
-                    });
-                } else {
-                    const rawReps = ex.reps || ex.repeticiones_ejercicio;
-                    const cleanRepsText = sanitizeRepsText(ex.reps_texto || String(rawReps || "--"), 0);
-                    
-                    items = [{
-                        ejercicio: ex.ejercicio,
-                        reps_target: extractTarget(cleanRepsText),
-                        reps_texto: cleanRepsText,
-                        peso_valor: parseFloat(ex.carga_sugerida) || 0,
-                        peso_unidad: "KG",
-                        series: ex.series || 3,
-                        descanso_segs: ex.descanso_segs || 60
-                    }];
-                }
+        flatRoutine.forEach((ex, idx) => {
+             // Detectar fase
+             const phase = isWarmup(ex) ? 'warmup' : isCooldown(ex) ? 'cooldown' : 'main';
+             
+             // Si es un ejercicio simple, creamos un bloque nuevo
+             const newBlock = {
+                 fase_sesion: phase,
+                 estructura_visual: 'single',
+                 items: [{
+                     ...ex,
+                     reps_target: ex.reps_target ?? parseInt(ex.reps) ?? 0,
+                     reps_texto: ex.reps_texto || String(ex.reps || "--")
+                 }],
+                 descanso_segs: ex.descanso_segs || 60
+             };
+             
+             blocks.push(newBlock);
+        });
 
-                return {
-                    fase_sesion: isWarmup(ex) ? 'warmup' : isCooldown(ex) ? 'cooldown' : 'main',
-                    estructura_visual: isConcatSuperset ? 'superset' : 'single',
-                    items: items
-                };
-            });
-        }
-
-        return [];
+        return blocks;
     }, [currentRoutine]);
 
-    // --- FILTRADO ---
-    const warmupBlocks = normalizedBlocks.filter(isWarmup);
-    const cooldownBlocks = normalizedBlocks.filter(isCooldown);
-    const workoutBlocks = normalizedBlocks.filter(b => !isWarmup(b) && !isCooldown(b));
+    // --- FILTRADO POR FASES ---
+    const warmupBlocks = normalizedBlocks.filter(b => isWarmup(b) || b.fase_sesion === 'warmup');
+    const cooldownBlocks = normalizedBlocks.filter(b => isCooldown(b) || b.fase_sesion === 'cooldown');
+    const workoutBlocks = normalizedBlocks.filter(b => !isWarmup(b) && !isCooldown(b) && b.fase_sesion !== 'warmup' && b.fase_sesion !== 'cooldown');
 
     const [phase, setPhase] = useState(() => {
         if (warmupBlocks.length > 0) return 'warmup';
