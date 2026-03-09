@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// Ajusta la ruta si es necesario (ej: ../../ui/Icon.jsx)
 import { Icon } from '../../ui/Icon.jsx';
 import { Card } from '../../ui/Card.jsx';
 import { InputField } from '../../ui/InputField.jsx';
@@ -8,20 +7,17 @@ import {
   formatRoutineTitle, 
   cleanExerciseTitle,
   isWarmupOrCooldown,
-  normalizeRoutine // Importamos la nueva función
+  normalizeRoutine // NUEVO ADAPTADOR
 } from '../../../utils/helpers.js'; 
 
-// Helper para obtener la duración correcta
 const getDuration = (routine, profile) => {
     if (routine?.duracionEstimada) return routine.duracionEstimada;
     if (profile?.timeAvailable) return `${profile.timeAvailable} min`;
     return "45 min";
 };
 
-// --- 1. BARRA DE PROGRESO SEMANAL ---
 export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex, t }) => {
   const completedDaysCount = completionLog.size;
-
   return (
     <div className="flex items-center justify-between bg-white/5 backdrop-blur rounded-2xl p-4 border border-white/10 shadow-lg mb-6">
         <div className="flex items-center gap-3">
@@ -52,22 +48,17 @@ export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex,
   );
 };
 
-// --- 2. VISTA PREVIA DE EJERCICIOS ---
+// --- VISTA PREVIA (BLINDADA) ---
 export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
-  // ADAPTADOR: Si nos pasan "routineData" (la rutina completa), normalizamos.
-  // Si nos pasan "exercises" directos, usamos eso (legacy).
-  let flatExercises = exercises;
+  // 1. Forzar normalización extrema
+  const normalized = normalizeRoutine(routineData || { rutinaPrincipal: exercises });
+  const flatExercises = normalized.rutinaPrincipal || [];
 
-  if (routineData) {
-      const normalized = normalizeRoutine(routineData);
-      flatExercises = normalized.rutinaPrincipal || [];
-  }
-
-  if (!flatExercises || !Array.isArray(flatExercises) || flatExercises.length === 0) {
+  if (flatExercises.length === 0) {
       return <div className="py-2 text-xs text-slate-500 italic text-center">Detalles disponibles al iniciar.</div>;
   }
 
-  // FILTRO ROBUSTO CENTRALIZADO: Usar el helper isWarmupOrCooldown.
+  // 2. Filtrar calentamiento/enfriamiento
   const filteredExercises = flatExercises.filter(ex => !isWarmupOrCooldown(ex));
 
   const visibleEx = limit ? filteredExercises.slice(0, limit) : filteredExercises;
@@ -77,7 +68,7 @@ export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
     <div className="space-y-2 mt-4 mb-4">
        {visibleEx.map((ex, i) => {
          const bloqueType = (ex.tipo_bloque || ex.bloque || "").toLowerCase();
-         const isSuperset = bloqueType.includes('superserie');
+         const isSuperset = bloqueType.includes('superserie') || ex.estructura_visual === 'superset';
          let content = null;
          
          if (isSuperset) {
@@ -140,21 +131,17 @@ export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
   );
 };
 
-// --- 3. TARJETA PRINCIPAL (HERO) ---
+// --- HERO CARD (BLINDADO) ---
 export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompleted, profile }) => {
-  if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
+  if (!routine) return null;
   
-  const data = routine.routine || routine;
-  // CAMBIO CLAVE: Pasamos 'routineData' en lugar de 'exercises' para que el componente normalice
-  const duration = getDuration(data, profile);
-
-  // EXTRAER TÍTULO DE FORMA ROBUSTA
-  const title = formatRoutineTitle(routine.diaEnfoque || data.diaEnfoque || routine.diaNombre || data.diaNombre || "Sesión de Hoy");
+  const normalized = normalizeRoutine(routine);
+  const title = formatRoutineTitle(normalized.diaEnfoque);
+  const duration = getDuration(normalized, profile);
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-xl p-5 mb-4 group">
        <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none group-hover:bg-teal-500/10 transition-colors duration-500"></div>
-       
        <div className="relative z-10">
            <div className="flex justify-between items-start mb-4">
               <div className="flex-1 mr-2">
@@ -165,12 +152,8 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
               </div>
               <button onClick={(e) => { e.stopPropagation(); onAdjust(); }} className="p-2.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all shadow-lg active:scale-95"><Icon name="settings" className="w-4 h-4" /></button>
            </div>
-           
-           <ExerciseListPreview routineData={data} limit={3} />
-           
-           <button onClick={() => onViewRoutine(routine)} className="w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-teal-500/40 
-               bg-gradient-to-r from-teal-500 to-emerald-600 
-               border-t border-white/20 hover:shadow-teal-400/60 transition-all flex items-center justify-center gap-2">
+           <ExerciseListPreview routineData={routine} limit={3} />
+           <button onClick={() => onViewRoutine(routine)} className="w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-teal-500/40 bg-gradient-to-r from-teal-500 to-emerald-600 border-t border-white/20 hover:shadow-teal-400/60 transition-all flex items-center justify-center gap-2">
                <Icon name="play" className="w-4 h-4 fill-current"/> 
                <span className="tracking-wide text-sm">COMENZAR SESIÓN</span>
            </button>
@@ -179,23 +162,19 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
   );
 };
 
-// --- 4. LISTA DE BIBLIOTECA ---
+// --- LIBRARY LIST (BLINDADO) ---
 export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile }) => {
   const [expandedId, setExpandedId] = useState(null);
-  if (!routines || routines.length === 0) return <div className="text-center py-8 text-xs text-slate-500">No hay opciones extra.</div>;
+  if (!routines || routines.length === 0) return null;
   
   return (
     <div className="space-y-3 pb-20">
        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Otras Opciones</h3>
        {routines.map((r) => {
          const isExpanded = expandedId === r.id;
-         const data = r.routine || r; 
-         
-         // CAMBIO CLAVE: Pasamos 'routineData'
-         const duration = getDuration(data, profile);
-         
-         // EXTRAER TÍTULO DE FORMA ROBUSTA
-         const title = formatRoutineTitle(r.diaEnfoque || data.diaEnfoque || r.diaNombre || data.diaNombre || "Entrenamiento");
+         const normalized = normalizeRoutine(r);
+         const title = formatRoutineTitle(normalized.diaEnfoque);
+         const duration = getDuration(normalized, profile);
 
          return (
            <div key={r.id} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-slate-800 border-teal-500/30 ring-1 ring-teal-500/20' : 'bg-slate-800/40 border-slate-700/50'}`}>
@@ -211,17 +190,14 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
                      <Icon name="chevronDown" className="w-5 h-5" />
                  </div>
               </div>
-              
               {isExpanded && (
                   <div className="px-4 pb-4 animate-fadeIn">
                       <div className="pt-2 border-t border-slate-700/50 mb-4 bg-slate-900/20 rounded-xl p-2">
-                          <ExerciseListPreview routineData={data} limit={99} />
+                          <ExerciseListPreview routineData={r} limit={99} />
                       </div>
                       <div className="flex gap-3 px-1">
                           <button onClick={(e) => { e.stopPropagation(); onAdjust(r); }} className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-bold text-xs hover:bg-slate-700 transition-colors">AJUSTAR</button>
-                          <button onClick={(e) => { e.stopPropagation(); onViewRoutine(r); }} className="flex-[2] py-2.5 rounded-lg font-bold text-xs shadow-lg shadow-teal-500/40 
-                          bg-gradient-to-r from-teal-500 to-emerald-600 
-                          border-t border-white/20 hover:shadow-teal-400/60 transition-all flex items-center justify-center gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); onViewRoutine(r); }} className="flex-[2] py-2.5 rounded-lg font-bold text-xs shadow-lg shadow-teal-500/40 bg-gradient-to-r from-teal-500 to-emerald-600 border-t border-white/20 transition-all flex items-center justify-center gap-2">
                             <Icon name="play" className="w-3 h-3 fill-current"/> INICIAR
                           </button>
                       </div>
@@ -234,7 +210,6 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
   );
 };
 
-// --- 5. MODAL DE AJUSTE ---
 export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdjustNextSession, loading, progressText, lang }) => {
     const t = { timeAvailable: "Tiempo", modality: "Modalidad", noEquipment: "Sin equipo", focusZone: "Zona", processing: "Procesando...", recalcParams: "Recalcular" }; 
     const [selectedMuscles, setSelectedMuscles] = useState([]);
@@ -244,15 +219,12 @@ export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdj
     const toggleMuscle = (m) => {
         const newSelection = selectedMuscles.includes(m) ? selectedMuscles.filter(x => x !== m) : [...selectedMuscles, m];
         setSelectedMuscles(newSelection);
-        if (onProfileChange) {
-            onProfileChange({ target: { name: 'muscleFocus', value: newSelection.join(', ') } });
-        }
+        if (onProfileChange) onProfileChange({ target: { name: 'muscleFocus', value: newSelection.join(', ') } });
     };
     
     const muscleOptions = [ { category: "Grupos", items: ["Tren Superior", "Tren Inferior", "Core", "Full Body"] }, { category: "Músculos", items: ["Glúteos", "Cuádriceps", "Pecho", "Espalda", "Brazos"] } ];
-    
-    // TÍTULO PARA EL MODAL DE AJUSTES
-    const title = nextRoutine.diaEnfoque || nextRoutine.diaNombre || "Ajustar Sesión";
+    const normalized = normalizeRoutine(nextRoutine);
+    const title = normalized?.diaEnfoque || "Ajustar Sesión";
 
     return (
       <Card className="p-6">
@@ -278,11 +250,7 @@ export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdj
                         <div className="flex flex-wrap gap-2.5">
                             {muscleOptions.flatMap(g => g.items).map(muscle => { 
                                 const isSelected = selectedMuscles.includes(muscle); 
-                                return (
-                                    <button key={muscle} onClick={() => toggleMuscle(muscle)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 border hover:scale-105 active:scale-95 ${isSelected ? 'bg-teal-600 border-teal-500 text-white shadow-md shadow-teal-900/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'}`}>
-                                        {muscle}
-                                    </button>
-                                ); 
+                                return <button key={muscle} onClick={() => toggleMuscle(muscle)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 border hover:scale-105 active:scale-95 ${isSelected ? 'bg-teal-600 border-teal-500 text-white shadow-md shadow-teal-900/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}>{muscle}</button>; 
                             })}
                         </div>
                     </div>

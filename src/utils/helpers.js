@@ -1,66 +1,143 @@
 import es from '../../locales/es.json';
 import en from '../../locales/en.json';
 
-// Patched to load translations from JSON files, ensuring updates are reflected.
 export const TRANSLATIONS = { es, en };
 
-// --- Lógica de Normalización (NUEVO) ---
-export const normalizeRoutine = (routineData) => {
-    if (!routineData) return { rutinaPrincipal: [] };
-    
-    // Si ya es la estructura plana antigua, devolver tal cual
-    if (routineData.rutinaPrincipal && Array.isArray(routineData.rutinaPrincipal) && !routineData.bloques) {
-        return routineData;
-    }
+// --- ADAPTADOR UNIVERSAL (BÚSQUEDA AGRESIVA Y DEBUG) ---
+export const normalizeRoutine = (data) => {
+    if (!data) return { rutinaPrincipal: [], diaEnfoque: "Entrenamiento" };
 
-    // Si viene con estructura de bloques (backend nuevo), aplanar
-    if (routineData.bloques && Array.isArray(routineData.bloques)) {
-        const flatExercises = [];
-        
-        routineData.bloques.forEach(bloque => {
-            if (bloque.items && Array.isArray(bloque.items)) {
+    const routine = data.routine || data;
+    const title = routine.diaEnfoque || routine.diaNombre || routine.dia || routine.title || "Entrenamiento";
+    let exercises = [];
+    
+    // DEBUG
+    // console.log("[DEBUG NORMALIZER] Analizando rutina para extraer ejercicios:", JSON.parse(JSON.stringify(routine)));
+
+    // 1. Estructura Antigua (Plana)
+    if (routine.rutinaPrincipal && Array.isArray(routine.rutinaPrincipal) && routine.rutinaPrincipal.length > 0) {
+        exercises = routine.rutinaPrincipal;
+    } 
+    // 2. Estructura Nueva (Bloques)
+    else if (routine.bloques && Array.isArray(routine.bloques)) {
+        routine.bloques.forEach(bloque => {
+            if (bloque.items && Array.isArray(bloque.items) && bloque.items.length > 0) {
                 bloque.items.forEach(item => {
-                    // Propagar propiedades del bloque al item
-                    const enrichedItem = {
+                    exercises.push({
                         ...item,
-                        fase_sesion: bloque.fase_sesion || item.fase_sesion || 'main', // Heredar fase
-                        estructura_visual: bloque.estructura_visual || 'single',
-                        tipo_bloque: bloque.fase_sesion || 'main' // Compatibilidad
-                    };
-                    flatExercises.push(enrichedItem);
+                        fase_sesion: bloque.fase_sesion || item.fase_sesion || 'main',
+                        tipo_bloque: bloque.fase_sesion || 'main'
+                    });
+                });
+            } else if (bloque.ejercicio || bloque.nombre || bloque.nombre_ejercicio) {
+                exercises.push({
+                    ...bloque,
+                    fase_sesion: bloque.fase_sesion || 'main',
+                    tipo_bloque: bloque.fase_sesion || 'main'
                 });
             }
         });
+    } 
+    
+    // 3. Búsqueda Extrema (Fallback)
+    if (exercises.length === 0) {
+        for (const key in routine) {
+            if (Array.isArray(routine[key]) && routine[key].length > 0) {
+                const arr = routine[key];
+                
+                if (typeof arr[0] === 'object' && arr[0] !== null) {
+                    arr.forEach(item => {
+                        // AQUÍ ESTABA EL ERROR: Añadimos 'nombre_ejercicio' a la lista de palabras mágicas
+                        if (item.ejercicio || item.nombre || item.name || item.exercise || item.nombre_ejercicio) {
+                            exercises.push({
+                                ...item,
+                                ejercicio: item.ejercicio || item.nombre_ejercicio || item.nombre || item.name || item.exercise || "Ejercicio"
+                            });
+                        } 
+                        else if (item.items && Array.isArray(item.items)) {
+                            item.items.forEach(sub => exercises.push({
+                                ...sub, 
+                                fase_sesion: item.fase_sesion || item.fase || 'main'
+                            }));
+                        }
+                        else {
+                            const subArrayKey = Object.keys(item).find(k => Array.isArray(item[k]));
+                            if (subArrayKey) {
+                                item[subArrayKey].forEach(sub => {
+                                    if(typeof sub === 'object') {
+                                        exercises.push({
+                                            ...sub,
+                                            fase_sesion: item.fase_sesion || item.fase || item.tipo || 'main'
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    });
 
-        return {
-            ...routineData,
-            rutinaPrincipal: flatExercises
-        };
+                    if (exercises.length > 0) {
+                        break;
+                    }
+                }
+            }
+        }
     }
 
-    return routineData;
+    // NORMALIZACIÓN FINAL DE PROPIEDADES (CRÍTICO)
+    const finalExercises = exercises.map(ex => {
+        // Aseguramos que la fase sea procesable
+        const rawPhase = (ex.fase_sesion || ex.fase || ex.tipo_bloque || ex.bloque || 'main').toLowerCase();
+        let safePhase = 'main';
+        if (rawPhase.includes('warm') || rawPhase.includes('calen')) safePhase = 'warmup';
+        if (rawPhase.includes('cool') || rawPhase.includes('enfria') || rawPhase.includes('calma')) safePhase = 'cooldown';
+
+        return {
+            ...ex,
+            // 💡 CORRECCIÓN PRINCIPAL AQUÍ: Leemos 'nombre_ejercicio'
+            ejercicio: ex.ejercicio || ex.nombre_ejercicio || ex.nombre || ex.name || ex.exercise || "Desconocido",
+            
+            fase_sesion: safePhase,
+            
+            reps_target: ex.reps_target ?? ex.repeticiones ?? ex.reps ?? 0,
+            reps_texto: ex.reps_texto || String(ex.reps_target || ex.repeticiones || ex.reps || "--"),
+            
+            peso_valor: ex.peso_valor ?? ex.carga ?? ex.peso ?? 0,
+            peso_unidad: ex.peso_unidad ?? ex.unidad ?? 'kg',
+            
+            // Si la IA usó 'instrucciones', lo mapeamos a 'tecnica' si existe
+            tecnica: ex.tecnica || ex.instrucciones || null,
+            descanso_segs: ex.descanso_segs || ex.descanso || 60,
+            series: ex.series || 3
+        };
+    });
+
+    // console.log("[DEBUG NORMALIZER FINAL] Array final enviado al componente:", finalExercises);
+
+    return {
+        ...routine,
+        diaEnfoque: title,
+        rutinaPrincipal: finalExercises
+    };
 };
 
 // --- Lógica de clasificación de ejercicios ---
-
-// REFACTORIZADO: Ahora solo se basa en la etiqueta explícita de la fase.
-export const isWarmup = (item) => {
-    if (!item) return false;
-    const phase = (item.fase_sesion || item.tipo_bloque || item.bloque || "").toLowerCase();
-    return phase === 'warmup' || phase === 'calentamiento';
+export const isWarmup = (exercise) => {
+    if (!exercise) return false;
+    const b = (exercise.fase_sesion || exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
+    const name = (exercise.ejercicio || "").toLowerCase();
+    return b === 'warmup' || b === 'calentamiento' || name.includes('calentamiento') || name.includes('warm up');
 };
 
-// REFACTORIZADO: Ahora solo se basa en la etiqueta explícita de la fase.
-export const isCooldown = (item) => {
-    if (!item) return false;
-    const phase = (item.fase_sesion || item.tipo_bloque || item.bloque || "").toLowerCase();
-    return phase === 'cooldown' || phase === 'enfriamiento' || phase === 'vuelta a la calma';
+export const isCooldown = (exercise) => {
+    if (!exercise) return false;
+    const b = (exercise.fase_sesion || exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
+    const name = (exercise.ejercicio || "").toLowerCase();
+    return b === 'cooldown' || b === 'enfriamiento' || b === 'vuelta a la calma' || name.includes('enfriamiento');
 };
 
-export const isWarmupOrCooldown = (item) => {
-    return isWarmup(item) || isCooldown(item);
+export const isWarmupOrCooldown = (exercise) => {
+    return isWarmup(exercise) || isCooldown(exercise);
 };
-
 
 export const calculateSmartRest = (profile, exercise) => {
     let restTime = 60; 
@@ -164,36 +241,23 @@ export const formatRoutineTitle = (title) => {
 
 export const formatRepsDisplay = (input, subIndex = 0) => { 
     if (!input) return "--"; 
-    
-    // Soporte para nueva estructura de items (Superseries)
     if (typeof input === 'object' && input.items && Array.isArray(input.items)) {
-        if (input.items[subIndex]) {
-            return formatRepsDisplay(input.items[subIndex]);
-        }
+        if (input.items[subIndex]) return formatRepsDisplay(input.items[subIndex]);
     }
-
     if (typeof input === 'object' && input !== null) {
         if (input.reps_texto) return String(input.reps_texto);
         if (input.reps_textoA && subIndex === 0) return String(input.reps_textoA);
         if (input.reps_textoB && subIndex === 1) return String(input.reps_textoB);
-        
         const val = input.reps_target ?? input.repeticiones_ejercicio ?? input.reps ?? input.repeticiones ?? "--";
         if (typeof val === 'object') return "--";
         return formatRepsDisplay(val);
     }
-
     const str = String(input);
-
     if (str.length < 20 && !/\d/.test(str)) return str;
-
     let val = str.replace(/segundos?|segun\w*/gi, 'seg').replace(/minutos?|mins?/gi, 'min');
-    
     if (/AMRAP/i.test(val)) return "AMRAP";
-    
     if (/^\d+-\d+$/.test(val)) return val;
-
     if (/min|seg|sec|m\b|s\b/i.test(val)) return val.substring(0, 10); 
-    
     const nums = val.match(/\d+/); 
     return nums ? nums[0] : "--"; 
 };
