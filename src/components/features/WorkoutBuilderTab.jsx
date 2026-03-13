@@ -8,6 +8,7 @@ import { db } from '../../services/firebase';
 
 export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, setActiveTab, handleViewRoutine, setHistory }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [routineToEdit, setRoutineToEdit] = useState(null); // NUEVO: Estado para saber qué rutina editar
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [expandedRoutineId, setExpandedRoutineId] = useState(null); 
     const fileInputRef = useRef(null);
@@ -27,13 +28,30 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
         }
     };
 
-    // FUNCIÓN DE BORRADO - SIN WINDOW.CONFIRM QUE BLOQUEA EL NAVEGADOR
+    const executeEdit = (routine, e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setActiveMenuId(null);
+        setRoutineToEdit(routine);
+        setIsEditing(true);
+    };
+
     const executeDelete = async (routineId, e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log("[DEBUG BORRADO] Iniciando borrado de ID:", routineId);
+        console.log("[DEBUG BORRADO] 1. ID de rutina recibido:", routineId);
 
+        const confirmed = window.confirm("¿Seguro que quieres borrar esta rutina permanentemente?");
+        
+        if (!confirmed) {
+            console.log("[DEBUG BORRADO] 2. Usuario canceló.");
+            setActiveMenuId(null);
+            return;
+        }
+
+        console.log("[DEBUG BORRADO] 3. Usuario confirmó. Iniciando proceso...");
+        
         try {
             if (!routinesColRef) {
                 console.error("[DEBUG BORRADO] ERROR: routinesColRef es nulo.");
@@ -42,17 +60,20 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                 return;
             }
 
-            // Optimistic Update: Borramos visualmente de inmediato
             if (typeof setHistory === 'function') {
-                console.log("[DEBUG BORRADO] Limpiando UI local...");
+                console.log("[DEBUG BORRADO] 4. Limpiando UI local...");
                 setHistory(prevHistory => prevHistory.filter(r => r.id !== routineId));
+            } else {
+                console.warn("[DEBUG BORRADO] ADVERTENCIA: setHistory no es una función.");
             }
 
-            console.log("[DEBUG BORRADO] Ejecutando deleteDoc...");
+            console.log("[DEBUG BORRADO] 5. Creando referencia a Firebase...");
             const docRefToDelete = doc(routinesColRef, routineId);
+            
+            console.log("[DEBUG BORRADO] 6. Enviando orden de borrado a Firebase...");
             await deleteDoc(docRefToDelete);
             
-            console.log("[DEBUG BORRADO] Firebase confirmó el borrado. ¡ÉXITO!");
+            console.log("[DEBUG BORRADO] 7. Firebase confirmó el borrado. ¡ÉXITO!");
             
         } catch (error) {
             console.error("[DEBUG BORRADO] ERROR FATAL en try/catch:", error);
@@ -165,15 +186,22 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
         }
     };
 
+    const closeEditor = () => {
+        setIsEditing(false);
+        setRoutineToEdit(null); // Limpiar la rutina a editar al cerrar
+    };
+
 
     if (isEditing) {
         return (
             <RoutineEditor 
                 t={t} 
-                onClose={() => setIsEditing(false)} 
+                onClose={closeEditor} 
                 routinesColRef={routinesColRef}
                 userId={userId}
                 setActiveTab={setActiveTab}
+                initialRoutine={routineToEdit} // Pasamos la rutina a editar
+                setHistory={setHistory}
             />
         );
     }
@@ -187,7 +215,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
 
             <div className="grid grid-cols-2 gap-3 mb-8">
                 <button 
-                    onClick={() => setIsEditing(true)}
+                    onClick={() => { setRoutineToEdit(null); setIsEditing(true); }}
                     className="flex flex-col items-center justify-center gap-2 p-4 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl hover:bg-indigo-600/30 transition-colors group"
                 >
                     <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -272,9 +300,13 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                                                     <Icon name="settings" className="w-4 h-4" />
                                                 </button>
 
+                                                {/* Menú Desplegable con BOTÓN EDITAR */}
                                                 {isMenuOpen && (
                                                     <div className="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-[100] overflow-hidden animate-fadeIn">
-                                                        <button onClick={(e) => executeDuplicate(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3">
+                                                        <button onClick={(e) => executeEdit(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3">
+                                                            <Icon name="settings" className="w-4 h-4 text-slate-400" /> Editar
+                                                        </button>
+                                                        <button onClick={(e) => executeDuplicate(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3 border-t border-slate-700/50">
                                                             <Icon name="copy" className="w-4 h-4 text-slate-400" /> Duplicar
                                                         </button>
                                                         <button onClick={(e) => executeExport(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3 border-t border-slate-700/50">
