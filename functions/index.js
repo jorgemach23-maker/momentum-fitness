@@ -152,7 +152,7 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
         "3. Calcula los descansos según el objetivo (Fuerza=180s, Hipertrofia=90s, Metabolico=60s).\n" +
         "4. En superseries, el 'descanso_segs' del primer ejercicio debe ser 0.\n" +
         "5. Cargas sugeridas ('peso_valor') deben ser realistas según el perfil de fuerza.\n" +
-        "6. Calcula la duracion de las rutinas incluyendo 'warmup' y 'cooldown' tomando como limite maximo el determinado en Logística ('profile.timeAvailable').\n" +
+        "6. Esta prohibido que la duracion de las rutinas incluyendo 'warmup' y 'cooldown' sea mayor el determinado en Logística ('profile.timeAvailable').\n" +
         "7. La estructura final DEBE seguir el esquema JSON proporcionado. No inventes propiedades nuevas.";
 
     try {

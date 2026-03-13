@@ -1,0 +1,62 @@
+[
+  {
+    "id": "e_bench_press",
+    "name": "Press de Banca",
+    "category": "Pecho",
+    "equipment": "Barra"
+  },
+  {
+    "id": "e_squat",
+    "name": "Sentadilla Libre",
+    "category": "Pierna",
+    "equipment": "Barra"
+  },
+  {
+    "id": "e_deadlift",
+    "name": "Peso Muerto",
+    "category": "Pierna",
+    "equipment": "Barra"
+  },
+  {
+    "id": "e_pullup",
+    "name": "Dominadas",
+    "category": "Espalda",
+    "equipment": "Peso Corporal"
+  },
+  {
+    "id": "e_pushup",
+    "name": "Flexiones",
+    "category": "Pecho",
+    "equipment": "Peso Corporal"
+  },
+  {
+    "id": "e_shoulder_press",
+    "name": "Press Militar",
+    "category": "Hombros",
+    "equipment": "Mancuernas"
+  },
+  {
+    "id": "e_bicep_curl",
+    "name": "Curl de Bíceps",
+    "category": "Brazos",
+    "equipment": "Mancuernas"
+  },
+  {
+    "id": "e_tricep_extension",
+    "name": "Extensión de Tríceps",
+    "category": "Brazos",
+    "equipment": "Polea"
+  },
+  {
+    "id": "e_ab_wheel",
+    "name": "Ab Wheel",
+    "category": "Core",
+    "equipment": "Rueda"
+  },
+  {
+    "id": "e_plank",
+    "name": "Plancha",
+    "category": "Core",
+    "equipment": "Peso Corporal"
+  }
+]

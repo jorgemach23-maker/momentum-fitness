@@ -3,7 +3,7 @@ import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithE
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, serverTimestamp, query, writeBatch, Timestamp, deleteDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { buildHistoryContext, TRANSLATIONS, calculateSmartRest } from '../utils/helpers';
-import { fetchGeminiWeeklyPlan, fetchGeminiBioageAnalysis } from '../services/gemini';
+import { fetchGeminiWeeklyPlan, fetchGeminiBioageAnalysis, fetchGeminiSessionAdjustment } from '../services/gemini';
 
 // --- Force Hot-Reload ---
 const appId = (typeof __app_id !== 'undefined' ? __app_id : 'momentum-fitness-ai').replace(/[/.]/g, '_');
@@ -181,6 +181,7 @@ const useProfile = (userId, isAuthReady, t) => {
     
     return { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef };
 };
+
 const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive) => {
     const [history, setHistory] = useState([]);
     
@@ -281,9 +282,9 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         setProgressText(t.recalcParams);
 
         try {
-            // const adjustedRoutine = await fetchGeminiSessionAdjustment(profile, routine, adjustments, language);
-            const adjustedRoutine = routine; // Placeholder since the function is removed
-             if (!adjustedRoutine || typeof adjustedRoutine !== 'object' || !adjustedRoutine.rutinaPrincipal) {
+            const adjustedRoutine = await fetchGeminiSessionAdjustment(profile, routine, adjustments, language);
+            
+             if (!adjustedRoutine || typeof adjustedRoutine !== 'object') {
                 throw new Error("La IA no generó un ajuste válido. Por favor, inténtalo de nuevo.");
             }
 
@@ -378,6 +379,7 @@ export const useAppLogic = () => {
     const { userId, isAnonymous, isAuthReady, authError, setAuthError, handleSignIn, handleSignUp, handleAnonymousSignIn, handleSignOut, handleLinkAccount, handlePasswordReset } = useAuth(t);
     const { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef } = useProfile(userId, isAuthReady, t);
     const [error, setError] = useState(null);
+    // AQUÍ ESTÁ routinesColRef extraído del hook useHistory
     const { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, routinesColRef } = useHistory(userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive);
     const [linkAccountError, setLinkAccountError] = useState(null);
 
@@ -622,6 +624,8 @@ export const useAppLogic = () => {
         userId, isAuthReady, authError, isAnonymous, linkAccountError, isSignOutWarningVisible,
         profile, bioageLoading, profileSuccess, profileError,
         history, generationProgress, error: combinedError,
+        // ¡LA PIEZA FALTANTE! Añadimos routinesColRef a los valores exportados
+        routinesColRef,
         toggleLanguage, setActiveTab, handleScroll, setProgressText, setShowAdjustment, setAuthError, setIsSignOutWarningVisible,
         onSignIn: handleSignIn,
         onSignUp: handleSignUp,

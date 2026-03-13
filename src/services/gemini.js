@@ -49,3 +49,18 @@ export const fetchGeminiBioageAnalysis = async (profile, lang) => {
         return { error: "No se pudo generar el análisis de BioAge." };
     }
 };
+
+// --- FUNCIÓN DE AJUSTE DE SESIÓN (RESTABLECIDA) ---
+export const fetchGeminiSessionAdjustment = async (profile, routine, adjustments, lang) => {
+    const functions = getFunctions();
+    const adjustSession = httpsCallable(functions, 'adjustSession');
+    try {
+        console.log("LLAMANDO A AJUSTAR SESIÓN...", { routine, adjustments });
+        const result = await adjustSession({ profile, routine, adjustments, lang });
+        console.log("RESPUESTA AJUSTE:", result.data);
+        return result.data;
+    } catch (error) {
+        console.error("Error al llamar a la Cloud Function 'adjustSession':", error);
+        return null;
+    }
+};

@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAppLogic } from './hooks/useAppLogic';
-import { useBackButtonHandler } from './hooks/useBackButtonHandler'; // Import the new hook
+import { useBackButtonHandler } from './hooks/useBackButtonHandler';
 import TrainingTab from './components/features/TrainingTab';
 import HistoryTab from './components/features/HistoryTab';
 import ProfileTab from './components/features/ProfileTab';
+import WorkoutBuilderTab from './components/features/WorkoutBuilderTab'; // Importaremos este nuevo componente pronto
 import { Auth } from './components/features/Auth';
 import ActiveSession from './components/features/training/ActiveSession';
 import { Icon } from './components/ui/Icon';
@@ -180,19 +181,34 @@ export default function App() {
                     <main className="flex-1 overflow-y-auto overflow-x-hidden minimal-scrollbar pt-16" onScroll={handleScroll}>
                         <div className="max-w-md mx-auto px-4 md:px-0 pb-32">
                             {activeTab === 'training' && <TrainingTab {...appLogic} />}
+                            {activeTab === 'builder' && <WorkoutBuilderTab {...appLogic} />}
                             {activeTab === 'history' && <HistoryTab {...appLogic} onRepeatSession={onRepeatSession} />}
                             {activeTab === 'profile' && <ProfileTab {...appLogic} />}
                         </div>
                     </main>
 
-                    <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none px-4">
-                        <nav className="bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-8 pointer-events-auto">
-                            {['training', 'history', 'profile'].map(tab => {
+                    <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none px-4 z-50">
+                        <nav className="bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-6 sm:gap-8 pointer-events-auto">
+                            {/* NUEVO ORDEN DE TABS: training -> builder -> history -> profile */}
+                            {['training', 'builder', 'history', 'profile'].map(tab => {
                                 const isActive = activeTab === tab;
-                                const icons = { training: 'target', history: 'list', profile: 'user' };
+                                const icons = { training: 'target', builder: 'plus', history: 'list', profile: 'user' };
+                                
+                                // Estilo especial para el botón "Nuevo" (Builder)
+                                const isBuilder = tab === 'builder';
+                                
                                 return (
-                                    <button key={tab} onClick={() => setActiveTab(tab)} className={`relative p-3 rounded-full transition-all duration-300 group ${isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 -translate-y-2 scale-110' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}>
-                                        <Icon name={icons[tab]} className="w-6 h-6" />
+                                    <button 
+                                        key={tab} 
+                                        onClick={() => setActiveTab(tab)} 
+                                        className={`relative p-3 rounded-full transition-all duration-300 flex items-center justify-center
+                                            ${isActive && !isBuilder ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 -translate-y-2 scale-110' : ''}
+                                            ${!isActive && !isBuilder ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : ''}
+                                            ${isBuilder && isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 -translate-y-2 scale-110' : ''}
+                                            ${isBuilder && !isActive ? 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10' : ''}
+                                        `}
+                                    >
+                                        <Icon name={icons[tab]} className={`w-6 h-6 ${isBuilder && !isActive ? 'drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : ''}`} />
                                     </button>
                                 );
                             })}
