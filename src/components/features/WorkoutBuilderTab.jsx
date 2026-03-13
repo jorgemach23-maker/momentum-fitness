@@ -1,27 +1,25 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Icon } from '../ui/Icon';
-import { Card } from '../ui/LayoutComponents';
 import { RoutineEditor } from './workout-builder/RoutineEditor';
 import { ExerciseListPreview } from './training/TrainingUI';
 import { formatRoutineTitle, normalizeRoutine } from '../../utils/helpers';
 import { doc, deleteDoc, setDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { db } from '../../services/firebase'; 
 
-export default function WorkoutBuilderTab({ t, history, setHistory, routinesColRef, userId, setActiveTab, handleViewRoutine }) {
+export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, setActiveTab, handleViewRoutine, setHistory }) {
     const [isEditing, setIsEditing] = useState(false);
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [expandedRoutineId, setExpandedRoutineId] = useState(null); 
     const fileInputRef = useRef(null);
 
-    // Filtrar solo las rutinas creadas manualmente
     const customRoutines = useMemo(() => {
         return history
             .filter(r => r.type === 'custom')
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [history]);
 
-    // --- ACCIONES DE RUTINA ---
-
-    const handleStartRoutine = (routine, e) => {
+    const executeStart = (routine, e) => {
+        e.preventDefault();
         e.stopPropagation(); 
         if (handleViewRoutine) {
             handleViewRoutine(routine);
@@ -29,37 +27,62 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
         }
     };
 
-    const handleDeleteRoutine = async (routineId, e) => {
-        e.stopPropagation(); 
-        if (window.confirm("¿Seguro que quieres borrar esta rutina de forma permanente?")) {
-            try {
-                // Borrar solo de Firebase. El listener en tiempo real actualizará la UI automáticamente.
-                if (routinesColRef && routineId) {
-                    await deleteDoc(doc(routinesColRef, routineId));
-                }
-            } catch (error) {
-                console.error("Error borrando rutina:", error);
-                alert("Error al borrar la rutina en la base de datos.");
+    // FUNCIÓN DE BORRADO - SIN WINDOW.CONFIRM QUE BLOQUEA EL NAVEGADOR
+    const executeDelete = async (routineId, e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log("[DEBUG BORRADO] Iniciando borrado de ID:", routineId);
+
+        try {
+            if (!routinesColRef) {
+                console.error("[DEBUG BORRADO] ERROR: routinesColRef es nulo.");
+                alert("Error crítico: Falta referencia a la base de datos.");
+                setActiveMenuId(null);
+                return;
             }
+
+            // Optimistic Update: Borramos visualmente de inmediato
+            if (typeof setHistory === 'function') {
+                console.log("[DEBUG BORRADO] Limpiando UI local...");
+                setHistory(prevHistory => prevHistory.filter(r => r.id !== routineId));
+            }
+
+            console.log("[DEBUG BORRADO] Ejecutando deleteDoc...");
+            const docRefToDelete = doc(routinesColRef, routineId);
+            await deleteDoc(docRefToDelete);
+            
+            console.log("[DEBUG BORRADO] Firebase confirmó el borrado. ¡ÉXITO!");
+            
+        } catch (error) {
+            console.error("[DEBUG BORRADO] ERROR FATAL en try/catch:", error);
+            alert("Ocurrió un error al borrar. Revisa la consola.");
+        } finally {
+            setActiveMenuId(null);
         }
-        setActiveMenuId(null);
     };
 
-    const handleDuplicateRoutine = async (routine, e) => {
+    const executeDuplicate = async (routine, e) => {
+        e.preventDefault();
         e.stopPropagation();
+        setActiveMenuId(null); 
+        
         try {
-            if (!routinesColRef) return;
+            if (!routinesColRef) {
+                alert("Error: Base de datos no conectada.");
+                return;
+            }
+            
             const newDocRef = doc(routinesColRef); 
 
             const duplicatedRoutine = {
                 ...routine,
                 diaEnfoque: `${routine.diaEnfoque} (Copia)`,
                 createdAt: serverTimestamp(),
-                status: 'pending'
+                status: 'pending',
+                id: newDocRef.id
             };
-            delete duplicatedRoutine.id; // Remover ID antiguo
 
-            // Guardar en Firestore. No llamamos a setHistory, Firebase lo hará por nosotros.
             await setDoc(newDocRef, duplicatedRoutine);
             alert("Rutina duplicada con éxito.");
             
@@ -67,13 +90,13 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
             console.error("Error duplicando rutina:", error);
             alert("Error al duplicar la rutina.");
         }
-        setActiveMenuId(null);
     };
 
-    // --- EXPORTAR E IMPORTAR ---
-
-    const handleExportRoutine = (routine, e) => {
+    const executeExport = (routine, e) => {
+        e.preventDefault();
         e.stopPropagation();
+        setActiveMenuId(null); 
+        
         const exportData = {
             version: 1,
             source: "MomentumFitness",
@@ -96,8 +119,6 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-        setActiveMenuId(null);
     };
 
     const handleImportFileChange = async (event) => {
@@ -117,17 +138,17 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
                 if (!routinesColRef) throw new Error("Base de datos no conectada.");
 
                 const newDocRef = doc(routinesColRef);
+
                 const importedRoutine = {
                     diaEnfoque: data.payload.diaEnfoque,
                     rutinaPrincipal: data.payload.rutinaPrincipal,
                     type: 'custom',
                     status: 'pending',
-                    createdAt: serverTimestamp()
+                    createdAt: serverTimestamp(),
+                    id: newDocRef.id
                 };
 
-                // Guardar en Firestore. Firebase lo inyectará en la UI.
                 await setDoc(newDocRef, importedRoutine);
-
                 alert("¡Rutina importada con éxito!");
             } catch (error) {
                 console.error("Error importando:", error);
@@ -152,9 +173,6 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
                 onClose={() => setIsEditing(false)} 
                 routinesColRef={routinesColRef}
                 userId={userId}
-                // ¡TRUCO MAGISTRAL! No pasamos setHistory a RoutineEditor.
-                // Así obligamos al editor a depender de Firebase Realtime para actualizar la UI,
-                // eliminando el error de duplicidad al crear.
                 setActiveTab={setActiveTab}
             />
         );
@@ -167,7 +185,6 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
                 Laboratorio de Rutinas
             </h2>
 
-            {/* SECCIÓN 1: CONTROLES SUPERIORES */}
             <div className="grid grid-cols-2 gap-3 mb-8">
                 <button 
                     onClick={() => setIsEditing(true)}
@@ -197,7 +214,6 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
                 </button>
             </div>
 
-            {/* SECCIÓN 2: MIS RUTINAS CREADAS (ACORDEÓN) */}
             <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 mb-4 flex items-center gap-2">
                     <Icon name="layers" className="w-4 h-4" />
@@ -207,23 +223,26 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
                 {customRoutines.length > 0 ? (
                     <div className="space-y-3">
                         {customRoutines.map(routine => {
-                            const key = routine.id || `fallback-${Math.random()}`;
                             const isExpanded = expandedRoutineId === routine.id;
                             const normalized = normalizeRoutine(routine);
                             const title = formatRoutineTitle(normalized.diaEnfoque);
                             const isMenuOpen = activeMenuId === routine.id;
 
+                            const robustKey = `routine-${routine.id || Math.random()}`;
+
                             return (
-                                <Card 
-                                    key={key} 
-                                    // CORRECCIÓN Z-INDEX: Elevamos la tarjeta cuando su menú está abierto
-                                    style={{ zIndex: isMenuOpen ? 50 : 10 }}
-                                    className={`p-0 overflow-visible relative transition-all duration-300 ${isExpanded ? 'border-indigo-500/30 ring-1 ring-indigo-500/20 bg-slate-800/80' : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'}`}
+                                <div 
+                                    key={robustKey} 
+                                    className={`relative rounded-2xl border transition-all duration-300 
+                                        ${isMenuOpen ? 'z-50' : 'z-10'} 
+                                        ${isExpanded ? 'border-indigo-500/30 ring-1 ring-indigo-500/20 bg-slate-800/80' : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'}
+                                    `}
                                 >
-                                    {/* Header Colapsable */}
                                     <div 
                                         className="p-4 flex justify-between items-center cursor-pointer"
-                                        onClick={() => setExpandedRoutineId(isExpanded ? null : routine.id)}
+                                        onClick={() => {
+                                            if (!isMenuOpen) setExpandedRoutineId(isExpanded ? null : routine.id);
+                                        }}
                                     >
                                         <div className="flex items-center gap-3 overflow-hidden">
                                             <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isExpanded ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
@@ -233,54 +252,58 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
                                         </div>
                                         
                                         <div className="flex items-center gap-2 shrink-0">
-                                            {/* Botón Iniciar Rápido */}
                                             <button 
-                                                onClick={(e) => handleStartRoutine(routine, e)}
+                                                onClick={(e) => executeStart(routine, e)}
                                                 className="p-2 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500 hover:text-white transition-colors"
                                                 title="Iniciar"
                                             >
                                                 <Icon name="play" className="w-4 h-4" />
                                             </button>
 
-                                            {/* Botón Menú (Engranaje) */}
                                             <div className="relative">
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : routine.id); }}
+                                                    onClick={(e) => { 
+                                                        e.preventDefault();
+                                                        e.stopPropagation(); 
+                                                        setActiveMenuId(isMenuOpen ? null : routine.id); 
+                                                    }}
                                                     className={`p-2 rounded-lg transition-colors ${isMenuOpen ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
                                                 >
                                                     <Icon name="settings" className="w-4 h-4" />
                                                 </button>
 
-                                                {/* Menú Desplegable con Z-INDEX ALTO */}
                                                 {isMenuOpen && (
-                                                    <div className="absolute right-0 top-10 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-[100] overflow-hidden animate-fadeIn">
-                                                        <button onClick={(e) => handleDuplicateRoutine(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3">
+                                                    <div className="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-[100] overflow-hidden animate-fadeIn">
+                                                        <button onClick={(e) => executeDuplicate(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3">
                                                             <Icon name="copy" className="w-4 h-4 text-slate-400" /> Duplicar
                                                         </button>
-                                                        <button onClick={(e) => handleExportRoutine(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3 border-t border-slate-700/50">
+                                                        <button onClick={(e) => executeExport(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3 border-t border-slate-700/50">
                                                             <Icon name="upload" className="w-4 h-4 text-slate-400" /> Exportar
                                                         </button>
-                                                        <button onClick={(e) => handleDeleteRoutine(routine.id, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-3 border-t border-slate-700/50">
+                                                        
+                                                        {/* BOTON DE BORRAR */}
+                                                        <button 
+                                                            onClick={(e) => executeDelete(routine.id, e)} 
+                                                            className="w-full text-left px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-3 border-t border-slate-700/50"
+                                                        >
                                                             <Icon name="close" className="w-4 h-4 text-red-400" /> Borrar
                                                         </button>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Icono de Colapso */}
                                             <Icon name={isExpanded ? "chevronUp" : "chevronDown"} className="w-4 h-4 text-slate-500 ml-1" />
                                         </div>
                                     </div>
                                     
-                                    {/* Contenido Expandible */}
                                     {isExpanded && (
-                                        <div className="animate-fadeIn border-t border-slate-700/50 bg-slate-900/50">
+                                        <div className="animate-fadeIn border-t border-slate-700/50 bg-slate-900/50 rounded-b-2xl">
                                             <div className="p-4">
                                                 <ExerciseListPreview routineData={routine} limit={99} />
                                             </div>
-                                            <div className="p-3 bg-slate-800/80">
+                                            <div className="p-3 bg-slate-800/80 rounded-b-2xl">
                                                 <button 
-                                                    onClick={(e) => handleStartRoutine(routine, e)}
+                                                    onClick={(e) => executeStart(routine, e)}
                                                     className="w-full flex justify-center items-center gap-2 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg shadow-teal-900/20 active:scale-95 uppercase tracking-wide"
                                                 >
                                                     <Icon name="play" className="w-4 h-4" />
@@ -289,7 +312,7 @@ export default function WorkoutBuilderTab({ t, history, setHistory, routinesColR
                                             </div>
                                         </div>
                                     )}
-                                </Card>
+                                </div>
                             );
                         })}
                     </div>
