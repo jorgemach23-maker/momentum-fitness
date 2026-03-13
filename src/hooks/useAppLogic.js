@@ -88,7 +88,7 @@ const useAuth = (t) => {
 const useProfile = (userId, isAuthReady, t) => {
     const defaultProfile = { gender: 'Hombre', age: 30, height: 175, weight: 75, bodyFat: 15, muscleMass: 40, daysPerWeek: 3, mainGoal: 'Perder grasa corporal', experienceLevel: 'Intermedio', injuries: '', muscleFocus: 'recomendado', timeAvailable: 45, currentPlanId: null, bioage: {}, bioageEstimation: null, menstrualCycle: { lastPeriod: '', cycleLength: 28 } };
     const [profile, setProfile] = useState(defaultProfile);
-    const [savedProfile, setSavedProfile] = useState(defaultProfile); // Guarda el estado del perfil en Firestore
+    const [savedProfile, setSavedProfile] = useState(defaultProfile); 
     const [profileSuccess, setProfileSuccess] = useState(null);
     const [profileError, setProfileError] = useState(null);
     const [bioageLoading, setBioageLoading] = useState(false);
@@ -111,7 +111,7 @@ const useProfile = (userId, isAuthReady, t) => {
                         const data = docSnap.data();
                         const fullProfile = { ...defaultProfile, ...data, bioage: data.bioage || {}, bioageEstimation: data.bioageEstimation || null, menstrualCycle: data.menstrualCycle || { lastPeriod: '', cycleLength: 28 } };
                         setProfile(fullProfile);
-                        setSavedProfile(fullProfile); // Inicializa el perfil guardado
+                        setSavedProfile(fullProfile); 
                     } else {
                         await setDoc(profileDocRef, defaultProfile);
                         setProfile(defaultProfile);
@@ -146,16 +146,15 @@ const useProfile = (userId, isAuthReady, t) => {
     const handleProfileSave = useCallback(async (updatedProfile) => {
         if (!profileDocRef || !updatedProfile) return;
         
-        // Compara el perfil a guardar con el último perfil guardado
         if (deepEqual(updatedProfile, savedProfile)) {
-            return; // No hay cambios, no se guarda
+            return; 
         }
 
         setProfileError(null);
         setProfileSuccess(null);
         try {
             await setDoc(profileDocRef, updatedProfile, { merge: true });
-            setSavedProfile(updatedProfile); // Actualiza el perfil guardado
+            setSavedProfile(updatedProfile); 
             setProfileSuccess(t.msgProfileSaved);
         } catch (e) {
             setProfileError(t.errorSave);
@@ -169,8 +168,7 @@ const useProfile = (userId, isAuthReady, t) => {
         try {
             const result = await fetchGeminiBioageAnalysis(currentProfile, language);
             const updatedProfile = { ...currentProfile, bioageEstimation: result };
-            setProfile(updatedProfile); // Actualiza el estado local inmediatamente
-            // El guardado se gestionará al cambiar de pestaña
+            setProfile(updatedProfile); 
         } catch (err) {
             console.error(err);
             setProfileError("Error al calcular BioAge.");
@@ -212,14 +210,14 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         if (!routinesColRef || !profileDocRef) return;
         setLoading(true);
         setError(null);
-        setGenerationProgress(0); // Reset progress
+        setGenerationProgress(0); 
         const progressSteps = [t.analyzing, t.designing, t.optimizing, t.finalizing];
         let step = 0;
         setProgressText(progressSteps[step]);
         const progressInterval = setInterval(() => {
             step = (step + 1) % progressSteps.length;
             setProgressText(progressSteps[step]);
-            setGenerationProgress(prev => Math.min(prev + 10, 90)); // Simulate progress
+            setGenerationProgress(prev => Math.min(prev + 10, 90)); 
         }, 2500);
 
         try {
@@ -251,11 +249,10 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             });
             
             await setDoc(profileDocRef, { currentPlanId: newPlanId }, { merge: true });
-            newBatch.commit(); // Commit before updating local state
+            newBatch.commit(); 
             
             setProfile(prev => ({ ...prev, currentPlanId: newPlanId }));
 
-            // Force manual refresh to avoid race condition
             const updatedSnapshot = await getDocs(query(routinesColRef));
             const newHistory = updatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setHistory(newHistory);
@@ -312,35 +309,31 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         setError(null);
         
         try {
-            // Create a new ID for the repeated routine
             const newRoutineId = doc(routinesColRef).id;
             const newRoutine = {
                 ...routineToRepeat,
-                id: newRoutineId, // Assign new ID
-                status: 'pending', // Reset status to pending
-                createdAt: serverTimestamp(), // New creation timestamp
-                completedAt: null, // Clear completion data
+                id: newRoutineId, 
+                status: 'pending', 
+                createdAt: serverTimestamp(), 
+                completedAt: null, 
                 feedback: null,
                 notes: null,
                 mode: null,
-                planId: routineToRepeat.planId || `repeated_${Date.now()}` // Keep planId or generate a new one
+                planId: routineToRepeat.planId || `repeated_${Date.now()}` 
             };
 
-            // Remove properties that should not be copied or need to be regenerated
             delete newRoutine.completedOnDay;
             delete newRoutine.modifiedAt;
             
             const routineRef = doc(routinesColRef, newRoutineId);
-            await setDoc(routineRef, newRoutine); // Save the new routine to Firestore
+            await setDoc(routineRef, newRoutine); 
 
-            // Update local history state
             setHistory(prevHistory => [...prevHistory, newRoutine]);
 
-            // Start the new session
             setCurrentRoutineId(newRoutineId);
             setView('routine');
             setIsSessionActive(true);
-            setSuccessMessage(t.msgSessionRepeat); // Need to add this translation
+            setSuccessMessage(t.msgSessionRepeat); 
             
         } catch (err) {
             console.error("Error repeating session:", err);
@@ -351,6 +344,7 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         }
     }, [routinesColRef, setHistory, setCurrentRoutineId, setView, setIsSessionActive, t]);
 
+    // AQUÍ ES DONDE EXPORTAMOS setHistory PARA QUE LLEGUE AL BUILDER
     return { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, routinesColRef };
 };
 
@@ -368,7 +362,6 @@ export const useAppLogic = () => {
     const [isSignOutWarningVisible, setIsSignOutWarningVisible] = useState(false);
     const [generationProgress, setGenerationProgress] = useState(0);
 
-    // Declaraciones de estado para la sesión activa movidas aquí
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [sessionSeconds, setSessionSeconds] = useState(0);
     const [restSeconds, setRestSeconds] = useState(0);
@@ -379,10 +372,10 @@ export const useAppLogic = () => {
     const { userId, isAnonymous, isAuthReady, authError, setAuthError, handleSignIn, handleSignUp, handleAnonymousSignIn, handleSignOut, handleLinkAccount, handlePasswordReset } = useAuth(t);
     const { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef } = useProfile(userId, isAuthReady, t);
     const [error, setError] = useState(null);
-    // AQUÍ ESTÁ routinesColRef extraído del hook useHistory
+    
+    // EXTRAEMOS setHistory DE AQUÍ
     const { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, routinesColRef } = useHistory(userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive);
     const [linkAccountError, setLinkAccountError] = useState(null);
-
 
     const [scrolled, setScrolled] = useState(false);
     const headerRef = useRef(null);
@@ -468,10 +461,9 @@ export const useAppLogic = () => {
         handleSignOut();
     }, [handleSignOut]);
 
-    // Modified handleSaveAndSignOut to navigate to profile tab
     const handleSaveAndSignOut = useCallback(() => {
         setIsSignOutWarningVisible(false);
-        setActiveTab('profile'); // Navigate to profile tab so user can create an account and save data
+        setActiveTab('profile'); 
     }, [setActiveTab]);
 
     const handleViewRoutine = useCallback((routine) => {
@@ -499,7 +491,7 @@ export const useAppLogic = () => {
 
         const completedRoutineData = {
             status: 'completed',
-            completedAt: Timestamp.now(), // Use Timestamp.now() for local state
+            completedAt: Timestamp.now(), 
             feedback,
             notes,
             mode,
@@ -519,7 +511,7 @@ export const useAppLogic = () => {
 
         try {
             const routineRef = doc(routinesColRef, routineId);
-            await setDoc(routineRef, { ...completedRoutineData, completedAt: serverTimestamp() }, { merge: true }); // Use serverTimestamp() for Firestore
+            await setDoc(routineRef, { ...completedRoutineData, completedAt: serverTimestamp() }, { merge: true }); 
         } catch (e) {
             console.error("Error saving feedback to Firebase:", e);
             setError(t.errorHistorySave);
@@ -624,15 +616,15 @@ export const useAppLogic = () => {
         userId, isAuthReady, authError, isAnonymous, linkAccountError, isSignOutWarningVisible,
         profile, bioageLoading, profileSuccess, profileError,
         history, generationProgress, error: combinedError,
-        // ¡LA PIEZA FALTANTE! Añadimos routinesColRef a los valores exportados
-        routinesColRef,
+        routinesColRef, 
+        setHistory, // <--- ¡AQUÍ ESTÁ LA SOLUCIÓN! Exportamos setHistory.
         toggleLanguage, setActiveTab, handleScroll, setProgressText, setShowAdjustment, setAuthError, setIsSignOutWarningVisible,
         onSignIn: handleSignIn,
         onSignUp: handleSignUp,
         onAnonymousSignIn: handleAnonymousSignIn,
         onSignOut: onSignOut,
         onForceSignOut: handleForceSignOut,
-        onSaveAndSignOut: handleSaveAndSignOut, // Export the new handler
+        onSaveAndSignOut: handleSaveAndSignOut,
         onLinkAccount,
         onPasswordReset,
         handleViewRoutine, handleBackToMain, handleRoutineFeedback, handleExerciseComplete, setRestSeconds, setIsSessionActive,
