@@ -8,6 +8,7 @@ const TrainingTab = ({
     onProfileChange,
     onGeneratePlan,
     onAdjustNextSession,
+    onCopyToMyWorkouts, // Nueva prop
     loading,
     successMessage,
     errorMessage,
@@ -30,7 +31,6 @@ const TrainingTab = ({
         return t.finalizing;
     }, [generationProgress, t]);
 
-    // Helper: Detectar grupos musculares predominantes
     const getMuscleGroups = (title = "") => {
         const t = title.toLowerCase();
         const groups = new Set();
@@ -41,14 +41,12 @@ const TrainingTab = ({
         return groups;
     };
 
-    // 1. Obtener todas las rutinas de la semana actual
     const currentWeekRoutines = useMemo(() =>
         history
             .filter(r => r.planId === currentPlanId && r.status !== 'archived_history')
             .sort((a, b) => a.weekDay - b.weekDay)
     , [history, currentPlanId]);
 
-    // 2. Identificar la última rutina completada globalmente para saber qué descansar
     const lastCompleted = useMemo(() =>
         history
             .filter(r => r.status === 'completed')
@@ -59,7 +57,6 @@ const TrainingTab = ({
             })[0]
     , [history]);
 
-    // 3. Lógica de Recomendación Inteligente
     const { recommendedRoutine, libraryRoutines } = useMemo(() => {
         const pending = currentWeekRoutines.filter(r => r.status === 'pending');
         if (pending.length === 0) return { recommendedRoutine: null, libraryRoutines: [], pendingRoutines: [] };
@@ -77,13 +74,11 @@ const TrainingTab = ({
         return { recommendedRoutine: recommended, libraryRoutines: library };
     }, [currentWeekRoutines, lastCompleted]);
 
-    // LÓGICA CORREGIDA: completionLog se basa en la semana actual, no en el planId
     const completionLog = useMemo(() => {
         const log = new Map();
         const today = new Date();
-        const dayOfWeek = (today.getDay() + 6) % 7; // Lunes=0, Domingo=6
+        const dayOfWeek = (today.getDay() + 6) % 7; 
         
-        // Clonar para no mutar la fecha original
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - dayOfWeek);
         startOfWeek.setHours(0, 0, 0, 0);
@@ -91,8 +86,6 @@ const TrainingTab = ({
         history.forEach(r => {
             if (r.status === 'completed' && r.completedAt?.seconds) {
                 const completedDate = new Date(r.completedAt.seconds * 1000);
-                
-                // Si la rutina se completó dentro de la semana actual
                 if (completedDate >= startOfWeek) {
                     const completedDayIndex = (completedDate.getDay() + 6) % 7;
                     log.set(completedDayIndex, r);
@@ -100,7 +93,7 @@ const TrainingTab = ({
             }
         });
         return log;
-    }, [history]); // Depende solo del historial general
+    }, [history]); 
 
     const handleOpenAdjustment = (routine) => {
         setAdjustingRoutine(routine);
@@ -116,7 +109,6 @@ const TrainingTab = ({
 
             <WeeklyProgressBar weekDistribution={currentWeekRoutines} completionLog={completionLog} todayIndex={todayIndex} t={t} />
 
-            {/* CONTENEDOR DE PESTAÑAS - MEJORADO VISUALMENTE */}
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4 mb-4">
                     <div className="flex items-center bg-white/5 backdrop-blur rounded-full p-1 border border-white/10 shadow-2xl">
@@ -214,6 +206,10 @@ const TrainingTab = ({
                                 onProfileChange={onProfileChange}
                                 onAdjustNextSession={(r, p, ne) => {
                                     onAdjustNextSession(r || adjustingRoutine, p, ne);
+                                    setShowAdjustment(false);
+                                }}
+                                onCopyToMyWorkouts={(r) => {
+                                    onCopyToMyWorkouts(r);
                                     setShowAdjustment(false);
                                 }}
                                 loading={loading}

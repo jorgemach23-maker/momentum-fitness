@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, EmailAuthProvider, linkWithCredential, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, serverTimestamp, query, writeBatch, Timestamp, deleteDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
-import { buildHistoryContext, TRANSLATIONS, calculateSmartRest } from '../utils/helpers';
+import { buildHistoryContext, TRANSLATIONS, calculateSmartRest, normalizeRoutine } from '../utils/helpers'; // IMPORTANTE: Importamos normalizeRoutine
 import { fetchGeminiWeeklyPlan, fetchGeminiBioageAnalysis, fetchGeminiSessionAdjustment } from '../services/gemini';
 
 // --- Force Hot-Reload ---
@@ -180,7 +180,7 @@ const useProfile = (userId, isAuthReady, t) => {
     return { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef };
 };
 
-const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive) => {
+const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive, setActiveTab) => {
     const [history, setHistory] = useState([]);
     
     const routinesColRef = useMemo(() => 
@@ -235,7 +235,7 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             const deleteBatch = writeBatch(db);
             const snapshot = await getDocs(query(routinesColRef));
             snapshot.docs.forEach(doc => {
-                if (doc.data().status !== 'completed') {
+                if (doc.data().status !== 'completed' && doc.data().type !== 'custom') { // IMPORTANTE: No borrar las custom
                     deleteBatch.delete(doc.ref);
                 }
             });
@@ -328,8 +328,6 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             const routineRef = doc(routinesColRef, newRoutineId);
             await setDoc(routineRef, newRoutine); 
 
-            setHistory(prevHistory => [...prevHistory, newRoutine]);
-
             setCurrentRoutineId(newRoutineId);
             setView('routine');
             setIsSessionActive(true);
@@ -342,10 +340,58 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             setLoading(false);
             setTimeout(() => setSuccessMessage(null), 3000);
         }
-    }, [routinesColRef, setHistory, setCurrentRoutineId, setView, setIsSessionActive, t]);
+    }, [routinesColRef, setCurrentRoutineId, setView, setIsSessionActive, t]);
 
-    // AQUÍ ES DONDE EXPORTAMOS setHistory PARA QUE LLEGUE AL BUILDER
-    return { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, routinesColRef };
+    // --- NUEVO: COPIAR RUTINA A MIS RUTINAS (CON SALVAGUARDAS PARA FIRESTORE) ---
+    const handleCopyToMyWorkouts = async (routine) => {
+        if (!routinesColRef || !routine) return;
+        
+        setLoading(true);
+        setError(null);
+        try {
+            const newDocRef = doc(routinesColRef);
+            
+            // USAMOS NORMALIZER PARA GARANTIZAR UNA ESTRUCTURA PERFECTA (SIN UNDEFINED)
+            const normalized = normalizeRoutine(routine);
+
+            // Quitamos cualquier propiedad 'undefined' que vuelva loco a Firebase
+            const cleanExercises = (normalized.rutinaPrincipal || []).map(ex => {
+                const cleanEx = { ...ex };
+                Object.keys(cleanEx).forEach(key => {
+                    if (cleanEx[key] === undefined) {
+                        delete cleanEx[key]; // Firebase permite que no exista la llave, pero NO que su valor sea explícitamente "undefined"
+                    }
+                });
+                return cleanEx;
+            });
+
+            const copiedRoutine = {
+                diaEnfoque: `${normalized.diaEnfoque || 'Rutina IA'} (Copia)`,
+                rutinaPrincipal: cleanExercises, // Usamos la lista limpia
+                type: 'custom', 
+                status: 'pending',
+                createdAt: serverTimestamp()
+            };
+
+            await setDoc(newDocRef, copiedRoutine);
+            
+            setSuccessMessage("¡Rutina copiada a 'Mis Rutinas'!");
+            setShowAdjustment(false);
+            
+            setTimeout(() => {
+                if(setActiveTab) setActiveTab('builder');
+            }, 1000);
+
+        } catch (err) {
+            console.error("Error copiando a mis rutinas:", err);
+            setError("Error al copiar la rutina: " + err.message); // Mostrar error detallado en UI
+        } finally {
+            setLoading(false);
+            setTimeout(() => setSuccessMessage(null), 4000);
+        }
+    };
+
+    return { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, handleCopyToMyWorkouts, routinesColRef };
 };
 
 export const useAppLogic = () => {
@@ -373,8 +419,7 @@ export const useAppLogic = () => {
     const { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef } = useProfile(userId, isAuthReady, t);
     const [error, setError] = useState(null);
     
-    // EXTRAEMOS setHistory DE AQUÍ
-    const { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, routinesColRef } = useHistory(userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive);
+    const { history, setHistory, handleGenerateWeeklyPlan, handleAdjustNextSession, handleRepeatSession, handleCopyToMyWorkouts, routinesColRef } = useHistory(userId, isAuthReady, profile, t, setProgressText, setLoading, setSuccessMessage, setError, setShowAdjustment, profileDocRef, setProfile, setGenerationProgress, setCurrentRoutineId, setView, setIsSessionActive, _setActiveTab);
     const [linkAccountError, setLinkAccountError] = useState(null);
 
     const [scrolled, setScrolled] = useState(false);
@@ -573,6 +618,8 @@ export const useAppLogic = () => {
 
     const onRepeatSession = useCallback((routine) => handleRepeatSession(routine), [handleRepeatSession]);
 
+    const onCopyToMyWorkouts = useCallback((routine) => handleCopyToMyWorkouts(routine), [handleCopyToMyWorkouts]);
+
     const handleGenerateBackup = useCallback(() => {
         const backupData = { profile, history };
         setBackupJson(JSON.stringify(backupData, null, 2));
@@ -617,7 +664,7 @@ export const useAppLogic = () => {
         profile, bioageLoading, profileSuccess, profileError,
         history, generationProgress, error: combinedError,
         routinesColRef, 
-        setHistory, // <--- ¡AQUÍ ESTÁ LA SOLUCIÓN! Exportamos setHistory.
+        setHistory, 
         toggleLanguage, setActiveTab, handleScroll, setProgressText, setShowAdjustment, setAuthError, setIsSignOutWarningVisible,
         onSignIn: handleSignIn,
         onSignUp: handleSignUp,
@@ -629,7 +676,8 @@ export const useAppLogic = () => {
         onPasswordReset,
         handleViewRoutine, handleBackToMain, handleRoutineFeedback, handleExerciseComplete, setRestSeconds, setIsSessionActive,
         onProfileChange: handleProfileChange, onProfileSave, onAnalyzeBioage,
-        onGeneratePlan, onAdjustNextSession, onRepeatSession,
+        onGeneratePlan, onAdjustNextSession, onRepeatSession, 
+        onCopyToMyWorkouts,
         onGenerateBackup: handleGenerateBackup, onCloseBackupModal: handleCloseBackupModal, onCopyToClipboard: handleCopyToClipboard, setIsImportModalOpen,
         onImportFromText: handleImportFromText
     };

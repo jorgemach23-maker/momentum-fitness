@@ -30,7 +30,7 @@ const getFemaleHealthContext = (profile) => {
     return '';
 };
 
-// --- ESQUEMA ESTRICTO PARA LA RESPUESTA DE GEMINI (STRUCTURED OUTPUT) ---
+// --- ESQUEMA ESTRICTO PARA LA RESPUESTA DE GEMINI ---
 const workoutPlanSchema = {
     type: SchemaType.ARRAY,
     description: "Lista de días de entrenamiento para la semana.",
@@ -57,46 +57,22 @@ const workoutPlanSchema = {
                         },
                         estructura_visual: {
                             type: SchemaType.STRING,
-                            description: "Debe ser EXACTAMENTE 'single' para un ejercicio o 'superset' para superseries."
+                            description: "Debe ser 'single' para un ejercicio normal, o 'superset' para superseries."
                         },
                         items: {
                             type: SchemaType.ARRAY,
-                            description: "Lista de ejercicios dentro de este bloque. Si estructura_visual es 'superset', debe tener exactamente 2 objetos.",
+                            description: "Lista de ejercicios en este bloque. IMPORTANTE: Si estructura_visual es 'superset', DEBE contener EXACTAMENTE 2 objetos aquí.",
                             items: {
                                 type: SchemaType.OBJECT,
                                 properties: {
-                                    ejercicio: {
-                                        type: SchemaType.STRING,
-                                        description: "Nombre claro del ejercicio."
-                                    },
-                                    tecnica: {
-                                        type: SchemaType.STRING,
-                                        description: "Instrucción breve de técnica o foco."
-                                    },
-                                    series: {
-                                        type: SchemaType.INTEGER,
-                                        description: "Número de series."
-                                    },
-                                    reps_target: {
-                                        type: SchemaType.INTEGER,
-                                        description: "Número máximo de repeticiones objetivo (solo un número entero)."
-                                    },
-                                    reps_texto: {
-                                        type: SchemaType.STRING,
-                                        description: "Rango visual de repeticiones (ej. '8-10' o 'AMRAP')."
-                                    },
-                                    peso_valor: {
-                                        type: SchemaType.NUMBER,
-                                        description: "Carga sugerida en números. Si es peso corporal, usar 0."
-                                    },
-                                    peso_unidad: {
-                                        type: SchemaType.STRING,
-                                        description: "Unidad de la carga: 'kg', 'lbs' o 'BW' (bodyweight)."
-                                    },
-                                    descanso_segs: {
-                                        type: SchemaType.INTEGER,
-                                        description: "Tiempo de descanso en segundos DESPUÉS de este ejercicio."
-                                    }
+                                    ejercicio: { type: SchemaType.STRING, description: "Nombre claro del ejercicio." },
+                                    tecnica: { type: SchemaType.STRING, description: "Instrucción breve de técnica." },
+                                    series: { type: SchemaType.INTEGER, description: "Número de series." },
+                                    reps_target: { type: SchemaType.INTEGER, description: "Número máximo de repeticiones objetivo." },
+                                    reps_texto: { type: SchemaType.STRING, description: "Rango visual (ej. '8-10')." },
+                                    peso_valor: { type: SchemaType.NUMBER, description: "Carga en números (0 si es corporal)." },
+                                    peso_unidad: { type: SchemaType.STRING, description: "Unidad ('kg', 'lbs' o 'BW')." },
+                                    descanso_segs: { type: SchemaType.INTEGER, description: "Descanso DESPUÉS del ejercicio. En superseries, el primero es 0." }
                                 },
                                 required: ["ejercicio", "series", "reps_target", "reps_texto", "peso_valor", "peso_unidad", "descanso_segs"]
                             }
@@ -110,18 +86,13 @@ const workoutPlanSchema = {
     }
 };
 
-// --- CLOUD FUNCTIONS ---
-
 exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
     if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'No autenticado.');
-
     const geminiKey = functions.config().gemini ? functions.config().gemini.key : null;
     if (!geminiKey) throw new functions.https.HttpsError('failed-precondition', 'Configuración de IA faltante.');
 
     const { profile, recentRoutines, lang } = data;
     const genAI = new GoogleGenerativeAI(geminiKey);
-    
-    // Inyectar el Esquema Estricto en la configuración del modelo
     const model = genAI.getGenerativeModel({ 
         model: "gemini-2.5-flash",
         generationConfig: {
@@ -135,59 +106,42 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
     const historyContext = buildHistoryContext(recentRoutines);
     const femaleHealthContext = getFemaleHealthContext(profile);
 
-    // El prompt ahora se centra solo en la LÓGICA DE ENTRENAMIENTO, 
-    // porque la ESTRUCTURA JSON ya está garantizada por el responseSchema.
     const systemPrompt = 
         "Eres 'FitCoach AI', un director de programación de fitness de élite.\n" +
-        "Genera un plan de entrenamiento semanal de " + (profile.daysPerWeek || 3) + " días. " + langInstruction + ".\n\n" +
+        "Genera un plan de entrenamiento de " + (profile.daysPerWeek || 3) + " días. " + langInstruction + ".\n\n" +
         "CONTEXTO DEL ATLETA:\n" +
-        "Perfil: " + profile.gender + ", " + profile.age + " años, " + profile.weight + " kg.\n" +
-        "Nivel: " + profile.experienceLevel + ". Fuerza: " + strengthProfile + ".\n" +
-        "Objetivo: " + profile.mainGoal + ". Salud: " + (profile.injuries || 'Ninguna') + ". " + femaleHealthContext + "\n" +
+        "Perfil: " + profile.gender + ", " + profile.age + " años, " + profile.weight + " kg. Nivel: " + profile.experienceLevel + ".\n" +
+        "Objetivo: " + profile.mainGoal + ". Salud: " + (profile.injuries || 'Ninguna') + ".\n" +
         "Logística: " + profile.timeAvailable + " min/sesión.\n" +
         "HISTORIAL: " + historyContext + "\n\n" +
         "LÓGICA DE ENTRENAMIENTO:\n" +
-        "1. Prioriza ejercicios compuestos para el objetivo principal.\n" +
-        "2. Incluye calentamiento ('warmup') con movilidad, y enfriamiento ('cooldown') con estiramientos estáticos.\n" +
-        "3. Calcula los descansos según el objetivo (Fuerza=180s, Hipertrofia=90s, Metabolico=60s).\n" +
+        "1. Prioriza ejercicios compuestos.\n" +
+        "2. Incluye siempre 'warmup' y 'cooldown'.\n" +
+        "3. **REGLA CRÍTICA: DEBES INCLUIR AL MENOS 1 O 2 SUPERSERIES POR SESIÓN ('estructura_visual': 'superset') para ahorrar tiempo y aumentar intensidad metabólica. Cuando uses 'superset', el array 'items' DEBE tener exactamente 2 ejercicios.**\n" +
         "4. En superseries, el 'descanso_segs' del primer ejercicio debe ser 0.\n" +
-        "5. Cargas sugeridas ('peso_valor') deben ser realistas según el perfil de fuerza.\n" +
-        "6. Esta prohibido que la duracion de las rutinas incluyendo 'warmup' y 'cooldown' sea mayor el determinado en Logística ('profile.timeAvailable').\n" +
-        "7. La estructura final DEBE seguir el esquema JSON proporcionado. No inventes propiedades nuevas.";
+        "5. Cargas sugeridas deben ser realistas.\n" +
+        "6. La duración no debe exceder " + profile.timeAvailable + " min.";
 
     try {
-        console.log("Iniciando llamada a Gemini con Structured Output...");
+        console.log("Iniciando llamada a Gemini...");
         const result = await model.generateContent(systemPrompt);
         const response = await result.response;
-        let text = response.text();
-        
-        // Al usar responseMimeType: "application/json", la API ya devuelve el JSON limpio (sin ```json)
-        const plan = JSON.parse(text);
-        return plan; 
-        
-        // NOTA: Eliminé processSupersets aquí porque el responseSchema 
-        // ya obliga a la IA a separar las superseries en el array 'items' nativamente.
-
+        return JSON.parse(response.text());
     } catch (error) {
         console.error("Error en generateGeminiPlan:", error);
         throw new functions.https.HttpsError('internal', 'Error al generar el plan: ' + error.message);
     }
 });
 
-// El resto del archivo se mantiene igual para analyzeBioage y adjustSession...
-
 exports.analyzeBioage = functions.https.onCall(async (data, context) => {
     if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'No autenticado');
-    
     const geminiKey = functions.config().gemini ? functions.config().gemini.key : null;
     if (!geminiKey) throw new functions.https.HttpsError('failed-precondition', 'API Key faltante');
-
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const { profile, lang } = data;
     const langInstruction = lang === 'en' ? "Answer in English." : "Responde en Español.";
-
     const systemPrompt = "Analiza estos datos y estima la BioAge en un JSON:\n" +
         "Edad: " + profile.age + ", Métricas: " + JSON.stringify(profile.bioage) + ". " + langInstruction + "\n" +
         "Formato: { \"bioage\": 30, \"strengths\": [], \"weaknesses\": [], \"recommendations\": [] }";
@@ -206,18 +160,12 @@ exports.analyzeBioage = functions.https.onCall(async (data, context) => {
 
 exports.adjustSession = functions.https.onCall(async (data, context) => {
     if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'No autenticado.');
-    
     const geminiKey = functions.config().gemini ? functions.config().gemini.key : null;
     if (!geminiKey) throw new functions.https.HttpsError('failed-precondition', 'API Key faltante.');
-
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({ 
         model: "gemini-2.5-flash",
-        // También aplicamos el esquema aquí para asegurar consistencia
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: workoutPlanSchema.items // El esquema de un solo día
-        }
+        generationConfig: { responseMimeType: "application/json", responseSchema: workoutPlanSchema.items }
     });
 
     const { profile, routine, adjustments, lang } = data;
@@ -230,15 +178,14 @@ exports.adjustSession = functions.https.onCall(async (data, context) => {
         "Ajustes Solicitados: " + JSON.stringify(adjustments) + "\n" +
         langInstruction + "\n\n" +
         "INSTRUCCIONES:\n" +
-        "- Modifica solo lo necesario (tiempo, equipo, músculos).\n" +
+        "- Mantén superseries si existen.\n" +
         "- Si pide 'Sin Equipo', cambia a ejercicios de peso corporal (peso_valor: 0, peso_unidad: 'BW').\n" +
-        "- La estructura devuelta DEBE cumplir estrictamente con el esquema JSON requerido.";
+        "- Respeta estrictamente el esquema JSON.";
 
     try {
         const result = await model.generateContent(systemPrompt);
         const response = await result.response;
-        let text = response.text();
-        return JSON.parse(text);
+        return JSON.parse(response.text());
     } catch (error) {
         console.error("Error en adjustSession:", error);
         throw new functions.https.HttpsError('internal', error.message);

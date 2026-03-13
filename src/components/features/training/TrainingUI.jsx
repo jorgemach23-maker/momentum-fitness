@@ -7,7 +7,7 @@ import {
   formatRoutineTitle, 
   cleanExerciseTitle,
   isWarmupOrCooldown,
-  normalizeRoutine // NUEVO ADAPTADOR
+  normalizeRoutine 
 } from '../../../utils/helpers.js'; 
 
 const getDuration = (routine, profile) => {
@@ -48,9 +48,7 @@ export const WeeklyProgressBar = ({ weekDistribution, completionLog, todayIndex,
   );
 };
 
-// --- VISTA PREVIA (BLINDADA) ---
 export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
-  // 1. Forzar normalización extrema
   const normalized = normalizeRoutine(routineData || { rutinaPrincipal: exercises });
   const flatExercises = normalized.rutinaPrincipal || [];
 
@@ -58,9 +56,7 @@ export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
       return <div className="py-2 text-xs text-slate-500 italic text-center">Detalles disponibles al iniciar.</div>;
   }
 
-  // 2. Filtrar calentamiento/enfriamiento
   const filteredExercises = flatExercises.filter(ex => !isWarmupOrCooldown(ex));
-
   const visibleEx = limit ? filteredExercises.slice(0, limit) : filteredExercises;
   const remaining = limit ? Math.max(0, filteredExercises.length - limit) : 0;
 
@@ -73,7 +69,10 @@ export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
          
          if (isSuperset) {
              let name1, name2;
-             if (ex.ejercicioA && ex.ejercicioB) {
+             if (ex.items && ex.items.length >= 2) {
+                 name1 = cleanExerciseTitle(ex.items[0].ejercicio || ex.items[0].nombre);
+                 name2 = cleanExerciseTitle(ex.items[1].ejercicio || ex.items[1].nombre);
+             } else if (ex.ejercicioA && ex.ejercicioB) {
                  name1 = cleanExerciseTitle(ex.ejercicioA);
                  name2 = cleanExerciseTitle(ex.ejercicioB);
              } else {
@@ -99,7 +98,7 @@ export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
                 </div> 
              );
          } else {
-             const rawName = cleanExerciseTitle(ex.ejercicio);
+             const rawName = cleanExerciseTitle(ex.ejercicio || ex.nombre);
              let equipBadge = "General";
              if(rawName.match(/barra/i)) equipBadge = "Barra";
              else if(rawName.match(/mancuerna/i)) equipBadge = "Mancuernas";
@@ -131,10 +130,8 @@ export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
   );
 };
 
-// --- HERO CARD (BLINDADO) ---
 export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompleted, profile }) => {
   if (!routine) return null;
-  
   const normalized = normalizeRoutine(routine);
   const title = formatRoutineTitle(normalized.diaEnfoque);
   const duration = getDuration(normalized, profile);
@@ -162,7 +159,6 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
   );
 };
 
-// --- LIBRARY LIST (BLINDADO) ---
 export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile }) => {
   const [expandedId, setExpandedId] = useState(null);
   if (!routines || routines.length === 0) return null;
@@ -210,8 +206,8 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
   );
 };
 
-export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdjustNextSession, loading, progressText, lang }) => {
-    const t = { timeAvailable: "Tiempo", modality: "Modalidad", noEquipment: "Sin equipo", focusZone: "Zona", processing: "Procesando...", recalcParams: "Recalcular" }; 
+export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdjustNextSession, onCopyToMyWorkouts, loading, progressText, lang }) => {
+    const t = { timeAvailable: "Tiempo", modality: "Modalidad", noEquipment: "Sin equipo", focusZone: "Zona", processing: "Procesando...", recalcParams: "Recalcular con IA" }; 
     const [selectedMuscles, setSelectedMuscles] = useState([]);
     const [noEquipment, setNoEquipment] = useState(false); 
     const [isZoneOpen, setIsZoneOpen] = useState(false);
@@ -256,9 +252,17 @@ export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdj
                     </div>
                 )}
             </div>
-           <button onClick={() => onAdjustNextSession(nextRoutine, profile, noEquipment)} disabled={loading} className="w-full py-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-2 shadow-lg">
-                {loading ? t.processing : <><Icon name="refresh" className="w-5 h-5" /> {t.recalcParams}</>}
-           </button>
+            
+            <div className="flex flex-col gap-3">
+                <button onClick={() => onAdjustNextSession(nextRoutine, profile, noEquipment)} disabled={loading} className="w-full py-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-2 shadow-lg">
+                    {loading ? t.processing : <><Icon name="sparkles" className="w-5 h-5 text-teal-400" /> {t.recalcParams}</>}
+                </button>
+                
+                {/* NUEVO BOTON: COPIAR A MIS RUTINAS */}
+                <button onClick={() => onCopyToMyWorkouts(nextRoutine)} disabled={loading} className="w-full py-3 rounded-xl border border-indigo-500/50 bg-indigo-500/10 text-indigo-300 font-bold transition-all hover:bg-indigo-500/20 active:scale-95 flex justify-center items-center gap-2">
+                    <Icon name="copy" className="w-4 h-4" /> Copiar a "Mis Rutinas" para editar
+                </button>
+            </div>
         </div>
       </Card>
     );

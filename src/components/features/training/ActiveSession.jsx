@@ -52,29 +52,42 @@ const AdjustableLoadMatrix = ({ initialLoad, initialUnit, onUpdate, label }) => 
     );
 };
 
-export const ActiveSession = ({ currentRoutine, handleRoutineFeedback, lang, onExerciseComplete, restSeconds, setRestSeconds, setIsSessionActive, isSessionActive, sessionSeconds, handleBackToMain, title }) => {
+export const ActiveSession = ({ currentRoutine, handleRoutineFeedback, lang, restSeconds, setRestSeconds, setIsSessionActive, isSessionActive, sessionSeconds, handleBackToMain }) => {
     const routineId = currentRoutine.id;
     const t = TRANSLATIONS?.[lang || 'es'] || TRANSLATIONS?.['es'] || {};
     
-    // --- ADAPTADOR CIEGO ---
     const normalizedBlocks = useMemo(() => {
-        // Obtenemos la lista plana pase lo que pase
         const flatRoutine = normalizeRoutine(currentRoutine).rutinaPrincipal || [];
-        
-        // La convertimos de nuevo a bloques seguros para la vista de ActiveSession
         const blocks = [];
+        
         flatRoutine.forEach(ex => {
              const phase = isWarmup(ex) ? 'warmup' : isCooldown(ex) ? 'cooldown' : 'main';
-             blocks.push({
-                 fase_sesion: phase,
-                 estructura_visual: 'single', // Simplificación segura
-                 items: [{
+             const isSuperset = ex.estructura_visual === 'superset' || (ex.tipo_bloque || '').includes('superserie');
+
+             // Lógica mejorada para extraer items de la superserie si vienen planos o anidados
+             let blockItems = [];
+             if (isSuperset && ex.items && ex.items.length >= 2) {
+                 blockItems = ex.items;
+             } else if (isSuperset && ex.ejercicioA && ex.ejercicioB) {
+                 blockItems = [
+                     { ejercicio: ex.ejercicioA, reps_target: ex.reps_target, peso_valor: ex.peso_valor, descanso_segs: 0 },
+                     { ejercicio: ex.ejercicioB, reps_target: ex.reps_target, peso_valor: ex.peso_valor, descanso_segs: ex.descanso_segs || 90 }
+                 ];
+             } else {
+                 blockItems = [{
                      ...ex,
                      ejercicio: ex.ejercicio || ex.nombre || "Ejercicio",
                      reps_target: ex.reps_target ?? parseInt(ex.reps) ?? 0,
                      reps_texto: ex.reps_texto || String(ex.reps || "--")
-                 }],
-                 descanso_segs: ex.descanso_segs || 60
+                 }];
+             }
+
+             blocks.push({
+                 fase_sesion: phase,
+                 estructura_visual: isSuperset ? 'superset' : 'single',
+                 items: blockItems,
+                 descanso_segs: ex.descanso_segs || 60,
+                 detalles_sets: ex.detalles_sets || null // <-- Extraemos los detalles si vienen del editor
              });
         });
         return blocks;
@@ -102,6 +115,17 @@ export const ActiveSession = ({ currentRoutine, handleRoutineFeedback, lang, onE
     const isSuperset = activeBlock?.estructura_visual === 'superset' || (activeBlock?.items?.length > 1);
     const progressPercent = phase === 'warmup' ? 0 : phase === 'cooldown' ? 100 : ((blockIndex + 1) / Math.max(workoutBlocks.length, 1)) * 100;
 
+    // Asegurarse de que el número de series visual coincida con la metadata si existe
+    const getNumSeries = () => {
+        if (!activeBlock) return 3;
+        if (activeBlock.detalles_sets && activeBlock.detalles_sets.length > 0) {
+            return activeBlock.detalles_sets.length;
+        }
+        return activeBlock.items[0]?.series || 3;
+    };
+
+    const numSeries = getNumSeries();
+
     useEffect(() => {
         if (isResting) {
             const timer = setInterval(() => {
@@ -128,8 +152,27 @@ export const ActiveSession = ({ currentRoutine, handleRoutineFeedback, lang, onE
                 });
             }
             setCompletedSets(prev => ({ ...prev, [key]: setData }));
-            if (onExerciseComplete) onExerciseComplete(activeBlock);
-            setRestSeconds(activeBlock.items[activeBlock.items.length - 1]?.descanso_segs || activeBlock.descanso_segs || 60);
+            
+            // --- CÁLCULO DE DESCANSO INTELIGENTE ---
+            // 1. Prioridad máxima: Descanso específico de ESTE SET configurado en el Creador Manual
+            let restTime = 60;
+            if (activeBlock.detalles_sets && activeBlock.detalles_sets[setIndex]) {
+                const specificRest = activeBlock.detalles_sets[setIndex].restTime;
+                if (specificRest !== undefined && specificRest !== null) {
+                    restTime = parseInt(specificRest);
+                }
+            } 
+            // 2. Prioridad media: Descanso definido para el bloque completo por la IA
+            else if (activeBlock.items[activeBlock.items.length - 1]?.descanso_segs) {
+                restTime = activeBlock.items[activeBlock.items.length - 1].descanso_segs;
+            } 
+            else if (activeBlock.descanso_segs) {
+                restTime = activeBlock.descanso_segs;
+            }
+
+            // Si es el último set, forzamos un descanso o saltamos si preferimos
+            // Podrías poner 0 si no quieres descanso tras el último set de un bloque
+            setRestSeconds(restTime);
         } else {
             const { [key]: _, ...rest } = completedSets;
             setCompletedSets(rest);
@@ -196,21 +239,38 @@ export const ActiveSession = ({ currentRoutine, handleRoutineFeedback, lang, onE
                             </div>
 
                             <div className="space-y-4">
-                                {Array.from({ length: activeBlock.items[0]?.series || 3 }).map((_, setIdx) => {
+                                {Array.from({ length: numSeries }).map((_, setIdx) => {
                                     const isDone = completedSets[`${blockIndex}-${setIdx}`]?.completed;
+                                    
+                                    // Obtener datos pre-configurados del set si existen
+                                    const customSetData = activeBlock.detalles_sets ? activeBlock.detalles_sets[setIdx] : null;
+
                                     return (
                                         <div key={setIdx} onClick={() => toggleSetCompletion(setIdx)} className={`group relative flex items-center gap-2 p-3 rounded-[2.5rem] transition-all duration-300 border ${isDone ? 'bg-teal-500/20 border-teal-500/40' : 'bg-slate-900/60 border-white/5 active:bg-slate-800'}`}>
                                             <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ml-1">
                                                 {isDone ? <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.5)]"><Icon name="check" className="w-4 h-4 text-white" /></div> : <div className="w-8 h-8 rounded-full border border-slate-700 flex items-center justify-center text-slate-500 font-black text-[10px]">{setIdx + 1}</div>}
                                             </div>
+                                            
                                             <div className={`flex-1 flex flex-wrap items-center gap-2 overflow-hidden ${isSuperset ? 'justify-end' : 'justify-center'}`}>
                                                 {activeBlock.items.map((item, itemIdx) => {
-                                                    const currentLoad = userLoads[`${blockIndex}-${setIdx}-${itemIdx}`] !== undefined ? userLoads[`${blockIndex}-${setIdx}-${itemIdx}`] : item.peso_valor;
+                                                    // Determinar carga actual (manual -> custom -> predeterminada)
+                                                    let currentLoad = userLoads[`${blockIndex}-${setIdx}-${itemIdx}`];
+                                                    let targetReps = item.reps_target;
+                                                    
+                                                    if (currentLoad === undefined) {
+                                                        if (customSetData) {
+                                                            currentLoad = itemIdx === 0 ? (customSetData.loadA || customSetData.load) : customSetData.loadB;
+                                                            targetReps = itemIdx === 0 ? (customSetData.repsA || customSetData.reps) : customSetData.repsB;
+                                                        } else {
+                                                            currentLoad = item.peso_valor;
+                                                        }
+                                                    }
+
                                                     return (
                                                         <React.Fragment key={itemIdx}>
                                                             {itemIdx > 0 && <div className="w-px h-12 bg-white/10 hidden sm:block mx-4"></div>}
                                                             <div className="flex gap-1.5 xs:gap-2">
-                                                                <MatrixValue value={item.reps_target} unit={`${item.reps_texto} REPS`} label={isSuperset ? `A${itemIdx + 1}` : null} />
+                                                                <MatrixValue value={targetReps} unit="REPS" label={isSuperset ? `A${itemIdx + 1}` : null} />
                                                                 <AdjustableLoadMatrix initialLoad={currentLoad} initialUnit={item.peso_unidad} onUpdate={(nl) => handleLoadUpdate(blockIndex, setIdx, itemIdx, nl)} label={isSuperset ? `A${itemIdx + 1}` : null} />
                                                             </div>
                                                         </React.Fragment>
