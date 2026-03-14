@@ -8,7 +8,7 @@ import { db } from '../../services/firebase';
 
 export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, setActiveTab, handleViewRoutine, setHistory }) {
     const [isEditing, setIsEditing] = useState(false);
-    const [routineToEdit, setRoutineToEdit] = useState(null); // NUEVO: Estado para saber qué rutina editar
+    const [routineToEdit, setRoutineToEdit] = useState(null);
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [expandedRoutineId, setExpandedRoutineId] = useState(null); 
     const fileInputRef = useRef(null);
@@ -36,22 +36,13 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
         setIsEditing(true);
     };
 
+    // FUNCIÓN DE BORRADO - REESCRITA Y SIN CONFIRM PARA EVITAR BLOQUEOS
     const executeDelete = async (routineId, e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log("[DEBUG BORRADO] 1. ID de rutina recibido:", routineId);
+        console.log("[DEBUG BORRADO] Iniciando borrado de ID:", routineId);
 
-        const confirmed = window.confirm("¿Seguro que quieres borrar esta rutina permanentemente?");
-        
-        if (!confirmed) {
-            console.log("[DEBUG BORRADO] 2. Usuario canceló.");
-            setActiveMenuId(null);
-            return;
-        }
-
-        console.log("[DEBUG BORRADO] 3. Usuario confirmó. Iniciando proceso...");
-        
         try {
             if (!routinesColRef) {
                 console.error("[DEBUG BORRADO] ERROR: routinesColRef es nulo.");
@@ -60,24 +51,21 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                 return;
             }
 
+            // Optimistic Update: Borramos visualmente de inmediato
             if (typeof setHistory === 'function') {
-                console.log("[DEBUG BORRADO] 4. Limpiando UI local...");
+                console.log("[DEBUG BORRADO] Limpiando UI local...");
                 setHistory(prevHistory => prevHistory.filter(r => r.id !== routineId));
-            } else {
-                console.warn("[DEBUG BORRADO] ADVERTENCIA: setHistory no es una función.");
             }
 
-            console.log("[DEBUG BORRADO] 5. Creando referencia a Firebase...");
+            console.log("[DEBUG BORRADO] Ejecutando deleteDoc en Firestore...");
             const docRefToDelete = doc(routinesColRef, routineId);
-            
-            console.log("[DEBUG BORRADO] 6. Enviando orden de borrado a Firebase...");
             await deleteDoc(docRefToDelete);
             
-            console.log("[DEBUG BORRADO] 7. Firebase confirmó el borrado. ¡ÉXITO!");
+            console.log("[DEBUG BORRADO] Firebase confirmó el borrado. ¡ÉXITO!");
             
         } catch (error) {
             console.error("[DEBUG BORRADO] ERROR FATAL en try/catch:", error);
-            alert("Ocurrió un error al borrar. Revisa la consola.");
+            alert("Ocurrió un error al borrar la rutina de la nube.");
         } finally {
             setActiveMenuId(null);
         }
@@ -188,7 +176,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
 
     const closeEditor = () => {
         setIsEditing(false);
-        setRoutineToEdit(null); // Limpiar la rutina a editar al cerrar
+        setRoutineToEdit(null);
     };
 
 
@@ -200,7 +188,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                 routinesColRef={routinesColRef}
                 userId={userId}
                 setActiveTab={setActiveTab}
-                initialRoutine={routineToEdit} // Pasamos la rutina a editar
+                initialRoutine={routineToEdit}
                 setHistory={setHistory}
             />
         );
@@ -313,7 +301,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                                                             <Icon name="upload" className="w-4 h-4 text-slate-400" /> Exportar
                                                         </button>
                                                         
-                                                        {/* BOTON DE BORRAR */}
+                                                        {/* BOTON DE BORRAR (SIN CONFIRM) */}
                                                         <button 
                                                             onClick={(e) => executeDelete(routine.id, e)} 
                                                             className="w-full text-left px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-3 border-t border-slate-700/50"

@@ -22,7 +22,6 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                 
                 let parsedSets = ex.detalles_sets || [];
                 
-                // Reconstruir sets si no existen en el metadata
                 if (parsedSets.length === 0) {
                     const numSeries = ex.series || 3;
                     if (isSuperset && ex.items && ex.items.length >= 2) {
@@ -169,7 +168,6 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                     flatRoutine.push({
                         ...baseData,
                         estructura_visual: 'superset',
-                        // Nombre para vistas legacy que no leen items
                         ejercicio: `${b.exerciseA} + ${b.exerciseB}`, 
                         items: [
                             { ejercicio: b.exerciseA, reps_target: parseInt(targetSet.repsA) || 0, reps_texto: targetSet.repsA || "--", peso_valor: parseFloat(targetSet.loadA) || 0, peso_unidad: 'kg', descanso_segs: 0 },
@@ -257,7 +255,6 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                                 <button onClick={() => removeBlock(block.id)} className="p-2 text-slate-500 hover:text-red-400 transition-colors shrink-0 ml-2"><Icon name="close" className="w-5 h-5" /></button>
                             </div>
 
-                            {/* CABECERAS DE TABLA DINÁMICAS SEGÚN EL TIPO */}
                             {block.type === 'single' ? (
                                 <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-900/30 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                     <div className="col-span-2 text-center">Set</div>
@@ -282,7 +279,6 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                                 {block.sets.map((set, setIndex) => (
                                     <div key={set.id} className="group relative">
                                         {block.type === 'single' ? (
-                                            /* FILA PARA SINGLE */
                                             <div className="grid grid-cols-12 gap-2 items-center px-1 py-1 rounded-lg hover:bg-slate-800/50 transition-colors">
                                                 <div className="col-span-2 text-center font-bold text-slate-400">{setIndex + 1}</div>
                                                 <div className="col-span-3 relative"><input type="number" value={set.load} onChange={(e) => updateSet(block.id, set.id, 'load', e.target.value)} placeholder="0" className="w-full bg-slate-900 text-white text-center py-2.5 rounded-lg border border-slate-700/50 focus:border-indigo-500 focus:outline-none placeholder:text-slate-700 font-mono text-sm transition-all" /></div>
@@ -295,21 +291,19 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                                                 <div className="col-span-1 flex justify-center">{block.sets.length > 1 && <button onClick={() => removeSet(block.id, set.id)} className="p-1.5 text-slate-600 hover:text-red-400 rounded-lg transition-colors"><Icon name="close" className="w-4 h-4" /></button>}</div>
                                             </div>
                                         ) : (
-                                            /* FILA PARA SUPERSET (Doble input) */
+                                            /* FILA PARA SUPERSET CON DESCANSO UNIFICADO */
                                             <div className="grid grid-cols-12 gap-1 items-center px-1 py-1 rounded-lg bg-cyan-900/10 border border-cyan-900/20 hover:bg-cyan-900/20 transition-colors">
                                                 <div className="col-span-1 text-center font-bold text-cyan-500 text-xs">{setIndex + 1}</div>
-                                                {/* Controles A */}
                                                 <div className="col-span-2 relative"><input type="number" value={set.loadA} onChange={(e) => updateSet(block.id, set.id, 'loadA', e.target.value)} placeholder="KG" className="w-full bg-slate-900 text-cyan-100 text-center py-2 rounded border border-cyan-800/50 focus:border-cyan-500 focus:outline-none placeholder:text-slate-700 font-mono text-[10px] transition-all" /></div>
                                                 <div className="col-span-2 relative"><input type="number" value={set.repsA} onChange={(e) => updateSet(block.id, set.id, 'repsA', e.target.value)} placeholder="Rp" className="w-full bg-slate-900 text-cyan-100 text-center py-2 rounded border border-cyan-800/50 focus:border-cyan-500 focus:outline-none placeholder:text-slate-700 font-mono text-[10px] transition-all" /></div>
-                                                {/* Controles B */}
                                                 <div className="col-span-2 relative"><input type="number" value={set.loadB} onChange={(e) => updateSet(block.id, set.id, 'loadB', e.target.value)} placeholder="KG" className="w-full bg-slate-900 text-blue-100 text-center py-2 rounded border border-blue-800/50 focus:border-blue-500 focus:outline-none placeholder:text-slate-700 font-mono text-[10px] transition-all" /></div>
                                                 <div className="col-span-2 relative"><input type="number" value={set.repsB} onChange={(e) => updateSet(block.id, set.id, 'repsB', e.target.value)} placeholder="Rp" className="w-full bg-slate-900 text-blue-100 text-center py-2 rounded border border-blue-800/50 focus:border-blue-500 focus:outline-none placeholder:text-slate-700 font-mono text-[10px] transition-all" /></div>
                                                 
-                                                {/* Rest y Borrar */}
-                                                <div className="col-span-2 flex flex-col justify-center items-center bg-slate-900 rounded border border-slate-700/50 overflow-hidden">
-                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', 15)} className="w-full text-slate-500 hover:text-white bg-slate-800"><Icon name="chevronUp" className="w-3 h-3 mx-auto" /></button>
-                                                    <span className="text-[9px] text-cyan-300 font-mono font-bold text-center leading-none py-0.5">{formatTime(set.restTime)}</span>
-                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', -15)} className="w-full text-slate-500 hover:text-white bg-slate-800"><Icon name="chevronDown" className="w-3 h-3 mx-auto" /></button>
+                                                {/* MISMO DISEÑO DE DESCANSO QUE EN SINGLE */}
+                                                <div className="col-span-2 flex justify-center items-center bg-slate-900 rounded border border-slate-700/50 overflow-hidden">
+                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', -15)} className="px-0.5 py-1 text-slate-500 hover:text-white hover:bg-slate-700"><Icon name="minus" className="w-3 h-3" /></button>
+                                                    <span className="text-[9px] text-cyan-300 font-mono font-bold w-6 text-center">{formatTime(set.restTime)}</span>
+                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', 15)} className="px-0.5 py-1 text-slate-500 hover:text-white hover:bg-slate-700"><Icon name="plus" className="w-3 h-3" /></button>
                                                 </div>
                                                 <div className="col-span-1 flex justify-center">{block.sets.length > 1 && <button onClick={() => removeSet(block.id, set.id)} className="p-1 text-slate-600 hover:text-red-400 rounded transition-colors"><Icon name="close" className="w-3 h-3" /></button>}</div>
                                             </div>

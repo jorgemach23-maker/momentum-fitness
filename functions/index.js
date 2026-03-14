@@ -120,7 +120,7 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
         "3. **REGLA CRÍTICA: DEBES INCLUIR AL MENOS 1 O 2 SUPERSERIES POR SESIÓN ('estructura_visual': 'superset') para ahorrar tiempo y aumentar intensidad metabólica. Cuando uses 'superset', el array 'items' DEBE tener exactamente 2 ejercicios.**\n" +
         "4. En superseries, el 'descanso_segs' del primer ejercicio debe ser 0.\n" +
         "5. Cargas sugeridas deben ser realistas.\n" +
-        "6. La duración no debe exceder " + profile.timeAvailable + " min.";
+        "6. Esta prohibido que la la duración exceda " + profile.timeAvailable + " min.";
 
     try {
         console.log("Iniciando llamada a Gemini...");

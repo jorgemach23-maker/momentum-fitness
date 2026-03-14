@@ -3,7 +3,7 @@ import en from '../../locales/en.json';
 
 export const TRANSLATIONS = { es, en };
 
-// --- ADAPTADOR UNIVERSAL (BÚSQUEDA AGRESIVA Y DEBUG) ---
+// --- ADAPTADOR UNIVERSAL (RESPETA SUPERSERIES) ---
 export const normalizeRoutine = (data) => {
     if (!data) return { rutinaPrincipal: [], diaEnfoque: "Entrenamiento" };
 
@@ -11,107 +11,101 @@ export const normalizeRoutine = (data) => {
     const title = routine.diaEnfoque || routine.diaNombre || routine.dia || routine.title || "Entrenamiento";
     let exercises = [];
     
-    // DEBUG
-    // console.log("[DEBUG NORMALIZER] Analizando rutina para extraer ejercicios:", JSON.parse(JSON.stringify(routine)));
-
-    // 1. Estructura Antigua (Plana)
-    if (routine.rutinaPrincipal && Array.isArray(routine.rutinaPrincipal) && routine.rutinaPrincipal.length > 0) {
-        exercises = routine.rutinaPrincipal;
-    } 
-    // 2. Estructura Nueva (Bloques)
-    else if (routine.bloques && Array.isArray(routine.bloques)) {
+    // 1. Estructura Nueva (Bloques) - LA PRIORIDAD AHORA ES PRESERVAR LA ESTRUCTURA
+    if (routine.bloques && Array.isArray(routine.bloques) && routine.bloques.length > 0) {
         routine.bloques.forEach(bloque => {
-            if (bloque.items && Array.isArray(bloque.items) && bloque.items.length > 0) {
+            const isSuperset = bloque.estructura_visual === 'superset' || (bloque.fase_sesion && bloque.fase_sesion.includes('super'));
+            
+            if (isSuperset && bloque.items && Array.isArray(bloque.items) && bloque.items.length >= 2) {
+                // Si es un superset válido del nuevo esquema, lo guardamos COMO UN SOLO OBJETO COMPUESTO
+                exercises.push({
+                    ...bloque,
+                    fase_sesion: bloque.fase_sesion || 'main',
+                    ejercicio: `${bloque.items[0].ejercicio || 'Ej 1'} + ${bloque.items[1].ejercicio || 'Ej 2'}`, // Título fallback
+                    // Preservamos los items internos
+                    items: bloque.items.map(item => ({
+                        ...item,
+                        fase_sesion: bloque.fase_sesion || 'main'
+                    }))
+                });
+            } else if (bloque.items && Array.isArray(bloque.items) && bloque.items.length > 0) {
+                // Si es un bloque normal con items, los sacamos (flatten)
                 bloque.items.forEach(item => {
                     exercises.push({
                         ...item,
                         fase_sesion: bloque.fase_sesion || item.fase_sesion || 'main',
-                        tipo_bloque: bloque.fase_sesion || 'main'
+                        estructura_visual: 'single'
                     });
                 });
-            } else if (bloque.ejercicio || bloque.nombre || bloque.nombre_ejercicio) {
+            } else if (bloque.ejercicio || bloque.nombre) {
+                // Si es un ejercicio directo
                 exercises.push({
                     ...bloque,
                     fase_sesion: bloque.fase_sesion || 'main',
-                    tipo_bloque: bloque.fase_sesion || 'main'
+                    estructura_visual: 'single'
                 });
             }
         });
     } 
-    
-    // 3. Búsqueda Extrema (Fallback)
-    if (exercises.length === 0) {
+    // 2. Estructura Antigua (Plana)
+    else if (routine.rutinaPrincipal && Array.isArray(routine.rutinaPrincipal) && routine.rutinaPrincipal.length > 0) {
+        exercises = routine.rutinaPrincipal;
+    }
+    // 3. Fallback Extremo
+    else {
         for (const key in routine) {
-            if (Array.isArray(routine[key]) && routine[key].length > 0) {
+            if (Array.isArray(routine[key]) && routine[key].length > 0 && typeof routine[key][0] === 'object') {
                 const arr = routine[key];
-                
-                if (typeof arr[0] === 'object' && arr[0] !== null) {
-                    arr.forEach(item => {
-                        // AQUÍ ESTABA EL ERROR: Añadimos 'nombre_ejercicio' a la lista de palabras mágicas
-                        if (item.ejercicio || item.nombre || item.name || item.exercise || item.nombre_ejercicio) {
-                            exercises.push({
-                                ...item,
-                                ejercicio: item.ejercicio || item.nombre_ejercicio || item.nombre || item.name || item.exercise || "Ejercicio"
-                            });
-                        } 
-                        else if (item.items && Array.isArray(item.items)) {
-                            item.items.forEach(sub => exercises.push({
-                                ...sub, 
-                                fase_sesion: item.fase_sesion || item.fase || 'main'
-                            }));
-                        }
-                        else {
-                            const subArrayKey = Object.keys(item).find(k => Array.isArray(item[k]));
-                            if (subArrayKey) {
-                                item[subArrayKey].forEach(sub => {
-                                    if(typeof sub === 'object') {
-                                        exercises.push({
-                                            ...sub,
-                                            fase_sesion: item.fase_sesion || item.fase || item.tipo || 'main'
-                                        });
-                                    }
-                                });
-                            }
-                        }
-                    });
-
-                    if (exercises.length > 0) {
-                        break;
+                arr.forEach(item => {
+                    if (item.ejercicio || item.nombre) {
+                        exercises.push({ ...item, ejercicio: item.ejercicio || item.nombre || "Ejercicio" });
+                    } else if (item.items && Array.isArray(item.items)) {
+                        item.items.forEach(sub => exercises.push({ ...sub, fase_sesion: item.fase_sesion || 'main' }));
                     }
-                }
+                });
+                if (exercises.length > 0) break;
             }
         }
     }
 
-    // NORMALIZACIÓN FINAL DE PROPIEDADES (CRÍTICO)
+    // NORMALIZACIÓN FINAL
     const finalExercises = exercises.map(ex => {
-        // Aseguramos que la fase sea procesable
         const rawPhase = (ex.fase_sesion || ex.fase || ex.tipo_bloque || ex.bloque || 'main').toLowerCase();
         let safePhase = 'main';
         if (rawPhase.includes('warm') || rawPhase.includes('calen')) safePhase = 'warmup';
         if (rawPhase.includes('cool') || rawPhase.includes('enfria') || rawPhase.includes('calma')) safePhase = 'cooldown';
 
+        // Si este objeto ya es una superserie compuesta (tiene items internos conservados)
+        if (ex.estructura_visual === 'superset' && ex.items && ex.items.length > 0) {
+            return {
+                ...ex,
+                fase_sesion: safePhase,
+                ejercicio: ex.ejercicio || "Superserie",
+                // Aseguramos que los items internos tengan las propiedades clave
+                items: ex.items.map(subItem => ({
+                    ...subItem,
+                    ejercicio: subItem.ejercicio || subItem.nombre || "Ejercicio",
+                    reps_target: subItem.reps_target ?? subItem.repeticiones ?? subItem.reps ?? 0,
+                    peso_valor: subItem.peso_valor ?? subItem.carga ?? subItem.peso ?? 0,
+                    descanso_segs: subItem.descanso_segs || 0
+                }))
+            };
+        }
+
+        // Si es un ejercicio normal
         return {
             ...ex,
-            // 💡 CORRECCIÓN PRINCIPAL AQUÍ: Leemos 'nombre_ejercicio'
             ejercicio: ex.ejercicio || ex.nombre_ejercicio || ex.nombre || ex.name || ex.exercise || "Desconocido",
-            
             fase_sesion: safePhase,
-            
             reps_target: ex.reps_target ?? ex.repeticiones ?? ex.reps ?? 0,
             reps_texto: ex.reps_texto || String(ex.reps_target || ex.repeticiones || ex.reps || "--"),
-            
             peso_valor: ex.peso_valor ?? ex.carga ?? ex.peso ?? 0,
             peso_unidad: ex.peso_unidad ?? ex.unidad ?? 'kg',
-            
-            // Si la IA usó 'instrucciones', lo mapeamos a 'tecnica' si existe
             tecnica: ex.tecnica || ex.instrucciones || null,
             descanso_segs: ex.descanso_segs || ex.descanso || 60,
             series: ex.series || 3
         };
     });
-
-    // console.log("[DEBUG NORMALIZER FINAL] Array final enviado al componente:", finalExercises);
 
     return {
         ...routine,
@@ -120,7 +114,6 @@ export const normalizeRoutine = (data) => {
     };
 };
 
-// --- Lógica de clasificación de ejercicios ---
 export const isWarmup = (exercise) => {
     if (!exercise) return false;
     const b = (exercise.fase_sesion || exercise.tipo_bloque || exercise.bloque || "").toLowerCase();
