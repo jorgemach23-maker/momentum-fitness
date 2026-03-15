@@ -101,7 +101,6 @@ export default function App() {
         currentExerciseIndex, setCurrentExerciseIndex, handleBackToMain, isSessionActive
     } = appLogic;
 
-    // Estado para controlar si el menú de idiomas está abierto
     const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
     const { showExitAppModal, handleConfirmExitApp, handleCancelExitApp } = useBackButtonHandler(
@@ -174,8 +173,6 @@ export default function App() {
                             </h1>
                             <div className="flex items-center gap-2 text-xs">
                                 <div className="flex items-center gap-2 origin-right relative">
-                                    
-                                    {/* MENU DESPLEGABLE DE IDIOMA */}
                                     <div className="relative" onClick={(e) => e.stopPropagation()}>
                                         <button 
                                             onClick={() => setIsLangMenuOpen(!isLangMenuOpen)} 
@@ -219,26 +216,32 @@ export default function App() {
                         </div>
                     </main>
 
+                    {/* DOCK FLOTANTE CON TRANSPARENCIA AUMENTADA Y COLORES PERSONALIZADOS */}
                     <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none px-4 z-50">
-                        <nav className="bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-6 sm:gap-8 pointer-events-auto">
+                        <nav className="bg-slate-900/60 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-6 sm:gap-8 pointer-events-auto">
                             {['training', 'builder', 'history', 'profile'].map(tab => {
                                 const isActive = activeTab === tab;
-                                const icons = { training: 'sparkles', builder: 'plus', history: 'list', profile: 'user' };
                                 
-                                const isBuilder = tab === 'builder';
+                                // ICONOS PERSONALIZADOS
+                                const icons = { training: 'sparkles', builder: 'copyPlus', history: 'calendarClock', profile: 'user' };
+                                
+                                // COLORES PERSONALIZADOS
+                                let activeBg = 'bg-teal-500';
+                                if (tab === 'training') activeBg = 'bg-blue-900 shadow-blue-900/40';
+                                if (tab === 'builder') activeBg = 'bg-indigo-500 shadow-indigo-500/40';
+                                if (tab === 'history') activeBg = 'bg-sky-900 shadow-sky-900/40';
+                                
+                                const isSpecial = tab === 'builder' || tab === 'history' || tab === 'training';
                                 
                                 return (
                                     <button 
                                         key={tab} 
                                         onClick={() => setActiveTab(tab)} 
                                         className={`relative p-3 rounded-full transition-all duration-300 flex items-center justify-center
-                                            ${isActive && !isBuilder ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 -translate-y-2 scale-110' : ''}
-                                            ${!isActive && !isBuilder ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : ''}
-                                            ${isBuilder && isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 -translate-y-2 scale-110' : ''}
-                                            ${isBuilder && !isActive ? 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10' : ''}
+                                            ${isActive ? `${activeBg} text-white shadow-lg -translate-y-2 scale-110` : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}
                                         `}
                                     >
-                                        <Icon name={icons[tab]} className={`w-6 h-6 ${isBuilder && !isActive ? 'drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : ''}`} />
+                                        <Icon name={icons[tab]} className="w-6 h-6" />
                                     </button>
                                 );
                             })}

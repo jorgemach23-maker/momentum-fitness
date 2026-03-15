@@ -2,6 +2,28 @@ const functions = require("firebase-functions");
 const { GoogleGenerativeAI, SchemaType } = require("@google/generative-ai");
 
 // --- FUNCIONES HELPER ---
+
+// NUEVO HELPER: Calcula la edad a partir de la fecha de nacimiento (YYYY-MM-DD)
+const calculateAgeFromBirthdate = (birthdateString) => {
+    if (!birthdateString) return null;
+    const birthDate = new Date(birthdateString);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age > 0 ? age : null; // Devolver null si es inválido
+};
+
+// HELPER MODIFICADO: Ahora extrae y asegura la edad correcta antes de procesar
+const getEffectiveAge = (profile) => {
+    const calculatedAge = calculateAgeFromBirthdate(profile.birthdate);
+    // Preferir edad calculada, fallback a profile.age, fallback a 30 por defecto
+    return calculatedAge || profile.age || 30; 
+};
+
 const buildHistoryContext = (recentRoutines) => {
   if (!recentRoutines || recentRoutines.length === 0) return "No hay historial de entrenamiento.";
   const historySummary = recentRoutines.map(r => {
@@ -30,7 +52,6 @@ const getFemaleHealthContext = (profile) => {
     return '';
 };
 
-// --- FUNCIÓN PARA DETERMINAR INSTRUCCIÓN DE IDIOMA ---
 const getLangInstruction = (lang) => {
     switch (lang) {
         case 'en': return "You MUST answer in English. ";
@@ -40,7 +61,6 @@ const getLangInstruction = (lang) => {
     }
 };
 
-// --- ESQUEMA ESTRICTO PARA LA RESPUESTA DE GEMINI ---
 const workoutPlanSchema = {
     type: SchemaType.ARRAY,
     description: "Lista de días de entrenamiento para la semana.",
@@ -115,12 +135,15 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
     const strengthProfile = getStrengthProfile(profile);
     const historyContext = buildHistoryContext(recentRoutines);
     const femaleHealthContext = getFemaleHealthContext(profile);
+    
+    // CALCULAMOS LA EDAD REAL AQUÍ (Backend)
+    const effectiveAge = getEffectiveAge(profile);
 
     const systemPrompt = 
-        "Eres 'FitCoach AI', un director de programación de fitness de élite y usas informacion cientificamente comprobada.\n" +
+        "Eres 'FitCoach AI', un director de programación de fitness de élite.\n" +
         "Genera un plan de entrenamiento de " + (profile.daysPerWeek || 3) + " días. " + langInstruction + ".\n\n" +
         "CONTEXTO DEL ATLETA:\n" +
-        "Perfil: " + profile.gender + ", " + profile.age + " años, " + profile.weight + " kg. Nivel: " + profile.experienceLevel + ".\n" +
+        "Perfil: " + profile.gender + ", " + effectiveAge + " años, " + profile.weight + " kg. Nivel: " + profile.experienceLevel + ".\n" +
         "Objetivo: " + profile.mainGoal + ". Salud: " + (profile.injuries || 'Ninguna') + ".\n" +
         "Logística: " + profile.timeAvailable + " min/sesión.\n" +
         "HISTORIAL: " + historyContext + "\n\n" +
@@ -133,7 +156,7 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
         "6. La duración no debe exceder " + profile.timeAvailable + " min.";
 
     try {
-        console.log("Iniciando llamada a Gemini...");
+        console.log(`Iniciando llamada a Gemini. Edad calculada usada: ${effectiveAge} años.`);
         const result = await model.generateContent(systemPrompt);
         const response = await result.response;
         return JSON.parse(response.text());
@@ -152,12 +175,16 @@ exports.analyzeBioage = functions.https.onCall(async (data, context) => {
 
     const { profile, lang } = data;
     const langInstruction = getLangInstruction(lang);
+    
+    // CALCULAMOS LA EDAD REAL AQUÍ (Backend)
+    const effectiveAge = getEffectiveAge(profile);
 
     const systemPrompt = "Analiza estos datos y estima la BioAge en un JSON:\n" +
-        "Edad: " + profile.age + ", Métricas: " + JSON.stringify(profile.bioage) + ". " + langInstruction + "\n" +
+        "Edad Cronológica Real: " + effectiveAge + " años, Métricas: " + JSON.stringify(profile.bioage) + ". " + langInstruction + "\n" +
         "Formato: { \"bioage\": 30, \"strengths\": [], \"weaknesses\": [], \"recommendations\": [] }";
 
     try {
+        console.log(`Iniciando análisis BioAge. Edad calculada usada: ${effectiveAge} años.`);
         const result = await model.generateContent(systemPrompt);
         const response = await result.response;
         let text = response.text();

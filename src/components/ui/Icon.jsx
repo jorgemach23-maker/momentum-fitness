@@ -11,7 +11,7 @@ import {
   LucideBrainCircuit, LucideStethoscope, LucideScanEye, LucideFileJson, LucideLink2, LucideDna,
   LucideHeart, LucideHourglass, LucideArrowRight, LucideZap, LucideTrophy, LucideMaximize2,
   LucideYoutube, LucideFastForward, LucideThumbsUp, LucideThumbsDown, LucideMinus, LucidePause, LucideWind,
-  LucideInfo as LucideInfoCircle, LucideRepeat, LucideHash
+  LucideInfo as LucideInfoCircle, LucideRepeat, LucideHash, LucideCalendarClock, LucideCopyPlus
 } from 'lucide-react'; 
 
 export const Icon = ({ name, className = "" }) => {
@@ -41,7 +41,8 @@ export const Icon = ({ name, className = "" }) => {
     dna: LucideDna, flower: LucideHeart, calendarHeart: LucideCalendarDays, hourglass: LucideHourglass, coffee: LucideClock,
     arrowRight: LucideArrowRight, zap: LucideZap, trophy: LucideTrophy, max: LucideMaximize2, youtube: LucideYoutube,
     fastForward: LucideFastForward, thumbsUp: LucideThumbsUp, thumbsDown: LucideThumbsDown, minus: LucideMinus,
-    pause: LucidePause, wind: LucideWind, repeat: LucideRepeat, hash: LucideHash
+    pause: LucidePause, wind: LucideWind, repeat: LucideRepeat, hash: LucideHash,
+    calendarClock: LucideCalendarClock, copyPlus: LucideCopyPlus
   };
   
   const LucideIcon = icons[name];
