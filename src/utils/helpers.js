@@ -1,7 +1,8 @@
 import es from '../../locales/es.json';
 import en from '../../locales/en.json';
+import de from '../../locales/de.json'; // Añadimos el alemán
 
-export const TRANSLATIONS = { es, en };
+export const TRANSLATIONS = { es, en, de }; // Incluimos el alemán en el objeto exportado
 
 // --- ADAPTADOR UNIVERSAL (RESPETA SUPERSERIES) ---
 export const normalizeRoutine = (data) => {
@@ -11,25 +12,21 @@ export const normalizeRoutine = (data) => {
     const title = routine.diaEnfoque || routine.diaNombre || routine.dia || routine.title || "Entrenamiento";
     let exercises = [];
     
-    // 1. Estructura Nueva (Bloques) - LA PRIORIDAD AHORA ES PRESERVAR LA ESTRUCTURA
     if (routine.bloques && Array.isArray(routine.bloques) && routine.bloques.length > 0) {
         routine.bloques.forEach(bloque => {
             const isSuperset = bloque.estructura_visual === 'superset' || (bloque.fase_sesion && bloque.fase_sesion.includes('super'));
             
             if (isSuperset && bloque.items && Array.isArray(bloque.items) && bloque.items.length >= 2) {
-                // Si es un superset válido del nuevo esquema, lo guardamos COMO UN SOLO OBJETO COMPUESTO
                 exercises.push({
                     ...bloque,
                     fase_sesion: bloque.fase_sesion || 'main',
-                    ejercicio: `${bloque.items[0].ejercicio || 'Ej 1'} + ${bloque.items[1].ejercicio || 'Ej 2'}`, // Título fallback
-                    // Preservamos los items internos
+                    ejercicio: `${bloque.items[0].ejercicio || 'Ej 1'} + ${bloque.items[1].ejercicio || 'Ej 2'}`,
                     items: bloque.items.map(item => ({
                         ...item,
                         fase_sesion: bloque.fase_sesion || 'main'
                     }))
                 });
             } else if (bloque.items && Array.isArray(bloque.items) && bloque.items.length > 0) {
-                // Si es un bloque normal con items, los sacamos (flatten)
                 bloque.items.forEach(item => {
                     exercises.push({
                         ...item,
@@ -38,7 +35,6 @@ export const normalizeRoutine = (data) => {
                     });
                 });
             } else if (bloque.ejercicio || bloque.nombre) {
-                // Si es un ejercicio directo
                 exercises.push({
                     ...bloque,
                     fase_sesion: bloque.fase_sesion || 'main',
@@ -47,11 +43,9 @@ export const normalizeRoutine = (data) => {
             }
         });
     } 
-    // 2. Estructura Antigua (Plana)
     else if (routine.rutinaPrincipal && Array.isArray(routine.rutinaPrincipal) && routine.rutinaPrincipal.length > 0) {
         exercises = routine.rutinaPrincipal;
     }
-    // 3. Fallback Extremo
     else {
         for (const key in routine) {
             if (Array.isArray(routine[key]) && routine[key].length > 0 && typeof routine[key][0] === 'object') {
@@ -68,20 +62,17 @@ export const normalizeRoutine = (data) => {
         }
     }
 
-    // NORMALIZACIÓN FINAL
     const finalExercises = exercises.map(ex => {
         const rawPhase = (ex.fase_sesion || ex.fase || ex.tipo_bloque || ex.bloque || 'main').toLowerCase();
         let safePhase = 'main';
         if (rawPhase.includes('warm') || rawPhase.includes('calen')) safePhase = 'warmup';
         if (rawPhase.includes('cool') || rawPhase.includes('enfria') || rawPhase.includes('calma')) safePhase = 'cooldown';
 
-        // Si este objeto ya es una superserie compuesta (tiene items internos conservados)
         if (ex.estructura_visual === 'superset' && ex.items && ex.items.length > 0) {
             return {
                 ...ex,
                 fase_sesion: safePhase,
                 ejercicio: ex.ejercicio || "Superserie",
-                // Aseguramos que los items internos tengan las propiedades clave
                 items: ex.items.map(subItem => ({
                     ...subItem,
                     ejercicio: subItem.ejercicio || subItem.nombre || "Ejercicio",
@@ -92,7 +83,6 @@ export const normalizeRoutine = (data) => {
             };
         }
 
-        // Si es un ejercicio normal
         return {
             ...ex,
             ejercicio: ex.ejercicio || ex.nombre_ejercicio || ex.nombre || ex.name || ex.exercise || "Desconocido",

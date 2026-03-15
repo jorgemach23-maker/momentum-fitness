@@ -36,7 +36,6 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
         setIsEditing(true);
     };
 
-    // FUNCIÓN DE BORRADO - REESCRITA Y SIN CONFIRM PARA EVITAR BLOQUEOS
     const executeDelete = async (routineId, e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -45,23 +44,17 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
 
         try {
             if (!routinesColRef) {
-                console.error("[DEBUG BORRADO] ERROR: routinesColRef es nulo.");
                 alert("Error crítico: Falta referencia a la base de datos.");
                 setActiveMenuId(null);
                 return;
             }
 
-            // Optimistic Update: Borramos visualmente de inmediato
             if (typeof setHistory === 'function') {
-                console.log("[DEBUG BORRADO] Limpiando UI local...");
                 setHistory(prevHistory => prevHistory.filter(r => r.id !== routineId));
             }
 
-            console.log("[DEBUG BORRADO] Ejecutando deleteDoc en Firestore...");
             const docRefToDelete = doc(routinesColRef, routineId);
             await deleteDoc(docRefToDelete);
-            
-            console.log("[DEBUG BORRADO] Firebase confirmó el borrado. ¡ÉXITO!");
             
         } catch (error) {
             console.error("[DEBUG BORRADO] ERROR FATAL en try/catch:", error);
@@ -93,11 +86,11 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
             };
 
             await setDoc(newDocRef, duplicatedRoutine);
-            alert("Rutina duplicada con éxito.");
+            // alert(t.msgSessionRepeat || "Rutina duplicada con éxito.");
             
         } catch (error) {
             console.error("Error duplicando rutina:", error);
-            alert("Error al duplicar la rutina.");
+            // alert(t.error_general || "Error al duplicar la rutina.");
         }
     };
 
@@ -158,10 +151,10 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                 };
 
                 await setDoc(newDocRef, importedRoutine);
-                alert("¡Rutina importada con éxito!");
+                alert(t.saved || "¡Rutina importada con éxito!");
             } catch (error) {
                 console.error("Error importando:", error);
-                alert("Error al importar: Archivo inválido o corrupto.");
+                alert(t.error_import || "Error al importar: Archivo inválido o corrupto.");
             }
             if (fileInputRef.current) fileInputRef.current.value = '';
         };
@@ -198,7 +191,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
         <div className="animate-fadeIn pb-24" onClick={() => setActiveMenuId(null)}>
             <h2 className="text-lg font-bold text-slate-100 mb-6 flex items-center gap-2">
                 <Icon name="dumbbell" className="w-5 h-5 text-indigo-400" /> 
-                Laboratorio de Rutinas
+                {t.workoutLab}
             </h2>
 
             <div className="grid grid-cols-2 gap-3 mb-8">
@@ -209,7 +202,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                     <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Icon name="plus" className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-bold text-indigo-300">Crear Nueva</span>
+                    <span className="text-xs font-bold text-indigo-300">{t.createNew}</span>
                 </button>
 
                 <button 
@@ -226,14 +219,14 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                     <div className="w-10 h-10 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Icon name="download" className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-bold text-slate-300">Importar (.txt)</span>
+                    <span className="text-xs font-bold text-slate-300">{t.importTxt}</span>
                 </button>
             </div>
 
             <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 mb-4 flex items-center gap-2">
                     <Icon name="layers" className="w-4 h-4" />
-                    Mis Rutinas ({customRoutines.length})
+                    {t.myWorkouts} ({customRoutines.length})
                 </h3>
 
                 {customRoutines.length > 0 ? (
@@ -271,7 +264,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                                             <button 
                                                 onClick={(e) => executeStart(routine, e)}
                                                 className="p-2 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500 hover:text-white transition-colors"
-                                                title="Iniciar"
+                                                title={t.startSession}
                                             >
                                                 <Icon name="play" className="w-4 h-4" />
                                             </button>
@@ -288,25 +281,25 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                                                     <Icon name="settings" className="w-4 h-4" />
                                                 </button>
 
-                                                {/* Menú Desplegable con BOTÓN EDITAR */}
+                                                {/* Menú Desplegable */}
                                                 {isMenuOpen && (
                                                     <div className="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-[100] overflow-hidden animate-fadeIn">
                                                         <button onClick={(e) => executeEdit(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3">
-                                                            <Icon name="settings" className="w-4 h-4 text-slate-400" /> Editar
+                                                            <Icon name="settings" className="w-4 h-4 text-slate-400" /> {t.edit}
                                                         </button>
                                                         <button onClick={(e) => executeDuplicate(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3 border-t border-slate-700/50">
-                                                            <Icon name="copy" className="w-4 h-4 text-slate-400" /> Duplicar
+                                                            <Icon name="copy" className="w-4 h-4 text-slate-400" /> {t.duplicate}
                                                         </button>
                                                         <button onClick={(e) => executeExport(routine, e)} className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-700 flex items-center gap-3 border-t border-slate-700/50">
-                                                            <Icon name="upload" className="w-4 h-4 text-slate-400" /> Exportar
+                                                            <Icon name="upload" className="w-4 h-4 text-slate-400" /> {t.export}
                                                         </button>
                                                         
-                                                        {/* BOTON DE BORRAR (SIN CONFIRM) */}
+                                                        {/* BOTON DE BORRAR */}
                                                         <button 
                                                             onClick={(e) => executeDelete(routine.id, e)} 
                                                             className="w-full text-left px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-3 border-t border-slate-700/50"
                                                         >
-                                                            <Icon name="close" className="w-4 h-4 text-red-400" /> Borrar
+                                                            <Icon name="close" className="w-4 h-4 text-red-400" /> {t.delete}
                                                         </button>
                                                     </div>
                                                 )}
@@ -327,7 +320,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                                                     className="w-full flex justify-center items-center gap-2 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg shadow-teal-900/20 active:scale-95 uppercase tracking-wide"
                                                 >
                                                     <Icon name="play" className="w-4 h-4" />
-                                                    Comenzar Esta Sesión
+                                                    {t.startThisSession}
                                                 </button>
                                             </div>
                                         </div>
@@ -339,7 +332,7 @@ export default function WorkoutBuilderTab({ t, history, routinesColRef, userId, 
                 ) : (
                     <div className="text-center py-12 bg-slate-800/30 rounded-2xl border border-dashed border-slate-700">
                         <Icon name="database" className="w-10 h-10 mx-auto mb-3 text-slate-600"/>
-                        <p className="text-slate-500 font-medium text-sm px-8">Crea tu primera rutina o importa una de un archivo .txt</p>
+                        <p className="text-slate-500 font-medium text-sm px-8">{t.firstRoutinePrompt}</p>
                     </div>
                 )}
             </div>

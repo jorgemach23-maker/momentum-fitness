@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppLogic } from './hooks/useAppLogic';
 import { useBackButtonHandler } from './hooks/useBackButtonHandler';
 import TrainingTab from './components/features/TrainingTab';
@@ -93,13 +93,16 @@ export default function App() {
         t, activeTab, view,
         userId, isAuthReady, showSplash,
         scrolled, headerRef, handleScroll,
-        setActiveTab, toggleLanguage, isAnonymous,
+        setActiveTab, language, setLanguage, isAnonymous,
         backupJson, onCloseBackupModal, onCopyToClipboard, copySuccess,
         isImportModalOpen, setIsImportModalOpen, onImportFromText, importTextError,
         isSignOutWarningVisible, onForceSignOut, setIsSignOutWarningVisible, 
         handleRoutineFeedback, onRepeatSession,
         currentExerciseIndex, setCurrentExerciseIndex, handleBackToMain, isSessionActive
     } = appLogic;
+
+    // Estado para controlar si el menú de idiomas está abierto
+    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
     const { showExitAppModal, handleConfirmExitApp, handleCancelExitApp } = useBackButtonHandler(
         view,
@@ -129,8 +132,21 @@ export default function App() {
         setActiveTab('profile'); 
     };
 
+    const handleLanguageChange = (langCode) => {
+        setLanguage(langCode);
+        setIsLangMenuOpen(false);
+    };
+
+    const languages = [
+        { code: 'es', label: 'Español' },
+        { code: 'en', label: 'English' },
+        { code: 'de', label: 'Deutsch' }
+    ];
+
+    const currentLangLabel = languages.find(l => l.code === language)?.label || 'Español';
+
     return (
-        <>
+        <div onClick={() => setIsLangMenuOpen(false)}>
             <MinimalScrollbarStyles />
             
             {backupJson && <BackupModal jsonString={backupJson} onClose={onCloseBackupModal} onCopy={onCopyToClipboard} copySuccess={copySuccess} t={t} />}
@@ -146,7 +162,7 @@ export default function App() {
                 </div>
 
                 <div className="relative z-10 flex flex-col flex-1 h-full">
-                    <header ref={headerRef} className={`w-full fixed top-0 left-0 border-b transition-all duration-300 ${scrolled ? 'bg-slate-900/80 backdrop-blur-md border-slate-700/50 py-2 shadow-lg' : 'bg-transparent border-transparent py-3'}`}>
+                    <header ref={headerRef} className={`w-full fixed top-0 left-0 border-b transition-all duration-300 ${scrolled ? 'bg-slate-900/80 backdrop-blur-md border-slate-700/50 py-2 shadow-lg z-50' : 'bg-transparent border-transparent py-3 z-50'}`}>
                         <div className="max-w-md mx-auto px-6 flex items-center justify-between">
                             <h1 className={`font-bold text-slate-100 flex items-center transition-all ${scrolled ? 'text-sm' : 'text-base'}`}>
                                 <div className="bg-teal-500/10 p-1.5 rounded-lg mr-2">
@@ -157,13 +173,38 @@ export default function App() {
                                 </span>
                             </h1>
                             <div className="flex items-center gap-2 text-xs">
-                                <div className="flex items-center gap-2 scale-90 origin-right">
-                                    <button onClick={toggleLanguage} className="flex items-center px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all font-bold font-mono tracking-tighter">
-                                        <span className={t.lang === 'es' ? 'text-teal-400' : ''}>ES</span>
-                                        <span className="mx-1 opacity-30">|</span>
-                                        <span className={t.lang === 'en' ? 'text-teal-400' : ''}>EN</span>
-                                    </button>
-                                    {userId && <span className={`flex items-center px-2 py-0.5 rounded-full border ${isAnonymous ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300' : 'bg-teal-500/10 border-teal-500/20 text-teal-300'} font-semibold shadow-inner`}><Icon name={isAnonymous ? "userCheck" : "activity"} className="w-3.5 h-3.5 mr-2" />{isAnonymous ? t.guest : t.online}</span>}
+                                <div className="flex items-center gap-2 origin-right relative">
+                                    
+                                    {/* MENU DESPLEGABLE DE IDIOMA */}
+                                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                        <button 
+                                            onClick={() => setIsLangMenuOpen(!isLangMenuOpen)} 
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-teal-500/50 transition-all font-bold tracking-tight shadow-sm"
+                                        >
+                                            <Icon name="lang" className="w-3.5 h-3.5 text-teal-400" />
+                                            <span>{language.toUpperCase()}</span>
+                                            <Icon name="chevronDown" className={`w-3 h-3 transition-transform duration-200 ${isLangMenuOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {isLangMenuOpen && (
+                                            <div className="absolute right-0 top-full mt-2 w-32 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden py-1 z-[100] animate-fadeIn">
+                                                {languages.map(lang => (
+                                                    <button 
+                                                        key={lang.code}
+                                                        onClick={() => handleLanguageChange(lang.code)}
+                                                        className={`w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors flex items-center justify-between
+                                                            ${language === lang.code ? 'bg-teal-500/10 text-teal-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
+                                                        `}
+                                                    >
+                                                        {lang.label}
+                                                        {language === lang.code && <Icon name="check" className="w-4 h-4" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {userId && <span className={`flex items-center px-2 py-1.5 rounded-lg border ${isAnonymous ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300' : 'bg-teal-500/10 border-teal-500/20 text-teal-300'} font-semibold shadow-inner`}><Icon name={isAnonymous ? "userCheck" : "activity"} className="w-3.5 h-3.5 mr-1.5" />{isAnonymous ? t.guest : t.online}</span>}
                                 </div>
                             </div>
                         </div>
@@ -182,7 +223,6 @@ export default function App() {
                         <nav className="bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-6 sm:gap-8 pointer-events-auto">
                             {['training', 'builder', 'history', 'profile'].map(tab => {
                                 const isActive = activeTab === tab;
-                                // 1. ICONO SPARKLES PARA EL DOCK (En lugar de target)
                                 const icons = { training: 'sparkles', builder: 'plus', history: 'list', profile: 'user' };
                                 
                                 const isBuilder = tab === 'builder';
@@ -206,6 +246,6 @@ export default function App() {
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

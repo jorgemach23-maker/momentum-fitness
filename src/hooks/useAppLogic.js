@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, EmailAuthProvider, linkWithCredential, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, serverTimestamp, query, writeBatch, Timestamp, deleteDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
-import { buildHistoryContext, TRANSLATIONS, calculateSmartRest, normalizeRoutine } from '../utils/helpers'; // IMPORTANTE: Importamos normalizeRoutine
+import { buildHistoryContext, TRANSLATIONS, calculateSmartRest, normalizeRoutine } from '../utils/helpers'; 
 import { fetchGeminiWeeklyPlan, fetchGeminiBioageAnalysis, fetchGeminiSessionAdjustment } from '../services/gemini';
 
 // --- Force Hot-Reload ---
@@ -35,9 +35,9 @@ const useAuth = (t) => {
         } catch (e) {
             console.error("Sign-in error:", e.code);
             if (['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'].includes(e.code)) {
-                setAuthError(t.errorInvalidCreds);
+                setAuthError(t.error_auth_invalid_credential || t.errorInvalidCreds || 'Credenciales inválidas');
             } else {
-                setAuthError(t.errorAuth);
+                setAuthError(t.error_general || t.errorAuth || 'Error de autenticación');
             }
         }
     }, [t]);
@@ -48,7 +48,7 @@ const useAuth = (t) => {
             await createUserWithEmailAndPassword(auth, email, password);
         } catch (e) {
             console.error("Sign-up error:", e.code);
-            setAuthError(e.code === 'auth/email-already-in-use' ? t.errorEmailInUse : t.errorAuth);
+            setAuthError(e.code === 'auth/email-already-in-use' ? (t.error_auth_email_already_in_use || t.errorEmailInUse) : (t.error_general || t.errorAuth));
         }
     }, [t]);
 
@@ -58,7 +58,7 @@ const useAuth = (t) => {
             await signInAnonymously(auth);
         } catch (e) {
             console.error("Anonymous sign-in error:", e);
-            setAuthError(t.errorAuth);
+            setAuthError(t.error_general || t.errorAuth);
         }
     }, [t]);
 
@@ -68,7 +68,7 @@ const useAuth = (t) => {
             await signOut(auth);
         } catch (e) {
             console.error("Sign-out error:", e);
-            setAuthError(t.errorAuth);
+            setAuthError(t.error_general || t.errorAuth);
         }
     }, [t]);
 
@@ -155,9 +155,9 @@ const useProfile = (userId, isAuthReady, t) => {
         try {
             await setDoc(profileDocRef, updatedProfile, { merge: true });
             setSavedProfile(updatedProfile); 
-            setProfileSuccess(t.msgProfileSaved);
+            setProfileSuccess(t.profileAutoSaved || t.msgProfileSaved);
         } catch (e) {
-            setProfileError(t.errorSave);
+            setProfileError(t.error_profileUpdate || t.errorSave);
         }
         setTimeout(() => {setProfileSuccess(null); setProfileError(null)}, 3000);
     }, [profileDocRef, t, savedProfile]);
@@ -171,11 +171,11 @@ const useProfile = (userId, isAuthReady, t) => {
             setProfile(updatedProfile); 
         } catch (err) {
             console.error(err);
-            setProfileError("Error al calcular BioAge.");
+            setProfileError(t.error_bioage || "Error al calcular BioAge.");
         } finally {
             setBioageLoading(false);
         }
-    }, []);
+    }, [t]);
     
     return { profile, setProfile, handleProfileChange, handleProfileSave, handleAnalyzeBioage, bioageLoading, profileSuccess, profileError, profileDocRef };
 };
@@ -235,7 +235,7 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             const deleteBatch = writeBatch(db);
             const snapshot = await getDocs(query(routinesColRef));
             snapshot.docs.forEach(doc => {
-                if (doc.data().status !== 'completed' && doc.data().type !== 'custom') { // IMPORTANTE: No borrar las custom
+                if (doc.data().status !== 'completed' && doc.data().type !== 'custom') { 
                     deleteBatch.delete(doc.ref);
                 }
             });
@@ -257,11 +257,11 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             const newHistory = updatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setHistory(newHistory);
             
-            setSuccessMessage(t.msgPlanGen);
+            setSuccessMessage(t.msgPlanGen || "Plan generado con éxito");
             
         } catch (err) {
             console.error("Error generating weekly plan:", err);
-            const errorMessage = err.message.includes("La IA no generó") ? err.message : t.errorSave;
+            const errorMessage = err.message.includes("La IA no generó") ? err.message : (t.error_routineGeneration || t.errorSave);
             setError(errorMessage);
             clearInterval(progressInterval);
             setGenerationProgress(0);
@@ -276,7 +276,7 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         if (!routinesColRef || !routine) return;
         setLoading(true);
         setError(null);
-        setProgressText(t.recalcParams);
+        setProgressText(t.processing || "Recalculando...");
 
         try {
             const adjustedRoutine = await fetchGeminiSessionAdjustment(profile, routine, adjustments, language);
@@ -289,11 +289,11 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             await setDoc(routineRef, { ...adjustedRoutine, status: 'pending', modifiedAt: serverTimestamp() }, { merge: true });
             
             setShowAdjustment(false);
-            setSuccessMessage(t.msgSessionUpd);
+            setSuccessMessage(t.msgSessionUpd || "Sesión actualizada");
 
         } catch (err) {
             console.error("Error adjusting session:", err);
-            const errorMessage = err.message.includes("La IA no generó") ? err.message : t.errorSave;
+            const errorMessage = err.message.includes("La IA no generó") ? err.message : (t.error_general || t.errorSave);
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -335,14 +335,13 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
             
         } catch (err) {
             console.error("Error repeating session:", err);
-            setError(t.errorSave);
+            setError(t.error_general || t.errorSave);
         } finally {
             setLoading(false);
             setTimeout(() => setSuccessMessage(null), 3000);
         }
     }, [routinesColRef, setCurrentRoutineId, setView, setIsSessionActive, t]);
 
-    // --- NUEVO: COPIAR RUTINA A MIS RUTINAS (CON SALVAGUARDAS PARA FIRESTORE) ---
     const handleCopyToMyWorkouts = async (routine) => {
         if (!routinesColRef || !routine) return;
         
@@ -351,15 +350,13 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
         try {
             const newDocRef = doc(routinesColRef);
             
-            // USAMOS NORMALIZER PARA GARANTIZAR UNA ESTRUCTURA PERFECTA (SIN UNDEFINED)
             const normalized = normalizeRoutine(routine);
 
-            // Quitamos cualquier propiedad 'undefined' que vuelva loco a Firebase
             const cleanExercises = (normalized.rutinaPrincipal || []).map(ex => {
                 const cleanEx = { ...ex };
                 Object.keys(cleanEx).forEach(key => {
                     if (cleanEx[key] === undefined) {
-                        delete cleanEx[key]; // Firebase permite que no exista la llave, pero NO que su valor sea explícitamente "undefined"
+                        delete cleanEx[key]; 
                     }
                 });
                 return cleanEx;
@@ -367,15 +364,16 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
 
             const copiedRoutine = {
                 diaEnfoque: `${normalized.diaEnfoque || 'Rutina IA'} (Copia)`,
-                rutinaPrincipal: cleanExercises, // Usamos la lista limpia
+                rutinaPrincipal: cleanExercises, 
                 type: 'custom', 
                 status: 'pending',
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                id: newDocRef.id
             };
 
             await setDoc(newDocRef, copiedRoutine);
             
-            setSuccessMessage("¡Rutina copiada a 'Mis Rutinas'!");
+            setSuccessMessage(t.copied || "¡Rutina copiada a 'Mis Rutinas'!");
             setShowAdjustment(false);
             
             setTimeout(() => {
@@ -384,7 +382,7 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
 
         } catch (err) {
             console.error("Error copiando a mis rutinas:", err);
-            setError("Error al copiar la rutina: " + err.message); // Mostrar error detallado en UI
+            setError(t.error_general || "Error al copiar la rutina: " + err.message);
         } finally {
             setLoading(false);
             setTimeout(() => setSuccessMessage(null), 4000);
@@ -395,8 +393,24 @@ const useHistory = (userId, isAuthReady, profile, t, setProgressText, setLoading
 };
 
 export const useAppLogic = () => {
+    // 1. Modificamos para usar un estado directo que seteamos con el selector
     const [language, setLanguage] = useState('es');
-    const t = useMemo(() => TRANSLATIONS[language] || TRANSLATIONS.es, [language]);
+    
+    // CARGAR TRADUCCIONES DINÁMICAMENTE (Soporte Alemán añadido)
+    const t = useMemo(() => {
+        const langData = TRANSLATIONS[language];
+        // Fallback al español si falta el idioma, o fallback a string literal si falta la clave en el diccionario
+        return new Proxy(langData || TRANSLATIONS.es, {
+            get: (target, prop) => {
+                if (prop in target) return target[prop];
+                if (prop in TRANSLATIONS.en) return TRANSLATIONS.en[prop];
+                if (prop in TRANSLATIONS.es) return TRANSLATIONS.es[prop];
+                // Si la clave no existe en ningún diccionario, devuelve la propia clave como fallback visual
+                return prop; 
+            }
+        });
+    }, [language]);
+
     const [activeTab, _setActiveTab] = useState('training');
     const [view, setView] = useState('main');
     const [currentRoutineId, setCurrentRoutineId] = useState(null);
@@ -457,7 +471,6 @@ export const useAppLogic = () => {
     }, [userId, isAuthReady, setActiveTab]);
 
     const handleScroll = (e) => setScrolled(e.target.scrollTop > 20);
-    const toggleLanguage = () => setLanguage(prev => prev === 'es' ? 'en' : 'es');
 
     const onLinkAccount = useCallback(async (email, password) => {
         setLinkAccountError(null);
@@ -467,11 +480,11 @@ export const useAppLogic = () => {
         } catch (e) {
             console.error("Link account error:", e.code);
             if (e.code === 'auth/email-already-in-use') {
-                setLinkAccountError(t.errorEmailInUse);
+                setLinkAccountError(t.error_auth_email_already_in_use || t.errorEmailInUse);
             } else if (['auth/invalid-credential', 'auth/wrong-password'].includes(e.code)) {
-                setLinkAccountError(t.errorInvalidCreds);
+                setLinkAccountError(t.error_auth_invalid_credential || t.errorInvalidCreds);
             } else {
-                setLinkAccountError(t.errorAuth);
+                setLinkAccountError(t.error_general || t.errorAuth);
             }
             return false;
         }
@@ -485,9 +498,9 @@ export const useAppLogic = () => {
         } catch (e) {
             console.error("Password reset error:", e.code);
             if (e.code === 'auth/user-not-found') {
-                setAuthError(t.errorInvalidCreds); 
+                setAuthError(t.error_auth_invalid_credential || t.errorInvalidCreds); 
             } else {
-                setAuthError(t.errorAuth);
+                setAuthError(t.error_general || t.errorAuth);
             }
             return false;
         }
@@ -551,7 +564,7 @@ export const useAppLogic = () => {
             )
         );
         handleBackToMain();
-        setSuccessMessage(t.msgSessionReg);
+        setSuccessMessage(t.msgSessionReg || "Sesión completada y registrada.");
         setTimeout(() => setSuccessMessage(null), 3000);
 
         try {
@@ -559,7 +572,7 @@ export const useAppLogic = () => {
             await setDoc(routineRef, { ...completedRoutineData, completedAt: serverTimestamp() }, { merge: true }); 
         } catch (e) {
             console.error("Error saving feedback to Firebase:", e);
-            setError(t.errorHistorySave);
+            setError(t.errorHistorySave || "Error al guardar el feedback.");
 
             setHistory(prevHistory =>
                 prevHistory.map(r =>
@@ -665,7 +678,8 @@ export const useAppLogic = () => {
         history, generationProgress, error: combinedError,
         routinesColRef, 
         setHistory, 
-        toggleLanguage, setActiveTab, handleScroll, setProgressText, setShowAdjustment, setAuthError, setIsSignOutWarningVisible,
+        language, setLanguage, // Pasamos el estado de idioma y su setter
+        setActiveTab, handleScroll, setProgressText, setShowAdjustment, setAuthError, setIsSignOutWarningVisible,
         onSignIn: handleSignIn,
         onSignUp: handleSignUp,
         onAnonymousSignIn: handleAnonymousSignIn,

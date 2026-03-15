@@ -4,7 +4,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ExerciseCatalog } from './ExerciseCatalog';
 import { normalizeRoutine } from '../../../utils/helpers';
 
-export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRef, initialRoutine = null }) => {
+export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRef, initialRoutine = null, t }) => {
     const [title, setTitle] = useState('');
     const [blocks, setBlocks] = useState([]);
     const [showCatalog, setShowCatalog] = useState(false);
@@ -74,8 +74,8 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
         const newBlock = {
             id: `block-${Date.now()}`,
             type: type,
-            exerciseA: 'Seleccionar Ejercicio...',
-            exerciseB: type === 'superset' ? 'Seleccionar Ejercicio...' : undefined,
+            exerciseA: t?.searchExercise || 'Seleccionar Ejercicio...',
+            exerciseB: type === 'superset' ? (t?.searchExercise || 'Seleccionar Ejercicio...') : undefined,
             sets: [
                 type === 'superset' 
                 ? { id: `set-${Date.now()}`, repsA: '', loadA: '', repsB: '', loadB: '', restTime: 120 }
@@ -211,18 +211,18 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
     return (
         <div className="fixed inset-0 z-[110] bg-slate-900 flex flex-col animate-slideUp">
             <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 shadow-sm">
-                <button onClick={onClose} disabled={isSaving} className="text-slate-400 hover:text-white font-medium px-2 py-1">Cancelar</button>
+                <button onClick={onClose} disabled={isSaving} className="text-slate-400 hover:text-white font-medium px-2 py-1">{t?.cancel || 'Cancelar'}</button>
                 <div className="font-black text-white tracking-wide uppercase text-sm">
-                    {initialRoutine ? 'Editar Rutina' : 'Nueva Rutina'}
+                    {initialRoutine ? (t?.editRoutine || 'Editar Rutina') : (t?.newRoutine || 'Nueva Rutina')}
                 </div>
                 <button onClick={handleSave} disabled={isSaving} className="text-teal-400 font-bold px-4 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 disabled:opacity-50 transition-colors flex items-center gap-2">
-                    {isSaving ? <Icon name="loader" className="w-4 h-4 animate-spin" /> : 'Guardar'}
+                    {isSaving ? <Icon name="loader" className="w-4 h-4 animate-spin" /> : (t?.save || 'Guardar')}
                 </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 pb-32 minimal-scrollbar">
                 <div className="mb-6">
-                    <input type="text" placeholder="Ej: Día de Pierna Pesado" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-transparent border-b-2 border-slate-700 text-3xl font-black text-white px-2 py-3 focus:outline-none focus:border-indigo-500 placeholder:text-slate-700 transition-colors" />
+                    <input type="text" placeholder={t?.routineNameHolder || "Ej: Día de Pierna Pesado"} value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-transparent border-b-2 border-slate-700 text-3xl font-black text-white px-2 py-3 focus:outline-none focus:border-indigo-500 placeholder:text-slate-700 transition-colors" />
                 </div>
 
                 <div className="space-y-6">
@@ -257,20 +257,20 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
 
                             {block.type === 'single' ? (
                                 <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-900/30 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    <div className="col-span-2 text-center">Set</div>
-                                    <div className="col-span-3 text-center">+KG</div>
-                                    <div className="col-span-3 text-center">Reps</div>
-                                    <div className="col-span-3 text-center">Rest</div>
+                                    <div className="col-span-2 text-center">{t?.set || 'Set'}</div>
+                                    <div className="col-span-3 text-center">KG</div>
+                                    <div className="col-span-3 text-center">{t?.reps || 'Reps'}</div>
+                                    <div className="col-span-3 text-center">{t?.rest || 'Rest'}</div>
                                     <div className="col-span-1"></div>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-12 gap-1 px-1 py-2 bg-cyan-950/30 text-[9px] font-black text-cyan-600/70 uppercase tracking-tight">
-                                    <div className="col-span-1 text-center">Set</div>
+                                    <div className="col-span-1 text-center">{t?.set || 'Set'}</div>
                                     <div className="col-span-2 text-center">KG(A)</div>
                                     <div className="col-span-2 text-center">Rp(A)</div>
                                     <div className="col-span-2 text-center">KG(B)</div>
                                     <div className="col-span-2 text-center">Rp(B)</div>
-                                    <div className="col-span-2 text-center">Rest</div>
+                                    <div className="col-span-2 text-center">{t?.rest || 'Rest'}</div>
                                     <div className="col-span-1"></div>
                                 </div>
                             )}
@@ -291,7 +291,6 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                                                 <div className="col-span-1 flex justify-center">{block.sets.length > 1 && <button onClick={() => removeSet(block.id, set.id)} className="p-1.5 text-slate-600 hover:text-red-400 rounded-lg transition-colors"><Icon name="close" className="w-4 h-4" /></button>}</div>
                                             </div>
                                         ) : (
-                                            /* FILA PARA SUPERSET CON DESCANSO UNIFICADO */
                                             <div className="grid grid-cols-12 gap-1 items-center px-1 py-1 rounded-lg bg-cyan-900/10 border border-cyan-900/20 hover:bg-cyan-900/20 transition-colors">
                                                 <div className="col-span-1 text-center font-bold text-cyan-500 text-xs">{setIndex + 1}</div>
                                                 <div className="col-span-2 relative"><input type="number" value={set.loadA} onChange={(e) => updateSet(block.id, set.id, 'loadA', e.target.value)} placeholder="KG" className="w-full bg-slate-900 text-cyan-100 text-center py-2 rounded border border-cyan-800/50 focus:border-cyan-500 focus:outline-none placeholder:text-slate-700 font-mono text-[10px] transition-all" /></div>
@@ -299,11 +298,10 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                                                 <div className="col-span-2 relative"><input type="number" value={set.loadB} onChange={(e) => updateSet(block.id, set.id, 'loadB', e.target.value)} placeholder="KG" className="w-full bg-slate-900 text-blue-100 text-center py-2 rounded border border-blue-800/50 focus:border-blue-500 focus:outline-none placeholder:text-slate-700 font-mono text-[10px] transition-all" /></div>
                                                 <div className="col-span-2 relative"><input type="number" value={set.repsB} onChange={(e) => updateSet(block.id, set.id, 'repsB', e.target.value)} placeholder="Rp" className="w-full bg-slate-900 text-blue-100 text-center py-2 rounded border border-blue-800/50 focus:border-blue-500 focus:outline-none placeholder:text-slate-700 font-mono text-[10px] transition-all" /></div>
                                                 
-                                                {/* MISMO DISEÑO DE DESCANSO QUE EN SINGLE */}
-                                                <div className="col-span-2 flex justify-center items-center bg-slate-900 rounded border border-slate-700/50 overflow-hidden">
-                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', -15)} className="px-0.5 py-1 text-slate-500 hover:text-white hover:bg-slate-700"><Icon name="minus" className="w-3 h-3" /></button>
-                                                    <span className="text-[9px] text-cyan-300 font-mono font-bold w-6 text-center">{formatTime(set.restTime)}</span>
-                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', 15)} className="px-0.5 py-1 text-slate-500 hover:text-white hover:bg-slate-700"><Icon name="plus" className="w-3 h-3" /></button>
+                                                <div className="col-span-2 flex flex-col justify-center items-center bg-slate-900 rounded border border-slate-700/50 overflow-hidden">
+                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', 15)} className="w-full text-slate-500 hover:text-white bg-slate-800"><Icon name="chevronUp" className="w-3 h-3 mx-auto" /></button>
+                                                    <span className="text-[9px] text-cyan-300 font-mono font-bold text-center leading-none py-0.5">{formatTime(set.restTime)}</span>
+                                                    <button onClick={() => updateSet(block.id, set.id, 'restTime', -15)} className="w-full text-slate-500 hover:text-white bg-slate-800"><Icon name="chevronDown" className="w-3 h-3 mx-auto" /></button>
                                                 </div>
                                                 <div className="col-span-1 flex justify-center">{block.sets.length > 1 && <button onClick={() => removeSet(block.id, set.id)} className="p-1 text-slate-600 hover:text-red-400 rounded transition-colors"><Icon name="close" className="w-3 h-3" /></button>}</div>
                                             </div>
@@ -313,19 +311,19 @@ export const RoutineEditor = ({ onClose, setHistory, setActiveTab, routinesColRe
                             </div>
 
                             <div className="p-3 border-t border-slate-800 bg-slate-900/20">
-                                <button onClick={() => addSet(block.id)} className="w-full py-2.5 rounded-lg border border-dashed border-slate-600 text-slate-400 font-bold text-xs uppercase tracking-wider hover:bg-slate-800 hover:text-white transition-colors flex justify-center items-center gap-2"><Icon name="plus" className="w-4 h-4" /> Añadir Set</button>
+                                <button onClick={() => addSet(block.id)} className="w-full py-2.5 rounded-lg border border-dashed border-slate-600 text-slate-400 font-bold text-xs uppercase tracking-wider hover:bg-slate-800 hover:text-white transition-colors flex justify-center items-center gap-2"><Icon name="plus" className="w-4 h-4" /> {t?.addSet || 'Añadir Set'}</button>
                             </div>
                         </div>
                     ))}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mt-6">
-                    <button onClick={() => addBlock('single')} className="py-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 font-bold text-sm tracking-wide hover:bg-indigo-500/20 hover:border-indigo-500/50 transition-all flex justify-center items-center gap-2"><Icon name="plus" className="w-4 h-4" /> Ejercicio</button>
+                    <button onClick={() => addBlock('single')} className="py-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 font-bold text-sm tracking-wide hover:bg-indigo-500/20 hover:border-indigo-500/50 transition-all flex justify-center items-center gap-2"><Icon name="plus" className="w-4 h-4" /> {t?.addExercise || 'Ejercicio'}</button>
                     <button onClick={() => addBlock('superset')} className="py-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 font-bold text-sm tracking-wide hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all flex justify-center items-center gap-2"><Icon name="layers" className="w-4 h-4" /> SuperSerie</button>
                 </div>
             </div>
             
-            {showCatalog && <ExerciseCatalog onSelect={handleCatalogSelect} onClose={() => setShowCatalog(false)} />}
+            {showCatalog && <ExerciseCatalog onSelect={handleCatalogSelect} onClose={() => setShowCatalog(false)} t={t} />}
         </div>
     );
 };

@@ -232,7 +232,7 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, profile, onAdjustNextS
            <ExerciseListPreview routineData={routine} limit={3} />
            <button onClick={() => onViewRoutine(routine)} className="w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-teal-500/40 bg-gradient-to-r from-teal-500 to-emerald-600 border-t border-white/20 hover:shadow-teal-400/60 transition-all flex items-center justify-center gap-2">
                <Icon name="play" className="w-4 h-4 fill-current"/> 
-               <span className="tracking-wide text-sm">COMENZAR SESIÓN</span>
+               <span className="tracking-wide text-sm">Start</span>
            </button>
        </div>
     </div>
@@ -289,7 +289,7 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, profile, onAdjustN
                       </div>
                       <div className="p-3 bg-slate-800/80 rounded-b-2xl">
                           <button onClick={(e) => { e.stopPropagation(); onViewRoutine(routine); }} className="w-full flex justify-center items-center gap-2 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg shadow-teal-900/20 active:scale-95 uppercase tracking-wide">
-                            <Icon name="play" className="w-4 h-4" /> Comenzar Esta Sesión
+                            <Icon name="play" className="w-4 h-4" /> Start
                           </button>
                       </div>
                   </div>

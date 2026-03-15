@@ -30,6 +30,16 @@ const getFemaleHealthContext = (profile) => {
     return '';
 };
 
+// --- FUNCIÓN PARA DETERMINAR INSTRUCCIÓN DE IDIOMA ---
+const getLangInstruction = (lang) => {
+    switch (lang) {
+        case 'en': return "You MUST answer in English. ";
+        case 'de': return "Sie MÜSSEN auf Deutsch antworten. ";
+        case 'es': 
+        default: return "DEBES responder en Español. ";
+    }
+};
+
 // --- ESQUEMA ESTRICTO PARA LA RESPUESTA DE GEMINI ---
 const workoutPlanSchema = {
     type: SchemaType.ARRAY,
@@ -101,13 +111,13 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
         }
     });
 
-    const langInstruction = lang === 'en' ? "You MUST answer in English." : "DEBES responder en Español.";
+    const langInstruction = getLangInstruction(lang);
     const strengthProfile = getStrengthProfile(profile);
     const historyContext = buildHistoryContext(recentRoutines);
     const femaleHealthContext = getFemaleHealthContext(profile);
 
     const systemPrompt = 
-        "Eres 'FitCoach AI', un director de programación de fitness de élite.\n" +
+        "Eres 'FitCoach AI', un director de programación de fitness de élite y usas informacion cientificamente comprobada.\n" +
         "Genera un plan de entrenamiento de " + (profile.daysPerWeek || 3) + " días. " + langInstruction + ".\n\n" +
         "CONTEXTO DEL ATLETA:\n" +
         "Perfil: " + profile.gender + ", " + profile.age + " años, " + profile.weight + " kg. Nivel: " + profile.experienceLevel + ".\n" +
@@ -117,10 +127,10 @@ exports.generateGeminiPlan = functions.https.onCall(async (data, context) => {
         "LÓGICA DE ENTRENAMIENTO:\n" +
         "1. Prioriza ejercicios compuestos.\n" +
         "2. Incluye siempre 'warmup' y 'cooldown'.\n" +
-        "3. **REGLA CRÍTICA: DEBES INCLUIR AL MENOS 1 O 2 SUPERSERIES POR SESIÓN ('estructura_visual': 'superset') para ahorrar tiempo y aumentar intensidad metabólica. Cuando uses 'superset', el array 'items' DEBE tener exactamente 2 ejercicios.**\n" +
+        "3. REGLA: Si usas 'superset', el array 'items' DEBE tener exactamente 2 ejercicios.\n" +
         "4. En superseries, el 'descanso_segs' del primer ejercicio debe ser 0.\n" +
         "5. Cargas sugeridas deben ser realistas.\n" +
-        "6. Esta prohibido que la la duración exceda " + profile.timeAvailable + " min.";
+        "6. La duración no debe exceder " + profile.timeAvailable + " min.";
 
     try {
         console.log("Iniciando llamada a Gemini...");
@@ -141,7 +151,8 @@ exports.analyzeBioage = functions.https.onCall(async (data, context) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const { profile, lang } = data;
-    const langInstruction = lang === 'en' ? "Answer in English." : "Responde en Español.";
+    const langInstruction = getLangInstruction(lang);
+
     const systemPrompt = "Analiza estos datos y estima la BioAge en un JSON:\n" +
         "Edad: " + profile.age + ", Métricas: " + JSON.stringify(profile.bioage) + ". " + langInstruction + "\n" +
         "Formato: { \"bioage\": 30, \"strengths\": [], \"weaknesses\": [], \"recommendations\": [] }";
@@ -169,7 +180,7 @@ exports.adjustSession = functions.https.onCall(async (data, context) => {
     });
 
     const { profile, routine, adjustments, lang } = data;
-    const langInstruction = lang === 'en' ? "Answer in English." : "Responde en Español.";
+    const langInstruction = getLangInstruction(lang);
 
     const systemPrompt = 
         "Eres un entrenador experto. Ajusta esta sesión de entrenamiento según los cambios solicitados.\n" +
