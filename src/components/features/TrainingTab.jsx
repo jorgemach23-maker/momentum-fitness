@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { WeeklyProgressBar, HeroRoutineCard, RoutineLibraryList, AdjustSessionView } from './training/TrainingUI';
+import { WeeklyProgressBar, HeroRoutineCard, RoutineLibraryList } from './training/TrainingUI';
 import { Icon } from '../ui/Icon';
 import { GeminiLoader } from '../ui/GeminiLoader';
 
 const TrainingTab = ({
     profile,
-    onProfileChange,
     onGeneratePlan,
     onAdjustNextSession,
-    onCopyToMyWorkouts, // Nueva prop
+    onCopyToMyWorkouts,
     loading,
     successMessage,
     errorMessage,
@@ -18,8 +17,6 @@ const TrainingTab = ({
     t
 }) => {
     const [activeTab, setActiveTab] = useState('recommended');
-    const [showAdjustment, setShowAdjustment] = useState(false);
-    const [adjustingRoutine, setAdjustingRoutine] = useState(null);
 
     const currentPlanId = profile.currentPlanId;
     const todayIndex = (new Date().getDay() + 6) % 7;
@@ -95,13 +92,8 @@ const TrainingTab = ({
         return log;
     }, [history]); 
 
-    const handleOpenAdjustment = (routine) => {
-        setAdjustingRoutine(routine);
-        setShowAdjustment(true);
-    };
-
     return (
-        <div className="animate-fadeIn pb-24">
+        <div className="animate-fadeIn pb-24" onClick={() => {}}> 
             <div className="space-y-2 mb-4">
                 {successMessage && <div className="p-4 bg-teal-500/10 border border-teal-500/20 text-teal-300 rounded-xl flex items-center shadow-lg backdrop-blur-md"><Icon name="check" className="mr-3 w-5 h-5" /> {successMessage}</div>}
                 {errorMessage && <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-300 rounded-xl flex items-center shadow-lg backdrop-blur-md"><Icon name="alert" className="mr-3 w-5 h-5" /> {errorMessage}</div>}
@@ -158,7 +150,9 @@ const TrainingTab = ({
                                         <HeroRoutineCard 
                                             routine={recommendedRoutine} 
                                             onViewRoutine={handleViewRoutine} 
-                                            onAdjust={() => handleOpenAdjustment(recommendedRoutine)} 
+                                            onAdjustNextSession={onAdjustNextSession}
+                                            onCopyToMyWorkouts={onCopyToMyWorkouts}
+                                            loading={loading}
                                             t={t} 
                                             profile={profile}
                                             lastCompleted={lastCompleted}
@@ -184,7 +178,9 @@ const TrainingTab = ({
                                 <RoutineLibraryList 
                                     routines={libraryRoutines} 
                                     onViewRoutine={handleViewRoutine} 
-                                    onAdjust={handleOpenAdjustment} 
+                                    onAdjustNextSession={onAdjustNextSession}
+                                    onCopyToMyWorkouts={onCopyToMyWorkouts}
+                                    loading={loading}
                                     t={t} 
                                     profile={profile}
                                 />
@@ -194,30 +190,6 @@ const TrainingTab = ({
                             </div>
                         )}
                     </>
-                )}
-
-                {showAdjustment && adjustingRoutine && (
-                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 animate-fadeIn">
-                        <div className="w-full max-w-md relative">
-                            <button onClick={() => setShowAdjustment(false)} className="absolute -top-10 right-0 text-slate-400 hover:text-white"><Icon name="close" className="w-8 h-8" /></button>
-                            <AdjustSessionView
-                                nextRoutine={adjustingRoutine}
-                                profile={profile}
-                                onProfileChange={onProfileChange}
-                                onAdjustNextSession={(r, p, ne) => {
-                                    onAdjustNextSession(r || adjustingRoutine, p, ne);
-                                    setShowAdjustment(false);
-                                }}
-                                onCopyToMyWorkouts={(r) => {
-                                    onCopyToMyWorkouts(r);
-                                    setShowAdjustment(false);
-                                }}
-                                loading={loading}
-                                progressText={progressText}
-                                t={t}
-                            />
-                        </div>
-                    </div>
                 )}
 
                 {currentWeekRoutines.length === 0 && !loading && (

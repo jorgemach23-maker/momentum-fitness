@@ -4,7 +4,7 @@ import { useBackButtonHandler } from './hooks/useBackButtonHandler';
 import TrainingTab from './components/features/TrainingTab';
 import HistoryTab from './components/features/HistoryTab';
 import ProfileTab from './components/features/ProfileTab';
-import WorkoutBuilderTab from './components/features/WorkoutBuilderTab'; // Importaremos este nuevo componente pronto
+import WorkoutBuilderTab from './components/features/WorkoutBuilderTab'; 
 import { Auth } from './components/features/Auth';
 import ActiveSession from './components/features/training/ActiveSession';
 import { Icon } from './components/ui/Icon';
@@ -12,17 +12,12 @@ import { MinimalScrollbarStyles } from './components/ui/GlobalStyles';
 import { SplashScreen } from './components/ui/SplashScreen'; 
 import { Card } from './components/ui/LayoutComponents';
 
-// --- Modales Globales (movidos para claridad, sin cambios funcionales) ---
 const BackupModal = ({ jsonString, onClose, onCopy, copySuccess, t }) => (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn">
-        {/* ... */}
-    </div>
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn"></div>
 );
 
 const ImportTextModal = ({ onClose, onImport, importError, t }) => (
-     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn">
-        {/* ... */}
-    </div>
+     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fadeIn"></div>
 );
 
 const SignOutWarningModal = ({ onContinue, onSave, onCancel, t, isAnonymous }) => (
@@ -106,7 +101,6 @@ export default function App() {
         currentExerciseIndex, setCurrentExerciseIndex, handleBackToMain, isSessionActive
     } = appLogic;
 
-    // Integrate useBackButtonHandler hook
     const { showExitAppModal, handleConfirmExitApp, handleCancelExitApp } = useBackButtonHandler(
         view,
         activeTab,
@@ -132,14 +126,13 @@ export default function App() {
     
     const handleSaveAndSignOut = () => {
         setIsSignOutWarningVisible(false);
-        setActiveTab('profile'); // Navega al perfil para que el usuario pueda crear una cuenta y guardar sus datos
+        setActiveTab('profile'); 
     };
 
     return (
         <>
             <MinimalScrollbarStyles />
             
-            {/* Renderizado de Modales */}
             {backupJson && <BackupModal jsonString={backupJson} onClose={onCloseBackupModal} onCopy={onCopyToClipboard} copySuccess={copySuccess} t={t} />}
             {isImportModalOpen && <ImportTextModal onClose={() => setIsImportModalOpen(false)} onImport={onImportFromText} importError={importTextError} t={t} />}
             {isSignOutWarningVisible && <SignOutWarningModal onContinue={onForceSignOut} onSave={handleSaveAndSignOut} onCancel={() => setIsSignOutWarningVisible(false)} t={t} isAnonymous={isAnonymous} />}
@@ -147,13 +140,11 @@ export default function App() {
 
             <div className="h-screen supports-[height:100dvh]:h-[100dvh] flex flex-col overflow-hidden font-sans bg-slate-900 text-slate-100 selection:bg-teal-500/30 relative">
                 
-                {/* FONDO DECORATIVO */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
                     <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-br from-teal-500/30 to-cyan-500/10 rounded-full blur-3xl animate-[pulse_10s_ease-in-out_infinite]"></div>
                     <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-to-tl from-violet-500/20 to-purple-500/10 rounded-full blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
                 </div>
 
-                {/* CONTENIDO PRINCIPAL - con z-index para estar por encima del fondo */}
                 <div className="relative z-10 flex flex-col flex-1 h-full">
                     <header ref={headerRef} className={`w-full fixed top-0 left-0 border-b transition-all duration-300 ${scrolled ? 'bg-slate-900/80 backdrop-blur-md border-slate-700/50 py-2 shadow-lg' : 'bg-transparent border-transparent py-3'}`}>
                         <div className="max-w-md mx-auto px-6 flex items-center justify-between">
@@ -189,12 +180,11 @@ export default function App() {
 
                     <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none px-4 z-50">
                         <nav className="bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-full px-6 py-3 flex gap-6 sm:gap-8 pointer-events-auto">
-                            {/* NUEVO ORDEN DE TABS: training -> builder -> history -> profile */}
                             {['training', 'builder', 'history', 'profile'].map(tab => {
                                 const isActive = activeTab === tab;
-                                const icons = { training: 'target', builder: 'plus', history: 'list', profile: 'user' };
+                                // 1. ICONO SPARKLES PARA EL DOCK (En lugar de target)
+                                const icons = { training: 'sparkles', builder: 'plus', history: 'list', profile: 'user' };
                                 
-                                // Estilo especial para el botón "Nuevo" (Builder)
                                 const isBuilder = tab === 'builder';
                                 
                                 return (

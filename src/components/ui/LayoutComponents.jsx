@@ -3,6 +3,14 @@ import { Icon } from './Icon';
 
 export const Card = ({ children, className = "", onClick }) => <div onClick={onClick} className={`bg-slate-800/40 border border-slate-700/50 rounded-2xl shadow-sm backdrop-blur-xl transition-all duration-300 ${className}`}>{children}</div>;
 
+// NUEVO COMPONENTE DE SECCIÓN PARA AGRUPAR EN EL PERFIL
+export const Section = ({ title, children, className = "" }) => (
+    <div className={`mb-8 ${className}`}>
+        {title && <h3 className="text-sm font-bold text-slate-300 mb-4 pl-1 border-l-2 border-teal-500 uppercase tracking-wider">{title}</h3>}
+        {children}
+    </div>
+);
+
 export const InputField = ({ label, icon, type = "text", name, value, onChange, placeholder, as = 'input', children, className = '', unit }) => {
     const commonProps = {
         name,

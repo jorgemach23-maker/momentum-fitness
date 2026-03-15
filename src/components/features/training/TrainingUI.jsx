@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import { Icon } from '../../ui/Icon.jsx';
-import { Card } from '../../ui/Card.jsx';
-import { InputField } from '../../ui/InputField.jsx';
-import { GeminiLoader } from '../../ui/GeminiLoader.jsx';
 import { 
   formatRoutineTitle, 
   cleanExerciseTitle,
@@ -130,14 +127,90 @@ export const ExerciseListPreview = ({ exercises, routineData, limit }) => {
   );
 };
 
-export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompleted, profile }) => {
-  if (!routine) return null;
+// --- MENÚ DE OPCIONES DESPLEGABLE (ZONAS CORREGIDAS) ---
+const RoutineOptionsMenu = ({ routine, profile, onAdjustNextSession, onCopyToMyWorkouts, loading, onClose }) => {
+    const [time, setTime] = useState(profile?.timeAvailable || 45);
+    const [noEquipment, setNoEquipment] = useState(false);
+    const [isZoneOpen, setIsZoneOpen] = useState(false);
+    
+    // 2. CORRECCIÓN: Estado de zonas vacío por defecto para no heredar "Brazo" u otros strings mal formateados.
+    const [selectedMuscles, setSelectedMuscles] = useState([]);
+
+    const muscleOptions = ["Pecho", "Espalda", "Pierna", "Hombro", "Brazo", "Core", "Full Body"];
+
+    const toggleMuscle = (m) => {
+        setSelectedMuscles(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+    };
+
+    const handleRecalculate = () => {
+        const adjustments = {
+            timeAvailable: time,
+            noEquipment: noEquipment,
+            muscleFocus: selectedMuscles.join(', ') // Puede ser vacío, backend lo ignora si está vacío
+        };
+        onAdjustNextSession(routine, adjustments);
+        onClose();
+    };
+
+    return (
+        <div className="absolute right-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] z-[100] p-4 cursor-default flex flex-col gap-4 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                <span className="font-bold text-white text-sm">Ajustes de Sesión</span>
+                <button onClick={onClose} className="text-slate-400 hover:text-white"><Icon name="close" className="w-4 h-4" /></button>
+            </div>
+
+            <div className="flex gap-3">
+                <div className="flex-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Tiempo (min)</label>
+                    <input type="number" value={time} onChange={(e) => setTime(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-sm focus:border-teal-500 focus:outline-none" />
+                </div>
+                <div className="flex-1 flex flex-col">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Modalidad</label>
+                    <button onClick={() => setNoEquipment(!noEquipment)} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border transition-colors ${noEquipment ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-slate-900 border-slate-700 text-slate-400'}`}>
+                        <span className="text-xs font-bold">Sin Equipo</span>
+                    </button>
+                </div>
+            </div>
+
+            <div className="relative">
+                <button onClick={() => setIsZoneOpen(!isZoneOpen)} className="w-full flex justify-between items-center bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-300">
+                    <span className="truncate">{selectedMuscles.length > 0 ? selectedMuscles.join(', ') : 'Zonas / Músculos...'}</span>
+                    <Icon name={isZoneOpen ? "chevronUp" : "chevronDown"} className="w-4 h-4" />
+                </button>
+                {isZoneOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 flex flex-wrap gap-1.5 z-10 max-h-32 overflow-y-auto minimal-scrollbar shadow-xl">
+                        {muscleOptions.map(m => (
+                            <button key={m} onClick={() => toggleMuscle(m)} className={`px-2 py-1 rounded-md text-[10px] font-bold transition-colors ${selectedMuscles.includes(m) ? 'bg-teal-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+                                {m}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-700/50">
+                <button onClick={handleRecalculate} disabled={loading} className="w-full py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
+                    {loading ? <Icon name="loader" className="w-4 h-4 animate-spin" /> : <><Icon name="sparkles" className="w-4 h-4" /> Recalcular con IA</>}
+                </button>
+                <button onClick={() => { onCopyToMyWorkouts(routine); onClose(); }} disabled={loading} className="w-full py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
+                    <Icon name="copy" className="w-4 h-4" /> Copiar a "Mis Rutinas"
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
+export const HeroRoutineCard = ({ routine, onViewRoutine, profile, onAdjustNextSession, onCopyToMyWorkouts, loading, t, lastCompleted }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  if (!routine) return <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded-2xl">Todo listo por hoy.</div>;
   const normalized = normalizeRoutine(routine);
   const title = formatRoutineTitle(normalized.diaEnfoque);
   const duration = getDuration(normalized, profile);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-xl p-5 mb-4 group">
+    <div className={`relative overflow-visible rounded-3xl border transition-all duration-300 ${isMenuOpen ? 'z-50 bg-slate-800 border-teal-500/30 ring-1 ring-teal-500/20' : 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700/50 shadow-xl'} p-5 mb-4 group`}>
        <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none group-hover:bg-teal-500/10 transition-colors duration-500"></div>
        <div className="relative z-10">
            <div className="flex justify-between items-start mb-4">
@@ -147,7 +220,14 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
                   </div>
                   <h2 className="text-xl font-black text-white leading-tight line-clamp-2 drop-shadow-md">{title}</h2>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); onAdjust(); }} className="p-2.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all shadow-lg active:scale-95"><Icon name="settings" className="w-4 h-4" /></button>
+              <div className="relative">
+                  <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className={`p-2.5 rounded-xl transition-colors ${isMenuOpen ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500'}`}>
+                      <Icon name="settings" className="w-4 h-4" />
+                  </button>
+                  {isMenuOpen && (
+                      <RoutineOptionsMenu routine={routine} profile={profile} onAdjustNextSession={onAdjustNextSession} onCopyToMyWorkouts={onCopyToMyWorkouts} loading={loading} t={t} onClose={() => setIsMenuOpen(false)} />
+                  )}
+              </div>
            </div>
            <ExerciseListPreview routineData={routine} limit={3} />
            <button onClick={() => onViewRoutine(routine)} className="w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-teal-500/40 bg-gradient-to-r from-teal-500 to-emerald-600 border-t border-white/20 hover:shadow-teal-400/60 transition-all flex items-center justify-center gap-2">
@@ -159,42 +239,57 @@ export const HeroRoutineCard = ({ routine, onViewRoutine, onAdjust, t, lastCompl
   );
 };
 
-export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile }) => {
+export const RoutineLibraryList = ({ routines, onViewRoutine, profile, onAdjustNextSession, onCopyToMyWorkouts, loading, t }) => {
   const [expandedId, setExpandedId] = useState(null);
-  if (!routines || routines.length === 0) return null;
+  const [activeMenuId, setActiveMenuId] = useState(null);
+
+  if (!routines || routines.length === 0) return <div className="text-center py-8 text-xs text-slate-500">No hay opciones extra.</div>;
   
   return (
     <div className="space-y-3 pb-20">
        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Otras Opciones</h3>
-       {routines.map((r) => {
-         const isExpanded = expandedId === r.id;
-         const normalized = normalizeRoutine(r);
+       {routines.map((routine) => {
+         const isExpanded = expandedId === routine.id;
+         const isMenuOpen = activeMenuId === routine.id;
+         const normalized = normalizeRoutine(routine);
          const title = formatRoutineTitle(normalized.diaEnfoque);
          const duration = getDuration(normalized, profile);
 
          return (
-           <div key={r.id} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-slate-800 border-teal-500/30 ring-1 ring-teal-500/20' : 'bg-slate-800/40 border-slate-700/50'}`}>
-              <div className="w-full flex items-center justify-between p-4 text-left cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : r.id)}>
-                 <div className="flex items-center gap-4 flex-1">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-teal-500 text-slate-900 shadow-lg shadow-teal-500/20' : 'bg-slate-900 text-slate-500 border border-slate-700'}`}><Icon name="dumbbell" className="w-5 h-5" /></div>
+           <div key={routine.id} className={`relative rounded-2xl border transition-all duration-300 ${isMenuOpen ? 'z-50' : 'z-10'} ${isExpanded ? 'border-teal-500/30 ring-1 ring-teal-500/20 bg-slate-800/80' : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'}`}>
+              <div className="p-4 flex justify-between items-center cursor-pointer" onClick={() => { if(!isMenuOpen) setExpandedId(isExpanded ? null : routine.id); }}>
+                 <div className="flex items-center gap-3 overflow-hidden">
+                    <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isExpanded ? 'bg-teal-500 text-white' : 'bg-slate-700 text-slate-400'}`}><Icon name="dumbbell" className="w-4 h-4" /></div>
                     <div>
-                        <h4 className={`text-sm font-bold ${isExpanded ? 'text-white' : 'text-slate-300'}`}>{title}</h4>
+                        <h4 className="text-sm font-bold text-white truncate pr-2">{title}</h4>
                         <p className="text-[10px] text-slate-500 font-mono mt-0.5">{duration}</p>
                     </div>
                  </div>
-                 <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180 text-teal-500' : 'text-slate-600'}`}>
-                     <Icon name="chevronDown" className="w-5 h-5" />
+                 
+                 <div className="flex items-center gap-2 shrink-0">
+                     <button onClick={(e) => { e.stopPropagation(); onViewRoutine(routine); }} className="p-2 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500 hover:text-white transition-colors" title="Iniciar">
+                         <Icon name="play" className="w-4 h-4" />
+                     </button>
+                     <div className="relative">
+                         <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : routine.id); }} className={`p-2 rounded-lg transition-colors ${isMenuOpen ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+                             <Icon name="settings" className="w-4 h-4" />
+                         </button>
+                         {isMenuOpen && (
+                             <RoutineOptionsMenu routine={routine} profile={profile} onAdjustNextSession={onAdjustNextSession} onCopyToMyWorkouts={onCopyToMyWorkouts} loading={loading} t={t} onClose={() => setActiveMenuId(null)} />
+                         )}
+                     </div>
+                     <Icon name={isExpanded ? "chevronUp" : "chevronDown"} className="w-4 h-4 text-slate-500 ml-1" />
                  </div>
               </div>
+              
               {isExpanded && (
-                  <div className="px-4 pb-4 animate-fadeIn">
-                      <div className="pt-2 border-t border-slate-700/50 mb-4 bg-slate-900/20 rounded-xl p-2">
-                          <ExerciseListPreview routineData={r} limit={99} />
+                  <div className="animate-fadeIn border-t border-slate-700/50 bg-slate-900/50 rounded-b-2xl">
+                      <div className="p-4">
+                          <ExerciseListPreview routineData={routine} limit={99} />
                       </div>
-                      <div className="flex gap-3 px-1">
-                          <button onClick={(e) => { e.stopPropagation(); onAdjust(r); }} className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-bold text-xs hover:bg-slate-700 transition-colors">AJUSTAR</button>
-                          <button onClick={(e) => { e.stopPropagation(); onViewRoutine(r); }} className="flex-[2] py-2.5 rounded-lg font-bold text-xs shadow-lg shadow-teal-500/40 bg-gradient-to-r from-teal-500 to-emerald-600 border-t border-white/20 transition-all flex items-center justify-center gap-2">
-                            <Icon name="play" className="w-3 h-3 fill-current"/> INICIAR
+                      <div className="p-3 bg-slate-800/80 rounded-b-2xl">
+                          <button onClick={(e) => { e.stopPropagation(); onViewRoutine(routine); }} className="w-full flex justify-center items-center gap-2 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg shadow-teal-900/20 active:scale-95 uppercase tracking-wide">
+                            <Icon name="play" className="w-4 h-4" /> Comenzar Esta Sesión
                           </button>
                       </div>
                   </div>
@@ -204,66 +299,4 @@ export const RoutineLibraryList = ({ routines, onViewRoutine, onAdjust, profile 
        })}
     </div>
   );
-};
-
-export const AdjustSessionView = ({ nextRoutine, profile, onProfileChange, onAdjustNextSession, onCopyToMyWorkouts, loading, progressText, lang }) => {
-    const t = { timeAvailable: "Tiempo", modality: "Modalidad", noEquipment: "Sin equipo", focusZone: "Zona", processing: "Procesando...", recalcParams: "Recalcular con IA" }; 
-    const [selectedMuscles, setSelectedMuscles] = useState([]);
-    const [noEquipment, setNoEquipment] = useState(false); 
-    const [isZoneOpen, setIsZoneOpen] = useState(false);
-    
-    const toggleMuscle = (m) => {
-        const newSelection = selectedMuscles.includes(m) ? selectedMuscles.filter(x => x !== m) : [...selectedMuscles, m];
-        setSelectedMuscles(newSelection);
-        if (onProfileChange) onProfileChange({ target: { name: 'muscleFocus', value: newSelection.join(', ') } });
-    };
-    
-    const muscleOptions = [ { category: "Grupos", items: ["Tren Superior", "Tren Inferior", "Core", "Full Body"] }, { category: "Músculos", items: ["Glúteos", "Cuádriceps", "Pecho", "Espalda", "Brazos"] } ];
-    const normalized = normalizeRoutine(nextRoutine);
-    const title = normalized?.diaEnfoque || "Ajustar Sesión";
-
-    return (
-      <Card className="p-6">
-        <div className="flex justify-between items-start mb-6 border-b border-slate-700/50 pb-4"><div><h3 className="text-lg font-bold text-slate-100 flex items-center gap-2"><Icon name="settings" className="w-5 h-5 text-slate-400"/> {title}</h3></div>{loading && <GeminiLoader progressText={progressText} />}</div>
-        <div className="space-y-6">
-           <div className="grid grid-cols-2 gap-6 items-center">
-                <InputField label={t.timeAvailable} icon="clock" type="number" name="timeAvailable" value={profile.timeAvailable} onChange={onProfileChange} />
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t.modality}</label>
-                    <button onClick={() => setNoEquipment(!noEquipment)} className={`w-full py-3 px-4 rounded-xl border flex items-center justify-between transition-all ${noEquipment ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-slate-900/50 border-slate-700 text-slate-400'}`}>
-                        <span className="text-sm font-semibold">{t.noEquipment}</span>
-                        <Icon name={noEquipment ? "toggleOn" : "toggleOff"} className={`w-6 h-6 ${noEquipment ? "text-indigo-400" : "text-slate-600"}`} />
-                    </button>
-                </div>
-           </div>
-           <div className="border border-slate-700 rounded-xl overflow-hidden">
-                <button onClick={() => setIsZoneOpen(!isZoneOpen)} className="w-full p-4 flex items-center justify-between bg-slate-900/50 hover:bg-slate-800 transition-colors">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.focusZone}</span>
-                    <Icon name={isZoneOpen ? "chevronUp" : "chevronDown"} className="w-4 h-4 text-slate-500" />
-                </button>
-                {isZoneOpen && (
-                    <div className="p-4 bg-slate-900/30 animate-fadeIn border-t border-slate-700/50">
-                        <div className="flex flex-wrap gap-2.5">
-                            {muscleOptions.flatMap(g => g.items).map(muscle => { 
-                                const isSelected = selectedMuscles.includes(muscle); 
-                                return <button key={muscle} onClick={() => toggleMuscle(muscle)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 border hover:scale-105 active:scale-95 ${isSelected ? 'bg-teal-600 border-teal-500 text-white shadow-md shadow-teal-900/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}>{muscle}</button>; 
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
-            
-            <div className="flex flex-col gap-3">
-                <button onClick={() => onAdjustNextSession(nextRoutine, profile, noEquipment)} disabled={loading} className="w-full py-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-2 shadow-lg">
-                    {loading ? t.processing : <><Icon name="sparkles" className="w-5 h-5 text-teal-400" /> {t.recalcParams}</>}
-                </button>
-                
-                {/* NUEVO BOTON: COPIAR A MIS RUTINAS */}
-                <button onClick={() => onCopyToMyWorkouts(nextRoutine)} disabled={loading} className="w-full py-3 rounded-xl border border-indigo-500/50 bg-indigo-500/10 text-indigo-300 font-bold transition-all hover:bg-indigo-500/20 active:scale-95 flex justify-center items-center gap-2">
-                    <Icon name="copy" className="w-4 h-4" /> Copiar a "Mis Rutinas" para editar
-                </button>
-            </div>
-        </div>
-      </Card>
-    );
 };
